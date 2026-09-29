@@ -1,9 +1,9 @@
 import type { BedGroup, BedPlan, WarningCode } from './types';
 
-/** Beds that sleep 2 and are used only when regular beds cannot cover the people. */
-const SOFA_LIKE: ReadonlySet<string> = new Set(['SOFA_BED', 'FUTON', 'AIR_MATTRESS', 'FLOOR_MATTRESS', 'COUCH']);
-/** Not beds for linen purposes. */
-const IGNORED: ReadonlySet<string> = new Set(['CRIB', 'TODDLER_BED', 'HAMMOCK']);
+/** Beds that sleep 2 and are used only when regular beds cannot cover the people (proposal §6). */
+const SOFA_LIKE: ReadonlySet<string> = new Set(['SOFA_BED', 'FUTON', 'AIR_MATTRESS']);
+/** Not beds for linen purposes (proposal §6). Every other unlisted type = double bed + warning. */
+const IGNORED: ReadonlySet<string> = new Set(['CRIB', 'TODDLER_BED']);
 const KNOWN_DOUBLE: ReadonlySet<string> = new Set(['KING_BED', 'QUEEN_BED', 'DOUBLE_BED']);
 const SINGLE: ReadonlySet<string> = new Set(['SINGLE_BED', 'BUNK_BED']);
 

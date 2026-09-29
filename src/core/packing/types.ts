@@ -30,7 +30,11 @@ export interface PackingSettings {
 
 /** One "Kapsule:" entry after parsing. */
 export interface CapsuleSpec {
-  /** Type text as written, e.g. "L'OR Nespresso (veľké)". Empty for none/unsure. */
+  /**
+   * Type text as written, e.g. "L'OR Nespresso (veľké)". Empty for "upresniť"
+   * and for a count without a type ("Kapsule: 10 ks"), which the card shows as
+   * the generic row with "druh nezadaný v Guesty".
+   */
   type: string;
   /** Fixed count from "N ks", or null = count follows people. */
   n: number | null;

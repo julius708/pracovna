@@ -111,7 +111,7 @@ Everything in spec §4 is implemented exactly; the default linen table is loaded
 |---|---|
 | Duvet precedence | Guesty exact counts (missing line = 0, absolute) → `Paplóny: malé/veľké` line → Settings „Paplóny podľa bytu“ → large + „Typ paplónov nezadaný – over na byte“ |
 | Bed types | KING/QUEEN/DOUBLE = double for 2; SINGLE = 1; BUNK = 2 singles + warning; SOFA_BED = conditional 2 („rozložiť gauč ×N“ / „gauč netreba“); AIR_MATTRESS/FUTON = conditional like a sofa; CRIB/TODDLER_BED = ignored; any other = double + „Neznámy typ postele – over na byte“ |
-| Edge cases | no beds → one double + warning; beds (incl. sofas) < people → „Postele v Guesty stačia len pre N osôb – over na byte“; capacity missing → bed capacity + warning; same-day check-in with 0 guests → capacity + red „Počet hostí nezadaný v Guesty“; bathrooms unknown → 1 + warning |
+| Edge cases | no beds → one double + warning; beds (incl. sofas) < people → „Postele v Guesty stačia len pre N osôb – over na byte“; capacity missing → bed capacity + warning; same-day check-in with 0 guests → capacity + red „Počet hostí nezadaný v Guesty – balíme na max. kapacitu“; bathrooms unknown → 1 + warning |
 | Gap sentence | shows the max `minNights` over the gap; plurals 1 „voľná noc“, 2–4 „voľné noci“, 5+ „voľných nocí“; 1 „osobu“, 2–4 „osoby“, 5+ „osôb“ |
 | Capsules | line split on `;`/`,`; count = first integer, type = rest; „nedávať/žiadne/nie/bez/0“ → no row; „upresniť“ → row + red „druh treba upresniť“; no line → row + red „druh nezadaný v Guesty“; totals per type after normalising case, diacritics and apostrophes; photos by substring `cafissimo`, `l'or`, `nespresso original` (longest match first) |
 | Per-item overrides | `sync.py` aliases kept (`predložky`, `osušky`, `uteráky` …); value = first integer („2 (+1 rezerva)“ → 2, not 21) |
@@ -150,7 +150,7 @@ Order of work stays as in spec §8: step 2 (calculator + parser + tests) needs n
 
 - **People** = Guesty `guestsCount` (adults + children; infants excluded), as the prototype did.
 - **Overrides** (`Osušky veľké: N` etc.) are fixed counts regardless of people.
-- **Several capsule types on one line without counts** → each type gets `people` + warning „viac druhov – over počet“.
+- **Several capsule types on one line without counts** → each type gets `people` + warning „viac druhov kapsúl – over počet“. A count without a type (`Kapsule: 10 ks`) shows the generic row with the red note and the fixed count.
 - **Summary tiles, filter counts and Angelika's sentence** follow the cleaning-company filter; the day tabs do not (prototype behaviour).
 - **Späť** is unlimited and logged; the checklist does not block „Zabaliť“; ticks lock after packing.
 - **Third day** is named by weekday („št 1.10.“) in the tab and the sentence; „Pozajtra“ is not used.

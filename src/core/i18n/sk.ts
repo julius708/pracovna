@@ -110,7 +110,7 @@ export const sk = {
 export const warningText: Record<WarningCode, string> = {
   bunk: 'Poschodová posteľ – over balenie',
   no_duvet_info: 'Typ paplónov nezadaný – over na byte',
-  beds_insufficient: 'Postele v Guesty nestačia – over na byte',
+  beds_insufficient: 'Postele v Guesty stačia len pre N osôb – over na byte',
   guests_missing: 'Počet hostí nezadaný v Guesty – balíme na max. kapacitu',
   capacity_missing: 'Kapacita nezadaná v Guesty – over na byte',
   bathrooms_missing: 'Počet kúpeľní nezadaný v Guesty – over na byte',
@@ -121,6 +121,15 @@ export const warningText: Record<WarningCode, string> = {
   multi_stay: 'Rezervácia s viacerými bytmi – over',
   double_checkout: '2 check-outy v ten istý deň',
 };
+
+/** Warning text for a card; fills in the numbers where the sentence needs them. */
+export function warningLine(code: WarningCode, r: PackingResult): string {
+  if (code === 'beds_insufficient') {
+    const n = r.beds.capacityAll;
+    return `Postele v Guesty stačia len pre ${n} ${pluralOsob(n)} – over na byte`;
+  }
+  return warningText[code];
+}
 
 /** Bed type labels for "Postele: 1× king, 1× gauč". */
 export const bedLabel: Record<string, string> = {
