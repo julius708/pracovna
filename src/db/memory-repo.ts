@@ -230,8 +230,8 @@ export class MemoryRepo implements SyncRepo {
   async runRetention(now: Date): Promise<RetentionResult> {
     const days = (n: number) => new Date(now.getTime() - n * 86_400_000).toISOString();
     const before = { runs: this.runs.length, wh: this.webhookEvents.length, cal: this.calendar.size, res: this.reservations.size };
-    this.runs = this.runs.filter((r) => r.started_at > days(r.ok === false ? 90 : 30));
-    this.webhookEvents = this.webhookEvents.filter((e) => e.received_at > days(90));
+    this.runs = this.runs.filter((r) => r.started_at > days(30));
+    this.webhookEvents = this.webhookEvents.filter((e) => e.received_at > days(e.status === 'rejected' ? 7 : 90));
     for (const e of this.webhookEvents) if (e.received_at < days(30)) e.payload = null;
     const yesterday = days(1).slice(0, 10);
     for (const [k, c] of this.calendar) if (c.date < yesterday) this.calendar.delete(k);

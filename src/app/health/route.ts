@@ -1,5 +1,5 @@
 import { loadEnv, missingSupabaseEnv } from '@/env';
-import { createSyncContext } from '@/sync/context';
+import { createRepoFromEnv } from '@/sync/context';
 import type { AlertState } from '@/sync/alerts';
 
 export const runtime = 'nodejs';
@@ -25,7 +25,7 @@ export async function GET() {
   };
   let status = 200;
   try {
-    const ctx = createSyncContext({ env });
+    const ctx = createRepoFromEnv(env);
     const [lastOk, failures, lastWebhook, alerts] = await Promise.all([
       ctx.repo.getState<string>('last_ok_sync_at'),
       ctx.repo.getState<number>('consecutive_failures'),

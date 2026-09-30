@@ -21,11 +21,22 @@ export interface SyncContext {
 
 let memoryRepo: MemoryRepo | null = null;
 let liveClient: GuestyClient | null = null;
+let seedClient: { today: string; client: GuestyClient } | null = null;
 
 export function webhookUrlFor(env: Env, extra: Record<string, string | undefined> = process.env): string | null {
   const host = extra.APP_URL ?? (extra.VERCEL_PROJECT_PRODUCTION_URL ? `https://${extra.VERCEL_PROJECT_PRODUCTION_URL}` : null);
   if (!host) return null;
   return `${host.replace(/\/$/, '')}/api/guesty/webhook`;
+}
+
+/** The database only: Supabase when configured, otherwise (seed mode) a process-wide memory repo. */
+export function createRepoFromEnv(env: Env): { repo: SyncRepo; ephemeral: boolean } {
+  if (missingSupabaseEnv(env).length === 0) {
+    return { repo: new SupabaseRepo(createAdminClient(env.NEXT_PUBLIC_SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!)), ephemeral: false };
+  }
+  if (!env.SEED_MODE) throw new Error(`Missing Supabase configuration: ${missingSupabaseEnv(env).join(', ')}`);
+  memoryRepo = memoryRepo ?? new MemoryRepo();
+  return { repo: memoryRepo, ephemeral: true };
 }
 
 /** Builds repo + Guesty client from the environment: live, or seed mode with the fake client. */
@@ -35,25 +46,33 @@ export function createSyncContext(overrides: Partial<SyncContext> = {}): SyncCon
   let repo = overrides.repo;
   let ephemeral = false;
   if (!repo) {
-    if (missingSupabaseEnv(env).length === 0) {
-      repo = new SupabaseRepo(createAdminClient(env.NEXT_PUBLIC_SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!));
-    } else {
-      if (!env.SEED_MODE) throw new Error(`Missing Supabase configuration: ${missingSupabaseEnv(env).join(', ')}`);
-      memoryRepo = memoryRepo ?? new MemoryRepo();
-      repo = memoryRepo;
-      ephemeral = true;
-    }
+    const r = createRepoFromEnv(env);
+    repo = r.repo;
+    ephemeral = r.ephemeral;
   }
+  const repoFinal = repo;
   let client = overrides.client;
   if (!client) {
     if (env.SEED_MODE) {
-      client = createSeedClient(todayInTz(new Date())).client;
+      const today = todayInTz(new Date());
+      if (!seedClient || seedClient.today !== today) seedClient = { today, client: createSeedClient(today).client };
+      client = seedClient.client;
     } else {
       const missing = missingGuestyEnv(env);
       if (missing.length) throw new Error(`Missing Guesty configuration: ${missing.join(', ')}`);
-      liveClient = liveClient ?? createGuestyClient({ env, tokenStore: repo.tokenStore, log });
+      liveClient =
+        liveClient ??
+        createGuestyClient({
+          env,
+          tokenStore: repoFinal.tokenStore,
+          log,
+          onTokenQuotaWarning: (mints) => {
+            log.warn('guesty.token.quota_warning', { mints_24h: mints });
+            void repoFinal.setState('token_quota_warning', { at: new Date().toISOString(), mints });
+          },
+        });
       client = liveClient;
     }
   }
-  return { env, repo, client, log, webhookUrl: overrides.webhookUrl ?? webhookUrlFor(env), seed: env.SEED_MODE, ephemeral };
+  return { env, repo: repoFinal, client, log, webhookUrl: overrides.webhookUrl ?? webhookUrlFor(env), seed: env.SEED_MODE, ephemeral };
 }

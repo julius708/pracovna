@@ -37,16 +37,18 @@ async function post(deps: AlertDeps, text: string): Promise<void> {
 }
 
 /**
- * Opens/closes alerts according to the current state; sends once on open,
- * every 6 h while open, once on resolve. The health endpoint reads the same state.
+ * Opens/closes the alerts named in `conditions` (kinds not mentioned are left
+ * as they are, so the 3-minute job cannot resolve what only the nightly job
+ * checks). Sends once on open, every 6 h while open, once on resolve.
  */
-export async function evaluateAlerts(deps: AlertDeps, conditions: Record<AlertKind, boolean>): Promise<AlertState> {
+export async function evaluateAlerts(deps: AlertDeps, conditions: Partial<Record<AlertKind, boolean>>): Promise<AlertState> {
   const now = deps.now ?? (() => new Date());
   const log = deps.log ?? silentLogger;
   const state = (await deps.repo.getState<AlertState>('alert_state')) ?? { open: {} };
   const t = now();
   for (const kind of Object.keys(conditions) as AlertKind[]) {
     const active = conditions[kind];
+    if (active === undefined) continue;
     const cur = state.open[kind];
     if (active && !cur) {
       state.open[kind] = { since: t.toISOString(), lastSent: t.toISOString() };
@@ -63,4 +65,11 @@ export async function evaluateAlerts(deps: AlertDeps, conditions: Record<AlertKi
   }
   await deps.repo.setState('alert_state', state);
   return state;
+}
+
+/** Shared alert inputs the cron routes compute from repo state. */
+export async function commonAlertConditions(repo: SyncRepo, maxMints: number, now: Date = new Date()): Promise<Partial<Record<AlertKind, boolean>>> {
+  const [failures, drop, token] = await Promise.all([repo.getState<number>('consecutive_failures'), repo.getState<unknown>('listing_drop'), repo.tokenStore.read()]);
+  const mints = token.mints.filter((m) => Date.parse(m) > now.getTime() - 24 * 3_600_000).length;
+  return { sync_failed_twice: (failures ?? 0) >= 2, listing_drop: !!drop, token_quota: mints >= maxMints };
 }

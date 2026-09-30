@@ -146,8 +146,12 @@ export async function processWebhookEvent(deps: WebhookProcessDeps, ev: WebhookE
         await recomputeWindow({ repo, log, now }, 'webhook');
         return finish('processed');
       }
-      const parsed = listingSchema.safeParse(listingPayload);
-      const raw = parsed.success ? parsed.data : await client.getListing(id);
+      // re-fetch rather than trust the payload (deliveries can arrive hours late); payload is the fallback
+      let raw = await client.getListing(id).catch(() => null);
+      if (!raw) {
+        const parsed = listingSchema.safeParse(listingPayload);
+        raw = parsed.success ? parsed.data : null;
+      }
       if (!raw) return finish('ignored', 'listing not available');
       const defs = await repo.getState<{ names: Record<string, string> }>('custom_field_defs');
       const spaces = Object.keys(bedsFromRooms(raw.listingRooms)).length ? null : await client.getSpaces(id);

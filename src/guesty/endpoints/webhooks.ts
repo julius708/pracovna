@@ -41,7 +41,7 @@ export async function getWebhookSecret(http: GuestyHttp, url: string): Promise<W
 function flatten(o: Record<string, unknown>, prefix = '', out: Record<string, unknown> = {}): Record<string, unknown> {
   for (const [k, v] of Object.entries(o)) {
     const key = prefix ? `${prefix}.${k}` : k;
-    if (v && typeof v === 'object' && !Array.isArray(v)) flatten(v as Record<string, unknown>, key, out);
+    if (v && typeof v === 'object') flatten(v as Record<string, unknown>, key, out);
     else out[key] = v;
   }
   return out;

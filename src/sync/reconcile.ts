@@ -1,4 +1,4 @@
-import { todayInTz, windowDates, type Ymd } from '@/core/packing';
+import { addDays, GAP_MAX_NIGHTS, todayInTz, windowDates, type Ymd } from '@/core/packing';
 import type { SyncRepo } from '@/db/repo';
 import type { ReservationRow } from '@/db/types';
 import type { GuestyClient } from '@/guesty/client';
@@ -64,6 +64,7 @@ async function stageCheckouts(deps: ReconcileDeps, dates: Ymd[], fetchedAt: stri
   });
   const rows = search.results.map((r) => mapReservation(r, fetchedAt)).filter((r): r is ReservationRow => !!r);
   await deps.repo.upsertReservations(rows);
+  await deps.repo.resetNotFound(rows.map((r) => r.guesty_id));
   return { seen: new Set(rows.map((r) => r.guesty_id)), rows };
 }
 
@@ -84,7 +85,10 @@ async function stageArrivals(deps: ReconcileDeps, dates: Ymd[], listingIds: stri
     }
     return ids.every((id) => done.has(id));
   };
-  const useListingFilter = (await deps.repo.getState<boolean>('listing_filter_supported' as never)) !== false;
+  // filter[listingId] is assumed supported; a 400/422 disables it for a day, then it is retried
+  const filterState = await deps.repo.getState<{ supported: boolean; at: string }>('listing_filter_supported');
+  const useListingFilter =
+    !filterState || filterState.supported !== false || Date.now() - Date.parse(filterState.at) > 24 * 3_600_000;
 
   if (useListingFilter) {
     for (let i = 0; i < listingIds.length; i += ARRIVAL_CHUNK) {
@@ -102,7 +106,7 @@ async function stageArrivals(deps: ReconcileDeps, dates: Ymd[], listingIds: stri
       } catch (e) {
         if (e instanceof GuestyApiError && (e.status === 400 || e.status === 422)) {
           log.warn('arrivals.listing_filter_rejected', { status: e.status });
-          await deps.repo.setState('listing_filter_supported' as never, false);
+          await deps.repo.setState('listing_filter_supported', { supported: false, at: new Date().toISOString() });
           return stageArrivalsUnfiltered(deps, dates, listingIds, fetchedAt);
         }
         throw e;
@@ -122,6 +126,7 @@ async function stageArrivals(deps: ReconcileDeps, dates: Ymd[], listingIds: stri
     return stageArrivalsUnfiltered(deps, dates, listingIds, fetchedAt);
   }
   await deps.repo.upsertReservations(rows);
+  await deps.repo.resetNotFound(rows.map((r) => r.guesty_id));
   return { rows, truncated: unresolved };
 }
 
@@ -146,17 +151,35 @@ async function stageArrivalsUnfiltered(deps: ReconcileDeps, dates: Ymd[], listin
     .map((r) => mapReservation(r, fetchedAt))
     .filter((r): r is ReservationRow => !!r && wanted.has(r.arrival_listing_id));
   await deps.repo.upsertReservations(rows);
+  await deps.repo.resetNotFound(rows.map((r) => r.guesty_id));
   return { rows, truncated: search.truncated ? [...wanted] : [] };
 }
 
 /**
- * Reservations we hold as confirmed in the window but did not see: fetch by id.
- * A non-confirmed status cancels; not found twice in a row = deleted in Guesty.
+ * Reservations we hold as confirmed (check-outs in the window, and next arrivals
+ * of the window's listings up to the gap horizon) that the searches did not
+ * return: fetch by id. A non-confirmed status cancels; not found twice in a row
+ * = deleted in Guesty; a transient error leaves the row untouched.
  */
-async function stageAbsence(deps: ReconcileDeps, dates: Ymd[], seen: Set<string>, fetchedAt: string): Promise<{ checked: number; cancelled: number; deleted: number }> {
+async function stageAbsence(
+  deps: ReconcileDeps,
+  dates: Ymd[],
+  seen: Set<string>,
+  listingIds: string[],
+  fetchedAt: string,
+): Promise<{ checked: number; cancelled: number; deleted: number; pending: number }> {
   const held = await deps.repo.getReservations({ checkOutGte: dates[0], checkOutLte: dates[2], status: 'confirmed' });
-  const missing = held.filter((r) => !seen.has(r.guesty_id)).slice(0, ABSENCE_MAX_IDS);
-  if (!missing.length) return { checked: 0, cancelled: 0, deleted: 0 };
+  const listingSet = new Set(listingIds);
+  const horizon = addDays(dates[2], GAP_MAX_NIGHTS);
+  const heldArrivals = listingIds.length ? await deps.repo.getReservations({ checkInGte: dates[0], status: 'confirmed', listingIds }) : [];
+  const candidates = new Map<string, ReservationRow>();
+  for (const r of held) if (!seen.has(r.guesty_id)) candidates.set(r.guesty_id, r);
+  for (const r of heldArrivals) {
+    if (!seen.has(r.guesty_id) && listingSet.has(r.arrival_listing_id) && r.check_in_date <= horizon) candidates.set(r.guesty_id, r);
+  }
+  const all = [...candidates.values()];
+  const missing = all.slice(0, ABSENCE_MAX_IDS);
+  if (!missing.length) return { checked: 0, cancelled: 0, deleted: 0, pending: 0 };
   const fetched = await deps.client.getReservationsByIds(missing.map((r) => r.guesty_id));
   const byId = new Map<string, ParsedReservation>();
   for (const f of fetched) {
@@ -188,15 +211,15 @@ async function stageAbsence(deps: ReconcileDeps, dates: Ymd[], seen: Set<string>
   await deps.repo.upsertReservations(updates);
   await deps.repo.resetNotFound(found);
   await deps.repo.incrementNotFound(notFound);
-  return { checked: missing.length, cancelled, deleted };
+  return { checked: missing.length, cancelled, deleted, pending: all.length - missing.length };
 }
 
 /** The 3-minute reconciliation (spec §3, proposal §5). */
 export async function reconcile(deps: ReconcileDeps, trigger: string): Promise<ReconcileResult> {
   const { repo, client } = deps;
   const now = deps.now ?? (() => new Date());
-  const log = (deps.log ?? silentLogger).child({ job: 'reconcile', trigger });
   const runId = await repo.startRun('reconcile', trigger);
+  const log = (deps.log ?? silentLogger).child({ job: 'reconcile', trigger, run_id: runId });
   const lockId = `reconcile-${runId}`;
   const stats: Record<string, unknown> = {};
   const partial: string[] = [];
@@ -255,9 +278,10 @@ export async function reconcile(deps: ReconcileDeps, trigger: string): Promise<R
       throw new StageError('arrivals', true, e);
     }
 
-    // 4. absence verification
+    // 4. absence verification (check-outs and next arrivals we hold but did not see)
     try {
-      stats.absence = await stageAbsence(deps, dates, seen, fetchedAt);
+      for (const a of arrivals) seen.add(a.guesty_id);
+      stats.absence = await stageAbsence(deps, dates, seen, listingIds, fetchedAt);
     } catch (e) {
       partial.push('absence');
       stats.absence_error = String(e);
@@ -280,6 +304,9 @@ export async function reconcile(deps: ReconcileDeps, trigger: string): Promise<R
     try {
       recompute = await recomputeWindow({ repo, log, now }, trigger === 'cron' ? 'sync' : trigger, today);
       stats.recompute = recompute;
+      if (recompute.created + recompute.updated + recompute.moved + recompute.cancelled + recompute.restored > 0) {
+        await repo.setState('reconcile_change_at', now().toISOString());
+      }
     } catch (e) {
       throw new StageError('recompute', true, e);
     }

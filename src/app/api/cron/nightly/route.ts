@@ -1,5 +1,6 @@
 import { isCronAuthorized, unauthorized } from '@/app/api/_auth';
-import { evaluateAlerts } from '@/sync/alerts';
+import { MAX_SERVER_MINTS_PER_24H } from '@/guesty/token';
+import { commonAlertConditions, evaluateAlerts } from '@/sync/alerts';
 import { createSyncContext } from '@/sync/context';
 import { nightly } from '@/sync/nightly';
 
@@ -20,14 +21,12 @@ export async function GET(req: Request) {
     log: ctx.log,
   });
   const webhook = result.webhook as { registered: boolean | null; silent: boolean } | undefined;
-  const failures = (await ctx.repo.getState<number>('consecutive_failures')) ?? 0;
   await evaluateAlerts(
     { repo: ctx.repo, webhookUrl: ctx.env.ALERT_WEBHOOK_URL ?? null, log: ctx.log },
     {
-      sync_failed_twice: failures >= 2,
-      listing_drop: !!(await ctx.repo.getState('listing_drop')),
-      token_quota: false,
-      webhook_missing: webhook?.registered === false,
+      ...(await commonAlertConditions(ctx.repo, MAX_SERVER_MINTS_PER_24H)),
+      // registered === null means the check itself failed: leave the alert as it is
+      ...(webhook?.registered === null ? {} : { webhook_missing: webhook?.registered === false }),
       webhook_silent: webhook?.silent === true,
     },
   );

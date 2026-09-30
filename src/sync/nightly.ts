@@ -14,15 +14,21 @@ export interface NightlyDeps {
   webhookUrl: string | null;
   log?: Logger;
   now?: () => Date;
+  sleep?: (ms: number) => Promise<void>;
 }
 
 export interface WebhookHealth {
   registered: boolean | null;
   lastWebhookAt: string | null;
+  /** Reconcile saw reservation changes in the last 24 h but no webhook arrived in that time. */
   silent: boolean;
 }
 
-/** Is our webhook still registered, and has Guesty delivered anything in the last 24 h? */
+const NIGHTLY_LOCK_SECONDS = 600;
+const LOCK_RETRIES = 6;
+const LOCK_RETRY_MS = 10_000;
+
+/** Is our webhook still registered, and has Guesty delivered anything while changes were happening? */
 export async function checkWebhookHealth(deps: Pick<NightlyDeps, 'repo' | 'client' | 'webhookUrl' | 'now'>): Promise<WebhookHealth> {
   const now = deps.now ?? (() => new Date());
   let registered: boolean | null = null;
@@ -34,21 +40,32 @@ export async function checkWebhookHealth(deps: Pick<NightlyDeps, 'repo' | 'clien
       registered = null;
     }
   }
-  const lastWebhookAt = await deps.repo.getState<string>('last_webhook_at');
-  const changesObserved = (await deps.repo.getState<string>('last_ok_sync_at')) !== null;
-  const silent = !!lastWebhookAt && changesObserved && now().getTime() - Date.parse(lastWebhookAt) > 24 * 3_600_000;
-  return { registered, lastWebhookAt, silent };
+  const [lastWebhookAt, lastChangeAt] = await Promise.all([deps.repo.getState<string>('last_webhook_at'), deps.repo.getState<string>('reconcile_change_at')]);
+  const dayAgo = now().getTime() - 24 * 3_600_000;
+  const changesRecently = !!lastChangeAt && Date.parse(lastChangeAt) > dayAgo;
+  const webhookRecently = !!lastWebhookAt && Date.parse(lastWebhookAt) > dayAgo;
+  return { registered, lastWebhookAt, silent: changesRecently && !webhookRecently };
 }
 
-/** Nightly: retention, full listing refresh, webhook health, recompute for the new day. */
+/** Nightly: retention, full listing refresh, webhook health, recompute for the new day. Holds the reconcile lock. */
 export async function nightly(deps: NightlyDeps): Promise<Record<string, unknown>> {
   const { repo } = deps;
   const now = deps.now ?? (() => new Date());
-  const log = (deps.log ?? silentLogger).child({ job: 'nightly' });
+  const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   const runId = await repo.startRun('nightly', 'cron');
+  const log = (deps.log ?? silentLogger).child({ job: 'nightly', run_id: runId });
+  const lockId = `nightly-${runId}`;
   const stats: Record<string, unknown> = {};
   let error: string | null = null;
   const callsBefore = deps.client.calls();
+
+  let locked = false;
+  for (let i = 0; i < LOCK_RETRIES && !locked; i++) {
+    locked = await repo.acquireLock('reconcile', NIGHTLY_LOCK_SECONDS, lockId);
+    if (!locked) await sleep(LOCK_RETRY_MS);
+  }
+  if (!locked) log.warn('nightly.lock_not_acquired');
+
   try {
     stats.retention = await repo.runRetention(now());
     try {
@@ -61,6 +78,8 @@ export async function nightly(deps: NightlyDeps): Promise<Record<string, unknown
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
     log.error('nightly.failed', { error });
+  } finally {
+    if (locked) await repo.releaseLock('reconcile', lockId);
   }
   await repo.finishRun(runId, { ok: error === null, error, guesty_calls: deps.client.calls() - callsBefore, stats });
   return { ok: error === null, error, ...stats };

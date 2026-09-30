@@ -1,0 +1,692 @@
+/**
+ * Black-box tests for supabase/migrations/0001_init.sql + 0002_sync_helpers.sql on PGlite.
+ *
+ * Expected behaviour comes from docs/PROPOSAL.md §4, §8, Appendix A and the spec §6:
+ *  - status / note / checklist are never overwritten by the sync; the only staff write paths
+ *    are pack_package / unpack_package / set_note / toggle_check, each writing one audit row;
+ *  - a plain UPDATE of packages is refused by a guard trigger; package_events is immutable;
+ *  - staff RPCs check the caller is an active profile and replay safely on a repeated client_action_id;
+ *  - settings are versioned with a history row; sync helpers (lock, retention) are service-role only.
+ *
+ * Supabase-provided objects are stubbed the way the task describes (auth.users, auth.uid(),
+ * roles anon/authenticated). Supabase also grants anon/authenticated the default privileges
+ * on public objects, so the same default privileges are declared before the migrations run.
+ */
+import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { PGlite } from '@electric-sql/pglite';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+
+const MIG1 = readFileSync(new URL('../../supabase/migrations/0001_init.sql', import.meta.url), 'utf8');
+const MIG2 = readFileSync(new URL('../../supabase/migrations/0002_sync_helpers.sql', import.meta.url), 'utf8');
+
+const STUBS = `
+create role authenticated nologin;
+create role anon nologin;
+create schema if not exists auth;
+create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb default '{}');
+create or replace function auth.uid() returns uuid language sql stable as
+  $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+grant usage on schema public to anon, authenticated;
+alter default privileges in schema public grant all on tables to anon, authenticated;
+alter default privileges in schema public grant all on sequences to anon, authenticated;
+alter default privileges in schema public grant all on functions to anon, authenticated;
+`;
+
+type PgErr = { code?: string; message: string; position?: string };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Row = Record<string, any>;
+
+/** Resolves to a compact copy of the database error (PGlite attaches the whole query text otherwise), or null. */
+async function pgError(p: Promise<unknown>): Promise<PgErr | null> {
+  try {
+    await p;
+  } catch (e) {
+    const err = e as PgErr;
+    return { code: err.code, message: err.message, position: err.position };
+  }
+  return null;
+}
+
+/** 1-based line of a character position inside a SQL text. */
+const lineOf = (sql: string, position?: string) => (position ? sql.slice(0, Number(position)).split('\n').length : undefined);
+
+// ------------------------------------------------------------------ 1. migrations apply cleanly
+describe('migrations', () => {
+  it('0001_init.sql and 0002_sync_helpers.sql apply cleanly on a fresh database with the Supabase stubs', async () => {
+    const fresh = new PGlite();
+    try {
+      await fresh.exec(STUBS);
+      const e1 = await pgError(fresh.exec(MIG1));
+      expect(e1, `0001_init.sql failed: ${e1?.code} ${e1?.message} (line ${lineOf(MIG1, e1?.position)})`).toBeNull();
+      const e2 = await pgError(fresh.exec(MIG2));
+      expect(e2, `0002_sync_helpers.sql failed: ${e2?.code} ${e2?.message} (line ${lineOf(MIG2, e2?.position)})`).toBeNull();
+      const fns = (await fresh.query<Row>("select proname from pg_proc where pronamespace = 'public'::regnamespace order by 1")).rows.map((r) => r.proname);
+      expect(fns).toEqual(expect.arrayContaining(['today_ba', 'is_admin', 'is_active_user', 'handle_new_user', 'sync_upsert_package', 'sync_set_lifecycle', 'pack_package', 'unpack_package', 'set_note', 'toggle_check', 'save_settings', 'admin_set_profile', 'acquire_lock', 'run_retention', 'increment_not_found']));
+    } finally {
+      await fresh.close();
+    }
+  });
+});
+
+// ------------------------------------------------------------------ shared database for the RPC tests
+// The SQL-language helpers is_admin()/is_active_user() reference public.profiles before the table
+// exists, so the raw file cannot load with the default check_function_bodies = on (see the test above).
+// The shared instance loads the untouched files with body checking off; everything else is identical.
+let db: PGlite;
+let seq = 0;
+
+const q = async <T extends Row = Row>(text: string, params: unknown[] = []) => (await db.query<T>(text, params)).rows;
+const one = async <T extends Row = Row>(text: string, params: unknown[] = []) => (await q<T>(text, params))[0];
+const actAs = (id: string | null) => q("select set_config('request.jwt.claim.sub', $1, false)", [id ?? '']);
+
+async function newUser(name: string | null, opts: { role?: 'staff' | 'admin'; active?: boolean; email?: string } = {}) {
+  const id = randomUUID();
+  const email = opts.email ?? `user${++seq}@example.com`;
+  const meta = name === null ? {} : { display_name: name };
+  await q('insert into auth.users (id, email, raw_user_meta_data) values ($1, $2, $3::jsonb)', [id, email, JSON.stringify(meta)]);
+  if (opts.role || opts.active === false) {
+    await q('update public.profiles set role = coalesce($2, role), active = coalesce($3, active) where id = $1', [id, opts.role ?? null, opts.active ?? null]);
+  }
+  return id;
+}
+
+function computed(over: Row = {}) {
+  return {
+    outgoing_reservation_id: `res-${++seq}`,
+    listing_id: 'lst-1',
+    listing_name: 'BA: Test 1',
+    date: '2026-10-05',
+    incoming_reservation_id: null,
+    same_day: false,
+    gap_nights: 2,
+    gap_blocked: false,
+    target_people: 2,
+    people_source: 'gap',
+    computed_items: { linen: [{ item: 'Plachta', qty: 2 }], consumables: [] },
+    computed_hash: 'hash-1',
+    warnings: [],
+    ...over,
+  };
+}
+
+const upsert = (c: Row) => one('select * from public.sync_upsert_package($1::jsonb)', [JSON.stringify(c)]);
+const pkg = (id: string) => one('select p.*, p.date::text as date from public.packages p where id = $1', [id]);
+const events = (id: string, event?: string) =>
+  q('select * from public.package_events where package_id = $1 and ($2::text is null or event = $2) order by id', [id, event ?? null]);
+
+async function newPackage(over: Row = {}) {
+  const c = computed(over);
+  const row = await upsert(c);
+  return { id: row.id as string, c };
+}
+
+beforeAll(async () => {
+  db = new PGlite();
+  await db.exec(STUBS);
+  await db.exec('set check_function_bodies = off');
+  await db.exec(MIG1);
+  await db.exec(MIG2);
+  await db.exec('set check_function_bodies = on');
+});
+afterAll(async () => {
+  await db?.close();
+});
+beforeEach(async () => {
+  await actAs(null);
+});
+
+// ------------------------------------------------------------------ 2. profiles / helpers
+describe('profiles and helper functions', () => {
+  it('handle_new_user creates a staff profile named from raw_user_meta_data.display_name', async () => {
+    const id = await newUser('Angelika');
+    const p = await one('select * from public.profiles where id = $1', [id]);
+    expect(p).toMatchObject({ display_name: 'Angelika', role: 'staff', active: true });
+  });
+
+  it('handle_new_user falls back to the e-mail local part when display_name is missing', async () => {
+    const id = await newUser(null, { email: 'jozef.novak@example.com' });
+    const p = await one('select display_name from public.profiles where id = $1', [id]);
+    expect(p.display_name).toBe('jozef.novak');
+  });
+
+  it('is_admin / is_active_user follow the profile role and active flag', async () => {
+    const staff = await newUser('Staff');
+    const admin = await newUser('Admin', { role: 'admin' });
+    const inactive = await newUser('Gone', { active: false });
+    const check = () => one('select public.is_admin() as admin, public.is_active_user() as active');
+
+    expect(await check()).toEqual({ admin: false, active: false }); // no caller
+    await actAs(staff);
+    expect(await check()).toEqual({ admin: false, active: true });
+    await actAs(admin);
+    expect(await check()).toEqual({ admin: true, active: true });
+    await actAs(inactive);
+    expect(await check()).toEqual({ admin: false, active: false });
+    await actAs(randomUUID()); // authenticated user without a profile row
+    expect(await check()).toEqual({ admin: false, active: false });
+  });
+
+  it('a deactivated admin is no longer an admin', async () => {
+    const exAdmin = await newUser('ExAdmin', { role: 'admin', active: false });
+    await actAs(exAdmin);
+    expect(await one('select public.is_admin() as admin')).toEqual({ admin: false });
+  });
+
+  it('today_ba() returns a date in Europe/Bratislava', async () => {
+    const r = await one("select pg_typeof(public.today_ba())::text as t, public.today_ba()::text as d, (now() at time zone 'Europe/Bratislava')::date::text as expected");
+    expect(r.t).toBe('date');
+    expect(r.d).toBe(r.expected);
+  });
+
+  it('guesty_tokens holds its single row after the migration', async () => {
+    const rows = await q('select id, access_token, mints from public.guesty_tokens');
+    expect(rows).toEqual([{ id: 1, access_token: null, mints: [] }]);
+  });
+});
+
+// ------------------------------------------------------------------ 3. sync_upsert_package and the guard
+describe('sync_upsert_package', () => {
+  it('inserts a package with the default lifecycle and staff columns and returns the row', async () => {
+    const c = computed();
+    const row = await upsert(c);
+    expect(row.id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(row).toMatchObject({
+      outgoing_reservation_id: c.outgoing_reservation_id,
+      listing_id: 'lst-1',
+      listing_name: 'BA: Test 1',
+      target_people: 2,
+      people_source: 'gap',
+      computed_hash: 'hash-1',
+      status: 'todo',
+      hidden: false,
+      note: '',
+      note_by: null,
+      packed_by: null,
+      packed_at: null,
+      checklist: { items: [], checked: {} },
+    });
+    expect(row.computed_items).toEqual(c.computed_items);
+    expect((await pkg(row.id)).date).toBe('2026-10-05');
+  });
+
+  it('a second call for the same reservation updates only the computed columns and keeps note and packed state', async () => {
+    const angelika = await newUser('Angelika');
+    const { id, c } = await newPackage();
+    await actAs(angelika);
+    await q('select public.set_note($1, $2, $3)', [id, 'chýba paplón', randomUUID()]);
+    await q('select public.pack_package($1, $2)', [id, randomUUID()]);
+    const before = await pkg(id);
+    expect(before).toMatchObject({ status: 'packed', note: 'chýba paplón', packed_by: angelika, packed_by_name: 'Angelika' });
+
+    await actAs(null);
+    const again = await upsert({ ...c, target_people: 4, computed_hash: 'hash-2', warnings: ['w1'], date: '2026-10-06', incoming_reservation_id: 'res-next' });
+    expect(again.id).toBe(id);
+    const after = await pkg(id);
+    expect(after).toMatchObject({
+      target_people: 4,
+      computed_hash: 'hash-2',
+      warnings: ['w1'],
+      date: '2026-10-06',
+      incoming_reservation_id: 'res-next',
+      status: 'packed',
+      note: 'chýba paplón',
+      note_by: angelika,
+      packed_by: angelika,
+      packed_by_name: 'Angelika',
+      packed_hash: before.packed_hash,
+    });
+    expect(after.packed_at).toEqual(before.packed_at);
+    expect(await q('select 1 from public.packages where outgoing_reservation_id = $1', [c.outgoing_reservation_id])).toHaveLength(1);
+  });
+
+  it('ignores staff and lifecycle keys smuggled into the payload', async () => {
+    const { id, c } = await newPackage();
+    await upsert({ ...c, note: 'hacked', status: 'packed', packed_by_name: 'Mallory', hidden: true, checklist: { items: ['x'], checked: { x: true } } });
+    expect(await pkg(id)).toMatchObject({ note: '', status: 'todo', packed_by_name: null, hidden: false, checklist: { items: [], checked: {} } });
+  });
+
+  it('a plain UPDATE of status, note or a computed column is refused with 42501', async () => {
+    const { id } = await newPackage();
+    const e1 = await pgError(q("update public.packages set status = 'packed' where id = $1", [id]));
+    expect(e1?.code).toBe('42501');
+    const e2 = await pgError(q("update public.packages set note = 'direct' where id = $1", [id]));
+    expect(e2?.code).toBe('42501');
+    const e3 = await pgError(q('update public.packages set target_people = 9 where id = $1', [id]));
+    expect(e3?.code).toBe('42501');
+    const e4 = await pgError(q("update public.packages set packed_by_name = 'X', packed_at = now() where id = $1", [id]));
+    expect(e4?.code).toBe('42501');
+    expect(await pkg(id)).toMatchObject({ status: 'todo', note: '', target_people: 2, packed_by_name: null });
+  });
+});
+
+// ------------------------------------------------------------------ 4. pack / unpack
+describe('pack_package / unpack_package', () => {
+  it('happy path sets packed_by, packed_by_name, packed_at, packed_hash and writes one event', async () => {
+    const angelika = await newUser('Angelika');
+    const { id, c } = await newPackage();
+    const action = randomUUID();
+    await actAs(angelika);
+    const res = await one('select public.pack_package($1, $2) as r', [id, action]);
+    expect(res.r).toBeTruthy();
+    expect(res.r.replayed ?? false).toBe(false);
+    expect(res.r.already_packed ?? false).toBe(false);
+
+    const row = await pkg(id);
+    expect(row).toMatchObject({ status: 'packed', packed_by: angelika, packed_by_name: 'Angelika', packed_hash: c.computed_hash });
+    expect(row.packed_at).toBeInstanceOf(Date);
+
+    const ev = await events(id, 'packed');
+    expect(ev).toHaveLength(1);
+    expect(ev[0]).toMatchObject({ actor: angelika, actor_name: 'Angelika', client_action_id: action, listing_id: 'lst-1', listing_name: 'BA: Test 1' });
+    expect(String(ev[0].package_date instanceof Date ? ev[0].package_date.toISOString().slice(0, 10) : ev[0].package_date)).toBe('2026-10-05');
+  });
+
+  it('a second packer gets already_packed with the first name and no event is written', async () => {
+    const angelika = await newUser('Angelika');
+    const boris = await newUser('Boris');
+    const { id } = await newPackage();
+    await actAs(angelika);
+    await q('select public.pack_package($1, $2)', [id, randomUUID()]);
+    const packedAt = (await pkg(id)).packed_at;
+    const countBefore = (await events(id)).length;
+
+    await actAs(boris);
+    const res = await one('select public.pack_package($1, $2) as r', [id, randomUUID()]);
+    expect(res.r.already_packed).toBeTruthy();
+    expect(JSON.stringify(res.r)).toContain('Angelika');
+    expect(await pkg(id)).toMatchObject({ packed_by: angelika, packed_by_name: 'Angelika' });
+    expect((await pkg(id)).packed_at).toEqual(packedAt);
+    expect(await events(id)).toHaveLength(countBefore);
+  });
+
+  it('the same client_action_id replayed returns replayed:true and writes nothing new', async () => {
+    const angelika = await newUser('Angelika');
+    const { id } = await newPackage();
+    const action = randomUUID();
+    await actAs(angelika);
+    const first = await one('select public.pack_package($1, $2) as r', [id, action]);
+    expect(first.r.replayed ?? false).toBe(false);
+    const snapshot = await pkg(id);
+    const countBefore = (await events(id)).length;
+
+    const second = await one('select public.pack_package($1, $2) as r', [id, action]);
+    expect(second.r.replayed).toBe(true);
+    expect(second.r.already_packed ?? false).toBe(false);
+    expect(await pkg(id)).toEqual(snapshot);
+    expect(await events(id)).toHaveLength(countBefore);
+  });
+
+  it('an inactive profile, a user without a profile and an anonymous caller are refused', async () => {
+    const gone = await newUser('Gone', { active: false });
+    const { id } = await newPackage();
+    await actAs(gone);
+    const e1 = await pgError(q('select public.pack_package($1, $2)', [id, randomUUID()]));
+    expect(e1, 'inactive profile must be refused').not.toBeNull();
+    await actAs(randomUUID());
+    const e2 = await pgError(q('select public.pack_package($1, $2)', [id, randomUUID()]));
+    expect(e2, 'unknown user must be refused').not.toBeNull();
+    await actAs(null);
+    const e3 = await pgError(q('select public.pack_package($1, $2)', [id, randomUUID()]));
+    expect(e3, 'anonymous caller must be refused').not.toBeNull();
+    expect(await pkg(id)).toMatchObject({ status: 'todo', packed_by: null });
+    expect(await events(id)).toHaveLength(0);
+  });
+
+  it('unpack_package resets the packed fields and logs previously_packed_by', async () => {
+    const angelika = await newUser('Angelika');
+    const boris = await newUser('Boris');
+    const { id } = await newPackage();
+    await actAs(angelika);
+    await q('select public.pack_package($1, $2)', [id, randomUUID()]);
+    await actAs(boris);
+    const action = randomUUID();
+    const res = await one('select public.unpack_package($1, $2) as r', [id, action]);
+    expect(res.r).toBeTruthy();
+    expect(await pkg(id)).toMatchObject({ status: 'todo', packed_by: null, packed_by_name: null, packed_at: null, packed_hash: null });
+    const ev = await events(id, 'unpacked');
+    expect(ev).toHaveLength(1);
+    expect(ev[0]).toMatchObject({ actor: boris, actor_name: 'Boris', client_action_id: action });
+    expect(ev[0].data).toHaveProperty('previously_packed_by');
+    expect([angelika, 'Angelika']).toContain(ev[0].data.previously_packed_by);
+  });
+});
+
+// ------------------------------------------------------------------ 5. note / checklist
+describe('set_note / toggle_check', () => {
+  it('set_note stores at most 200 characters with the author and writes a note event', async () => {
+    const angelika = await newUser('Angelika');
+    const { id } = await newPackage();
+    const action = randomUUID();
+    await actAs(angelika);
+    await q('select public.set_note($1, $2, $3)', [id, 'ž'.repeat(250), action]);
+    const row = await pkg(id);
+    expect(row.note).toHaveLength(200);
+    expect(row.note).toBe('ž'.repeat(200));
+    expect(row).toMatchObject({ note_by: angelika, note_by_name: 'Angelika' });
+    expect(row.note_at).toBeInstanceOf(Date);
+    const ev = await events(id, 'note');
+    expect(ev).toHaveLength(1);
+    expect(ev[0]).toMatchObject({ actor: angelika, actor_name: 'Angelika', client_action_id: action });
+  });
+
+  it('clearing the note nulls note_by', async () => {
+    const angelika = await newUser('Angelika');
+    const { id } = await newPackage();
+    await actAs(angelika);
+    await q('select public.set_note($1, $2, $3)', [id, 'niečo', randomUUID()]);
+    expect(await pkg(id)).toMatchObject({ note: 'niečo', note_by: angelika });
+    await q('select public.set_note($1, $2, $3)', [id, '', randomUUID()]);
+    expect(await pkg(id)).toMatchObject({ note: '', note_by: null });
+  });
+
+  it('set_note replay with the same client_action_id is a no-op', async () => {
+    const angelika = await newUser('Angelika');
+    const { id } = await newPackage();
+    const action = randomUUID();
+    await actAs(angelika);
+    await q('select public.set_note($1, $2, $3)', [id, 'prvá', action]);
+    const res = await one('select public.set_note($1, $2, $3) as r', [id, 'druhá', action]);
+    expect(res.r.replayed).toBe(true);
+    expect((await pkg(id)).note).toBe('prvá');
+    expect(await events(id, 'note')).toHaveLength(1);
+  });
+
+  it('toggle_check works while todo and returns the checked map', async () => {
+    const angelika = await newUser('Angelika');
+    const { id } = await newPackage();
+    await actAs(angelika);
+    const on = await one('select public.toggle_check($1, $2, $3, $4) as r', [id, 'Uteráky', true, randomUUID()]);
+    const onMap = on.r.checked ?? on.r;
+    expect(onMap).toMatchObject({ Uteráky: true });
+    expect((await pkg(id)).checklist.checked).toMatchObject({ Uteráky: true });
+
+    const two = await one('select public.toggle_check($1, $2, $3, $4) as r', [id, 'Plachty', true, randomUUID()]);
+    expect(two.r.checked ?? two.r).toMatchObject({ Uteráky: true, Plachty: true });
+
+    const off = await one('select public.toggle_check($1, $2, $3, $4) as r', [id, 'Uteráky', false, randomUUID()]);
+    const offMap = off.r.checked ?? off.r;
+    expect(offMap.Uteráky ?? false).toBe(false);
+    expect(offMap).toMatchObject({ Plachty: true });
+    expect((await pkg(id)).checklist.checked.Uteráky ?? false).toBe(false);
+    expect(await events(id, 'checklist')).toHaveLength(3);
+  });
+
+  it('toggle_check is refused once the package is packed', async () => {
+    const angelika = await newUser('Angelika');
+    const { id } = await newPackage();
+    await actAs(angelika);
+    await q('select public.toggle_check($1, $2, $3, $4)', [id, 'Uteráky', true, randomUUID()]);
+    await q('select public.pack_package($1, $2)', [id, randomUUID()]);
+    const before = (await pkg(id)).checklist;
+    const countBefore = (await events(id)).length;
+    // "refused" = either an error or an ok:false result; either way nothing may change
+    let refused = false;
+    try {
+      const r = await one('select public.toggle_check($1, $2, $3, $4) as r', [id, 'Uteráky', false, randomUUID()]);
+      refused = r.r?.ok === false;
+    } catch {
+      refused = true;
+    }
+    expect(refused, 'toggle_check after packing must be refused').toBe(true);
+    expect((await pkg(id)).checklist).toEqual(before);
+    expect(await events(id)).toHaveLength(countBefore);
+  });
+});
+
+// ------------------------------------------------------------------ 6. lifecycle + audit log immutability
+describe('sync_set_lifecycle and package_events', () => {
+  it('cancel hides the package with a reason and restore brings it back; packed fields survive', async () => {
+    const angelika = await newUser('Angelika');
+    const { id } = await newPackage();
+    await actAs(angelika);
+    await q('select public.pack_package($1, $2)', [id, randomUUID()]);
+    await actAs(null);
+
+    await q('select public.sync_set_lifecycle($1, $2, $3, $4)', [id, 'cancelled', true, 'reservation cancelled']);
+    const cancelled = await pkg(id);
+    expect(cancelled).toMatchObject({ status: 'cancelled', hidden: true, cancel_reason: 'reservation cancelled', packed_by: angelika, packed_by_name: 'Angelika' });
+    expect(cancelled.cancelled_at).toBeInstanceOf(Date);
+
+    await q('select public.sync_set_lifecycle($1, $2, $3, $4)', [id, 'todo', false, null]);
+    const restored = await pkg(id);
+    expect(restored).toMatchObject({ status: 'todo', hidden: false, cancel_reason: null, cancelled_at: null, packed_by: angelika });
+  });
+
+  it('null arguments leave the corresponding lifecycle column unchanged', async () => {
+    const { id } = await newPackage();
+    await q('select public.sync_set_lifecycle($1, $2, $3, $4)', [id, null, true, null]);
+    expect(await pkg(id)).toMatchObject({ status: 'todo', hidden: true, cancel_reason: null });
+    await q('select public.sync_set_lifecycle($1, $2, $3, $4)', [id, 'cancelled', null, 'gone']);
+    expect(await pkg(id)).toMatchObject({ status: 'cancelled', hidden: true, cancel_reason: 'gone' });
+  });
+
+  it('package_events rows can be neither updated nor deleted', async () => {
+    const angelika = await newUser('Angelika');
+    const { id } = await newPackage();
+    await actAs(angelika);
+    await q('select public.pack_package($1, $2)', [id, randomUUID()]);
+    const ev = (await events(id))[0];
+    const e1 = await pgError(q("update public.package_events set actor_name = 'Mallory' where id = $1", [ev.id]));
+    expect(e1, 'UPDATE must be refused').not.toBeNull();
+    const e2 = await pgError(q('delete from public.package_events where id = $1', [ev.id]));
+    expect(e2, 'DELETE must be refused').not.toBeNull();
+    expect((await events(id))[0]).toMatchObject({ id: ev.id, actor_name: 'Angelika' });
+  });
+});
+
+// ------------------------------------------------------------------ 7. locks and retention
+describe('acquire_lock', () => {
+  it('first caller wins, second is refused while the lease is live, same run re-acquires, expired lease is free', async () => {
+    const name = `lock-${++seq}`;
+    const lock = (run: string, ttl = 240) => one('select public.acquire_lock($1, $2, $3) as ok', [name, ttl, run]);
+    expect((await lock('run-1')).ok).toBe(true);
+    expect((await lock('run-2')).ok).toBe(false);
+    expect((await lock('run-1')).ok).toBe(true);
+    expect(await one('select run_id from public.sync_locks where name = $1', [name])).toEqual({ run_id: 'run-1' });
+
+    await q("update public.sync_locks set locked_until = now() - interval '1 second' where name = $1", [name]);
+    expect((await lock('run-3')).ok).toBe(true);
+    const row = await one('select run_id, locked_until > now() as live from public.sync_locks where name = $1', [name]);
+    expect(row).toEqual({ run_id: 'run-3', live: true });
+    expect((await lock('run-1')).ok).toBe(false);
+  });
+});
+
+describe('run_retention', () => {
+  it('deletes old runs, old webhook payloads, old calendar days and unreferenced old reservations, keeps the rest', async () => {
+    const now = new Date();
+    const daysAgo = (d: number) => new Date(now.getTime() - d * 86_400_000).toISOString();
+    const ymdAgo = (d: number) => daysAgo(d).slice(0, 10);
+
+    const oldRun = await one("insert into public.sync_runs (job, trigger, started_at) values ('reconcile', 'cron', $1) returning id", [daysAgo(40)]);
+    const newRun = await one("insert into public.sync_runs (job, trigger, started_at) values ('reconcile', 'cron', $1) returning id", [daysAgo(10)]);
+    const oldHook = await one("insert into public.webhook_events (svix_id, received_at, payload) values ($1, $2, '{}') returning id", [`svix-old-${++seq}`, daysAgo(100)]);
+    const newHook = await one("insert into public.webhook_events (svix_id, received_at, payload) values ($1, $2, '{}') returning id", [`svix-new-${++seq}`, daysAgo(30)]);
+    await q("insert into public.calendar_min_nights (listing_id, date, min_nights) values ('cal-l', $1, 1), ('cal-l', $2, 1), ('cal-l', $3, 1)", [ymdAgo(10), ymdAgo(1), ymdAgo(0)]);
+    const res = (gid: string, checkOut: string) =>
+      q("insert into public.reservations (guesty_id, listing_id, arrival_listing_id, status, check_in_date, check_out_date, fetched_at) values ($1, 'l', 'l', 'confirmed', $2, $2, now())", [gid, checkOut]);
+    await res('old-unref', ymdAgo(90));
+    await res('old-outgoing', ymdAgo(90));
+    await res('old-incoming', ymdAgo(90));
+    await res('recent-unref', ymdAgo(30));
+    await newPackage({ outgoing_reservation_id: 'old-outgoing', incoming_reservation_id: 'old-incoming', date: ymdAgo(90) });
+
+    const r = await one('select public.run_retention($1::timestamptz) as r', [now.toISOString()]);
+    expect(r.r).toMatchObject({ sync_runs: 1, webhook_events: 1, calendar: 1, reservations: 1 });
+
+    expect((await q('select id from public.sync_runs where id in ($1, $2)', [oldRun.id, newRun.id])).map((x) => x.id)).toEqual([newRun.id]);
+    expect((await q('select id from public.webhook_events where id in ($1, $2)', [oldHook.id, newHook.id])).map((x) => x.id)).toEqual([newHook.id]);
+    expect((await q("select date::text as d from public.calendar_min_nights where listing_id = 'cal-l' order by 1")).map((x) => x.d)).toEqual([ymdAgo(1), ymdAgo(0)]);
+    expect((await q("select guesty_id from public.reservations where guesty_id in ('old-unref','old-outgoing','old-incoming','recent-unref') order by 1")).map((x) => x.guesty_id)).toEqual(['old-incoming', 'old-outgoing', 'recent-unref']);
+  });
+
+  it('increment_not_found bumps the counter of the reservation', async () => {
+    await q("insert into public.reservations (guesty_id, listing_id, arrival_listing_id, status, check_in_date, check_out_date, fetched_at) values ('nf-1', 'l', 'l', 'confirmed', '2026-10-01', '2026-10-03', now())");
+    await q("select public.increment_not_found('nf-1')");
+    await q("select public.increment_not_found('nf-1')");
+    expect(await one("select not_found_runs from public.reservations where guesty_id = 'nf-1'")).toEqual({ not_found_runs: 2 });
+  });
+});
+
+// ------------------------------------------------------------------ 8. admin RPCs
+describe('save_settings / admin_set_profile', () => {
+  it('save_settings bumps the version, records who changed it and writes a history row; a stale version is a conflict', async () => {
+    const admin = await newUser('Admin', { role: 'admin' });
+    const key = `linen_table_${++seq}`;
+    await q('insert into public.settings (key, value, version) values ($1, $2::jsonb, 1)', [key, JSON.stringify({ a: 1 })]);
+    await actAs(admin);
+
+    const ok = await one('select public.save_settings($1, $2::jsonb, $3) as r', [key, JSON.stringify({ a: 2 }), 1]);
+    expect(ok.r).toBeTruthy();
+    const row = await one('select value, version, updated_by from public.settings where key = $1', [key]);
+    expect(row).toEqual({ value: { a: 2 }, version: 2, updated_by: admin });
+    const hist = await q('select key, old_value, new_value, changed_by from public.settings_history where key = $1 order by id', [key]);
+    expect(hist).toEqual([{ key, old_value: { a: 1 }, new_value: { a: 2 }, changed_by: admin }]);
+
+    // stale expected version: must not overwrite
+    const stale = await pgError(q('select public.save_settings($1, $2::jsonb, $3) as r', [key, JSON.stringify({ a: 3 }), 1]));
+    if (stale === null) {
+      const r = await one('select public.save_settings($1, $2::jsonb, $3) as r', [key, JSON.stringify({ a: 3 }), 1]);
+      expect(r.r.ok ?? false, `expected a conflict result, got ${JSON.stringify(r.r)}`).toBe(false);
+    }
+    expect(await one('select value, version from public.settings where key = $1', [key])).toEqual({ value: { a: 2 }, version: 2 });
+    expect(await q('select 1 from public.settings_history where key = $1', [key])).toHaveLength(1);
+  });
+
+  it('save_settings is refused for staff', async () => {
+    const staff = await newUser('Staff');
+    const key = `consumables_${++seq}`;
+    await q('insert into public.settings (key, value, version) values ($1, $2::jsonb, 1)', [key, JSON.stringify({ a: 1 })]);
+    await actAs(staff);
+    const e = await pgError(q('select public.save_settings($1, $2::jsonb, $3)', [key, JSON.stringify({ a: 2 }), 1]));
+    expect(e, 'staff must not save settings').not.toBeNull();
+    expect(await one('select value, version from public.settings where key = $1', [key])).toEqual({ value: { a: 1 }, version: 1 });
+  });
+
+  it('admin_set_profile requires an admin caller and then updates role and active', async () => {
+    const admin = await newUser('Admin', { role: 'admin' });
+    const staff = await newUser('Staff');
+    const target = await newUser('Target');
+
+    await actAs(staff);
+    const e1 = await pgError(q('select public.admin_set_profile($1, $2, $3)', [target, 'admin', true]));
+    expect(e1, 'staff must not change profiles').not.toBeNull();
+    await actAs(null);
+    const e2 = await pgError(q('select public.admin_set_profile($1, $2, $3)', [target, 'admin', true]));
+    expect(e2, 'anonymous caller must not change profiles').not.toBeNull();
+    expect(await one('select role, active from public.profiles where id = $1', [target])).toEqual({ role: 'staff', active: true });
+
+    await actAs(admin);
+    await q('select public.admin_set_profile($1, $2, $3)', [target, 'admin', false]);
+    expect(await one('select role, active from public.profiles where id = $1', [target])).toEqual({ role: 'admin', active: false });
+    await q('select public.admin_set_profile($1, $2, $3)', [target, 'staff', true]);
+    expect(await one('select role, active from public.profiles where id = $1', [target])).toEqual({ role: 'staff', active: true });
+  });
+});
+
+// ------------------------------------------------------------------ 9. row level security and grants (as the authenticated role)
+describe('row level security', () => {
+  async function asAuthenticated<T>(userId: string | null, fn: () => Promise<T>): Promise<T> {
+    await actAs(userId);
+    await db.exec('set role authenticated');
+    try {
+      return await fn();
+    } finally {
+      await db.exec('reset role');
+    }
+  }
+
+  it('staff see only visible packages from yesterday to day+2; admins see everything; inactive users see nothing', async () => {
+    const staff = await newUser('Staff');
+    const admin = await newUser('Admin', { role: 'admin' });
+    const inactive = await newUser('Gone', { active: false });
+    const today = (await one('select public.today_ba()::text as d')).d as string;
+    const shift = (n: number) => {
+      const d = new Date(`${today}T12:00:00Z`);
+      d.setUTCDate(d.getUTCDate() + n);
+      return d.toISOString().slice(0, 10);
+    };
+    const tag = `rls-${++seq}`;
+    const mk = (n: number, hidden = false) => newPackage({ listing_id: tag, date: shift(n) }).then(async ({ id }) => {
+      if (hidden) await q('select public.sync_set_lifecycle($1, $2, $3, $4)', [id, null, true, null]);
+      return shift(n);
+    });
+    await mk(-2);
+    await mk(-1);
+    await mk(0);
+    await mk(2);
+    await mk(3);
+    await mk(0, true);
+
+    const visible = (uid: string | null) =>
+      asAuthenticated(uid, async () => (await q('select date::text as d, hidden from public.packages where listing_id = $1 order by 1, 2', [tag])).map((r) => `${r.d}${r.hidden ? '!' : ''}`));
+    expect(await visible(staff)).toEqual([shift(-1), shift(0), shift(2)]);
+    expect(await visible(admin)).toEqual([shift(-2), shift(-1), shift(0), `${shift(0)}!`, shift(2), shift(3)]);
+    expect(await visible(inactive)).toEqual([]);
+    expect(await visible(null)).toEqual([]);
+  });
+
+  it('reservations, events and runs are admin-only and a deactivated admin sees none of them', async () => {
+    const staff = await newUser('Staff');
+    const admin = await newUser('Admin', { role: 'admin' });
+    const exAdmin = await newUser('ExAdmin', { role: 'admin', active: false });
+    await q("insert into public.reservations (guesty_id, listing_id, arrival_listing_id, status, check_in_date, check_out_date, fetched_at) values ('rls-res', 'l', 'l', 'confirmed', '2026-10-01', '2026-10-03', now())");
+    const count = (uid: string | null) =>
+      asAuthenticated(uid, async () => {
+        const r = await one("select (select count(*) from public.reservations where guesty_id = 'rls-res')::int as res, (select count(*) from public.package_events)::int as ev, (select count(*) from public.sync_runs)::int as runs");
+        return [r.res > 0, r.ev > 0, r.runs > 0];
+      });
+    expect(await count(admin)).toEqual([true, true, true]);
+    expect(await count(staff)).toEqual([false, false, false]);
+    expect(await count(null)).toEqual([false, false, false]);
+    expect(await count(exAdmin)).toEqual([false, false, false]);
+  });
+
+  it('active users read settings and profiles; the sync helpers are not executable by authenticated', async () => {
+    const staff = await newUser('Staff');
+    await q("insert into public.settings (key, value) values ('rls-key', '{}') on conflict do nothing");
+    const r = await asAuthenticated(staff, async () => ({
+      settings: (await q("select key from public.settings where key = 'rls-key'")).length,
+      profiles: (await q('select id from public.profiles where id = $1', [staff])).length,
+      lock: await pgError(q("select public.acquire_lock('x', 10, 'r')")),
+      retention: await pgError(q('select public.run_retention(now())')),
+      upsert: await pgError(q('select public.sync_upsert_package($1::jsonb)', [JSON.stringify(computed())])),
+      lifecycle: await pgError(q('select public.sync_set_lifecycle($1, $2, $3, $4)', [randomUUID(), 'cancelled', true, 'x'])),
+      notFound: await pgError(q("select public.increment_not_found('x')")),
+    }));
+    expect(r.settings).toBe(1);
+    expect(r.profiles).toBe(1);
+    for (const k of ['lock', 'retention', 'upsert', 'lifecycle', 'notFound'] as const) {
+      expect((r[k] as PgErr | null)?.code, `${k} must be refused for authenticated`).toBe('42501');
+    }
+  });
+});
+
+// ------------------------------------------------------------------ 10. realtime broadcast
+describe('notify_board', () => {
+  it('sends a message on the private topic "board" when a package or a setting changes (realtime.send stub)', async () => {
+    const rt = new PGlite();
+    try {
+      await rt.exec(STUBS);
+      await rt.exec('set check_function_bodies = off');
+      await rt.exec(MIG1);
+      await rt.exec(MIG2);
+      await rt.exec(`
+        create schema realtime;
+        create table realtime.messages (id bigserial primary key, topic text, event text, payload jsonb, private boolean);
+        create function realtime.send(payload jsonb, event text, topic text, private boolean default true) returns void
+        language sql as $$ insert into realtime.messages (topic, event, payload, private) values (topic, event, payload, private) $$;
+      `);
+      const c = computed();
+      await rt.query('select public.sync_upsert_package($1::jsonb)', [JSON.stringify(c)]);
+      await rt.query("insert into public.settings (key, value) values ('linen_table', '{}')");
+      const msgs = (await rt.query<Row>('select topic, private from realtime.messages order by id')).rows;
+      expect(msgs.length).toBeGreaterThanOrEqual(2);
+      expect(msgs.every((m) => m.topic === 'board')).toBe(true);
+      expect(msgs.every((m) => m.private === true)).toBe(true);
+    } finally {
+      await rt.close();
+    }
+  });
+});

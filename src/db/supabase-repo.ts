@@ -25,6 +25,13 @@ function must<T>(r: { data: T | null; error: { message: string } | null }, what:
   return r.data as T;
 }
 
+/** Last occurrence wins, so a fresher row later in the batch replaces an earlier one. */
+function dedupe<T>(rows: T[], key: (r: T) => string): T[] {
+  const map = new Map<string, T>();
+  for (const r of rows) map.set(key(r), r);
+  return [...map.values()];
+}
+
 function chunks<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
@@ -78,7 +85,8 @@ export class SupabaseRepo implements SyncRepo {
   }
 
   async upsertListings(rows: ListingRow[]) {
-    for (const part of chunks(rows, 200)) must(await this.db.from('listings').upsert(part, { onConflict: 'guesty_id' }), 'listings.upsert');
+    const unique = dedupe(rows, (r) => r.guesty_id);
+    for (const part of chunks(unique, 200)) must(await this.db.from('listings').upsert(part, { onConflict: 'guesty_id' }), 'listings.upsert');
   }
   async getListings() {
     return must(await this.db.from('listings').select('*'), 'listings.select') as ListingRow[];
@@ -96,7 +104,7 @@ export class SupabaseRepo implements SyncRepo {
       const cur = must(await this.db.from('reservations').select('guesty_id, fetched_at, not_found_runs').in('guesty_id', part), 'reservations.select');
       for (const r of cur as { guesty_id: string; fetched_at: string; not_found_runs: number }[]) existing.set(r.guesty_id, r);
     }
-    const fresh = rows
+    const fresh = dedupe(rows, (r) => r.guesty_id)
       .filter((r) => {
         const cur = existing.get(r.guesty_id);
         return !cur || Date.parse(cur.fetched_at) <= Date.parse(r.fetched_at);
@@ -111,7 +119,8 @@ export class SupabaseRepo implements SyncRepo {
     if (f.checkInGte) q = q.gte('check_in_date', f.checkInGte);
     if (f.status) q = q.eq('status', f.status);
     if (f.listingIds) {
-      const list = f.listingIds.map((id) => `"${id}"`).join(',');
+      if (!f.listingIds.length) return [];
+      const list = f.listingIds.map((id) => `"${id.replace(/"/g, '')}"`).join(',');
       q = q.or(`listing_id.in.(${list}),arrival_listing_id.in.(${list})`);
     }
     return must(await q, 'reservations.filter') as ReservationRow[];
@@ -129,7 +138,8 @@ export class SupabaseRepo implements SyncRepo {
   }
 
   async upsertCalendar(rows: CalendarRow[]) {
-    for (const part of chunks(rows, 500)) must(await this.db.from('calendar_min_nights').upsert(part, { onConflict: 'listing_id,date' }), 'calendar.upsert');
+    const unique = dedupe(rows, (r) => `${r.listing_id}|${r.date}`);
+    for (const part of chunks(unique, 500)) must(await this.db.from('calendar_min_nights').upsert(part, { onConflict: 'listing_id,date' }), 'calendar.upsert');
   }
   async getCalendar(listingIds: string[], from: Ymd, to: Ymd) {
     if (!listingIds.length) return [];
@@ -188,6 +198,10 @@ export class SupabaseRepo implements SyncRepo {
     return row?.value ?? null;
   }
   async setState(key: AppStateKey, value: unknown) {
+    if (value === null || value === undefined) {
+      must(await this.db.from('app_state').delete().eq('key', key), 'app_state.delete');
+      return;
+    }
     must(await this.db.from('app_state').upsert({ key, value: value as never, updated_at: new Date().toISOString() }), 'app_state.set');
   }
   async acquireLock(name: string, ttlSeconds: number, runId: string) {

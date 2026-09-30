@@ -116,18 +116,30 @@ export function createTokenProvider(opts: TokenProviderOptions) {
   const isUsable = (rec: TokenRecord, at: Date) =>
     !!rec.accessToken && !!rec.expiresAt && Date.parse(rec.expiresAt) > at.getTime();
 
-  async function mintUnderLease(reason: string): Promise<string> {
+  async function mintUnderLease(reason: string, attempt = 0): Promise<string> {
     const at = now();
+    const before = await opts.store.read();
     const leased = await opts.store.tryLease(new Date(at.getTime() + LEASE_MS).toISOString(), at.toISOString());
     if (!leased) {
-      // another instance is minting: wait for its token
+      // another instance is minting: wait for ITS new token (for a forced refresh the
+      // old token is still "fresh" by expiry, so wait until the token actually changes)
+      const arrived = (rec: TokenRecord) =>
+        reason === 'force' ? !!rec.accessToken && rec.accessToken !== before.accessToken && isUsable(rec, now()) : isFresh(rec, now());
       for (let i = 0; i < 20; i++) {
         await sleep(1000);
         const rec = await opts.store.read();
-        if (isFresh(rec, now())) return rec.accessToken!;
+        if (arrived(rec)) return rec.accessToken!;
+        if (!rec.leaseUntil || rec.leaseUntil <= now().toISOString()) {
+          // the holder gave up without a new token: take the lease ourselves once
+          if (attempt === 0) return mintUnderLease(reason, 1);
+          break;
+        }
       }
       const rec = await opts.store.read();
-      if (isUsable(rec, now())) return rec.accessToken!;
+      if (isUsable(rec, now())) {
+        log.warn('guesty.token.wait_fallback', { reason });
+        return rec.accessToken!;
+      }
       throw new Error('Guesty token lease held by another instance and no token appeared');
     }
     try {

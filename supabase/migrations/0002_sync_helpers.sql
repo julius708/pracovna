@@ -25,15 +25,15 @@ language plpgsql security definer set search_path = '' as $$
 declare
   n_runs int; n_wh int; n_cal int; n_res int;
 begin
-  with d as (
-    delete from public.sync_runs
-    where (ok is distinct from false and started_at < p_now - interval '30 days')
-       or (ok = false and started_at < p_now - interval '90 days')
-    returning 1)
+  with d as (delete from public.sync_runs where started_at < p_now - interval '30 days' returning 1)
   select count(*) into n_runs from d;
 
   update public.webhook_events set payload = null where received_at < p_now - interval '30 days' and payload is not null;
-  with d as (delete from public.webhook_events where received_at < p_now - interval '90 days' returning 1)
+  with d as (
+    delete from public.webhook_events
+    where received_at < p_now - interval '90 days'
+       or (status = 'rejected' and received_at < p_now - interval '7 days')
+    returning 1)
   select count(*) into n_wh from d;
 
   with d as (delete from public.calendar_min_nights where date < (p_now at time zone 'Europe/Bratislava')::date - 1 returning 1)

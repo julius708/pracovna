@@ -8,9 +8,12 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts', 'src/**/*.test.ts'],
+    // the PGlite database tests boot a WASM Postgres in beforeAll
+    hookTimeout: 90_000,
+    testTimeout: 20_000,
     coverage: {
       provider: 'v8',
-      include: ['src/core/**'],
+      include: ['src/core/**', 'src/guesty/**', 'src/sync/**', 'src/db/**'],
     },
   },
 });

@@ -5,14 +5,6 @@
 create or replace function public.today_ba() returns date
 language sql stable as $$ select (now() at time zone 'Europe/Bratislava')::date $$;
 
-create or replace function public.is_admin() returns boolean
-language sql stable security definer set search_path = '' as
-$$ select exists (select 1 from public.profiles where id = auth.uid() and role = 'admin' and active) $$;
-
-create or replace function public.is_active_user() returns boolean
-language sql stable security definer set search_path = '' as
-$$ select exists (select 1 from public.profiles where id = auth.uid() and active) $$;
-
 -- ---------------------------------------------------------------- profiles
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -21,6 +13,15 @@ create table if not exists public.profiles (
   active boolean not null default true,
   created_at timestamptz not null default now()
 );
+
+-- (defined after the table: SQL-language functions are validated at creation time)
+create or replace function public.is_admin() returns boolean
+language sql stable security definer set search_path = '' as
+$$ select exists (select 1 from public.profiles where id = auth.uid() and role = 'admin' and active) $$;
+
+create or replace function public.is_active_user() returns boolean
+language sql stable security definer set search_path = '' as
+$$ select exists (select 1 from public.profiles where id = auth.uid() and active) $$;
 
 create or replace function public.handle_new_user() returns trigger
 language plpgsql security definer set search_path = '' as $$
@@ -365,7 +366,7 @@ begin
   end if;
   select display_name into me_name from public.profiles where id = me;
   select * into row from public.packages where id = p_id for update;
-  if row is null then
+  if not found then
     raise exception 'package not found' using errcode = 'P0002';
   end if;
   if row.status = 'packed' then
@@ -398,7 +399,7 @@ begin
   end if;
   select display_name into me_name from public.profiles where id = me;
   select * into row from public.packages where id = p_id for update;
-  if row is null then
+  if not found then
     raise exception 'package not found' using errcode = 'P0002';
   end if;
   if row.status <> 'packed' then
@@ -430,7 +431,7 @@ begin
   end if;
   select display_name into me_name from public.profiles where id = me;
   select * into row from public.packages where id = p_id for update;
-  if row is null then
+  if not found then
     raise exception 'package not found' using errcode = 'P0002';
   end if;
   if row.status = 'cancelled' then
@@ -465,7 +466,7 @@ begin
   end if;
   select display_name into me_name from public.profiles where id = me;
   select * into row from public.packages where id = p_id for update;
-  if row is null then
+  if not found then
     raise exception 'package not found' using errcode = 'P0002';
   end if;
   if row.status <> 'todo' then
@@ -492,7 +493,7 @@ begin
     raise exception 'admin only' using errcode = '42501';
   end if;
   select * into cur from public.settings where key = p_key for update;
-  if cur is not null and p_expected_version is not null and cur.version <> p_expected_version then
+  if found and p_expected_version is not null and cur.version <> p_expected_version then
     return jsonb_build_object('ok', false, 'conflict', true, 'version', cur.version);
   end if;
   insert into public.settings_history (key, old_value, new_value, changed_by) values (p_key, cur.value, p_value, auth.uid());

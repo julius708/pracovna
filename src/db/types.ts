@@ -204,4 +204,7 @@ export type AppStateKey =
   | 'alert_state'
   | 'custom_field_defs'
   | 'listing_drop'
-  | 'webhook_registration';
+  | 'webhook_registration'
+  | 'listing_filter_supported'
+  | 'reconcile_change_at'
+  | 'token_quota_warning';

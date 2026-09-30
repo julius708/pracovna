@@ -1,25 +1,35 @@
 import { GuestyApiError, type GuestyHttp } from '../http';
 import { calendarDaySchema, parseMany, type ParsedCalendarDay } from '../schemas';
 
+const HEX_ID = /^[0-9a-f]{24}$/i;
+
+function isDay(x: unknown): x is Record<string, unknown> {
+  return !!x && typeof x === 'object' && typeof (x as Record<string, unknown>).date === 'string';
+}
+
 /**
  * The calendar response shape is documented per day object only; the top level
- * may be a flat array, {data: {days}}, {days}, or one object per listing. This
- * collects every array of day-like objects found in the payload.
+ * may be a flat array, {data: {days}}, {days}, one object per listing
+ * ({listingId, days: [...]}) or a map keyed by listing id. This collects every
+ * day-like object and attributes the listing id from the enclosing object or
+ * key when the day itself does not carry one.
  */
-export function extractCalendarDays(json: unknown, depth = 0): unknown[] {
-  if (depth > 5 || !json) return [];
+export function extractCalendarDays(json: unknown, depth = 0, parentListingId: string | null = null): unknown[] {
+  if (depth > 6 || !json) return [];
   if (Array.isArray(json)) {
-    if (json.length && json.every((x) => x && typeof x === 'object' && typeof (x as Record<string, unknown>).date === 'string')) {
-      return json;
-    }
-    return json.flatMap((x) => extractCalendarDays(x, depth + 1));
+    return json.flatMap((x) => (isDay(x) ? [withListing(x, parentListingId)] : extractCalendarDays(x, depth + 1, parentListingId)));
   }
   if (typeof json === 'object') {
     const o = json as Record<string, unknown>;
-    if (typeof o.date === 'string' && ('minNights' in o || 'status' in o)) return [o];
-    return Object.values(o).flatMap((v) => extractCalendarDays(v, depth + 1));
+    if (isDay(o) && ('minNights' in o || 'status' in o)) return [withListing(o, parentListingId)];
+    const own = typeof o.listingId === 'string' ? o.listingId : typeof o._id === 'string' && HEX_ID.test(o._id) ? o._id : parentListingId;
+    return Object.entries(o).flatMap(([k, v]) => extractCalendarDays(v, depth + 1, HEX_ID.test(k) ? k : own));
   }
   return [];
+}
+
+function withListing(day: Record<string, unknown>, listingId: string | null): Record<string, unknown> {
+  return typeof day.listingId === 'string' || !listingId ? day : { ...day, listingId };
 }
 
 export interface CalendarOptions {
@@ -30,7 +40,7 @@ export interface CalendarOptions {
 /**
  * Per-day minNights / status / cta for several listings. Uses the multi-listing
  * endpoint in chunks and falls back to the single-listing endpoint when Guesty
- * rejects the batch (undocumented limits).
+ * rejects the batch (undocumented limits). A 404 for one listing skips it.
  */
 export async function getCalendarDays(
   http: GuestyHttp,
@@ -50,9 +60,14 @@ export async function getCalendarDays(
     } catch (e) {
       if (!(e instanceof GuestyApiError) || e.status < 400 || e.status >= 500) throw e;
       for (const id of part) {
-        const json = await http.get(`/availability-pricing/api/calendar/listings/${encodeURIComponent(id)}`, { startDate, endDate });
-        const days = parseMany(calendarDaySchema, extractCalendarDays(json), opts.onParseError);
-        out.push(...days.map((d) => ({ ...d, listingId: d.listingId ?? id })));
+        try {
+          const json = await http.get(`/availability-pricing/api/calendar/listings/${encodeURIComponent(id)}`, { startDate, endDate });
+          const days = parseMany(calendarDaySchema, extractCalendarDays(json, 0, id), opts.onParseError);
+          out.push(...days.map((d) => ({ ...d, listingId: d.listingId ?? id })));
+        } catch (inner) {
+          if (inner instanceof GuestyApiError && inner.status === 404) continue;
+          throw inner;
+        }
       }
     }
   }
