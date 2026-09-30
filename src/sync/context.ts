@@ -19,9 +19,15 @@ export interface SyncContext {
   ephemeral: boolean;
 }
 
-let memoryRepo: MemoryRepo | null = null;
-let liveClient: GuestyClient | null = null;
-let seedClient: { today: string; client: GuestyClient } | null = null;
+/**
+ * Process-wide singletons. They live on globalThis because Next bundles route
+ * handlers, server actions and pages separately in development, and each
+ * bundle would otherwise get its own module instance (and its own memory repo).
+ */
+const g = globalThis as unknown as {
+  __pracovna?: { memoryRepo?: MemoryRepo; liveClient?: GuestyClient; seedClient?: { today: string; client: GuestyClient } };
+};
+const singletons = (g.__pracovna ??= {});
 
 export function webhookUrlFor(env: Env, extra: Record<string, string | undefined> = process.env): string | null {
   const host = extra.APP_URL ?? (extra.VERCEL_PROJECT_PRODUCTION_URL ? `https://${extra.VERCEL_PROJECT_PRODUCTION_URL}` : null);
@@ -35,8 +41,8 @@ export function createRepoFromEnv(env: Env): { repo: SyncRepo; ephemeral: boolea
     return { repo: new SupabaseRepo(createAdminClient(env.NEXT_PUBLIC_SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!)), ephemeral: false };
   }
   if (!env.SEED_MODE) throw new Error(`Missing Supabase configuration: ${missingSupabaseEnv(env).join(', ')}`);
-  memoryRepo = memoryRepo ?? new MemoryRepo();
-  return { repo: memoryRepo, ephemeral: true };
+  singletons.memoryRepo ??= new MemoryRepo();
+  return { repo: singletons.memoryRepo, ephemeral: true };
 }
 
 /** Builds repo + Guesty client from the environment: live, or seed mode with the fake client. */
@@ -55,23 +61,23 @@ export function createSyncContext(overrides: Partial<SyncContext> = {}): SyncCon
   if (!client) {
     if (env.SEED_MODE) {
       const today = todayInTz(new Date());
-      if (!seedClient || seedClient.today !== today) seedClient = { today, client: createSeedClient(today).client };
-      client = seedClient.client;
+      if (!singletons.seedClient || singletons.seedClient.today !== today) {
+        singletons.seedClient = { today, client: createSeedClient(today).client };
+      }
+      client = singletons.seedClient.client;
     } else {
       const missing = missingGuestyEnv(env);
       if (missing.length) throw new Error(`Missing Guesty configuration: ${missing.join(', ')}`);
-      liveClient =
-        liveClient ??
-        createGuestyClient({
-          env,
-          tokenStore: repoFinal.tokenStore,
-          log,
-          onTokenQuotaWarning: (mints) => {
-            log.warn('guesty.token.quota_warning', { mints_24h: mints });
-            void repoFinal.setState('token_quota_warning', { at: new Date().toISOString(), mints });
-          },
-        });
-      client = liveClient;
+      singletons.liveClient ??= createGuestyClient({
+        env,
+        tokenStore: repoFinal.tokenStore,
+        log,
+        onTokenQuotaWarning: (mints) => {
+          log.warn('guesty.token.quota_warning', { mints_24h: mints });
+          void repoFinal.setState('token_quota_warning', { at: new Date().toISOString(), mints });
+        },
+      });
+      client = singletons.liveClient;
     }
   }
   return { env, repo: repoFinal, client, log, webhookUrl: overrides.webhookUrl ?? webhookUrlFor(env), seed: env.SEED_MODE, ephemeral };

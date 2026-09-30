@@ -1,0 +1,250 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import type { BoardPackage } from '@/app/_lib/board';
+import type { Viewer } from '@/app/_lib/viewer';
+import { formatHM, NOTE_MAX_LENGTH, type PackingResult, type WarningCode } from '@/core/packing';
+import { bedSummary, capsuleLabel, cheerDone, childrenBanner, duvetText, nextArrival, packedBy, peopleSentence, sk, sofaText, warningLine } from '@/core/i18n/sk';
+
+const AV = '/assets/angelika.jpg';
+/** Warnings shown inline in the beds line, as in the prototype. */
+const INLINE: WarningCode[] = ['bunk', 'no_duvet_info'];
+
+export interface CardHandlers {
+  onPack: (p: BoardPackage) => void;
+  onUndo: (p: BoardPackage) => void;
+  onNote: (p: BoardPackage, text: string) => void;
+  onCheck: (p: BoardPackage, item: string, checked: boolean) => void;
+}
+
+export function PackageCard({
+  p,
+  cleaner,
+  viewer,
+  busy,
+  cheer,
+  handlers,
+}: {
+  p: BoardPackage;
+  cleaner: string | null;
+  viewer: Viewer;
+  busy: boolean;
+  cheer: string | null;
+  handlers: CardHandlers;
+}) {
+  const r = p.computed_items as PackingResult;
+  const [noteOpen, setNoteOpen] = useState(false);
+  const noteRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (noteOpen) noteRef.current?.focus();
+  }, [noteOpen]);
+
+  const cancelled = p.status === 'cancelled';
+  const cls = cancelled ? 'job cancelled-card' : `job is-${p.status}`;
+  const next = r.next;
+  const kid = childrenBanner(r);
+  const sofa = sofaText(r);
+  const duvet = duvetText(r);
+  const changed = p.status === 'packed' && p.packed_hash && p.packed_hash !== p.computed_hash;
+  const checklist = r.checklist ?? [];
+  const checked = p.checklist?.checked ?? {};
+  const done = checklist.filter((x) => checked[x]).length;
+  const otherWarnings = (r.warnings as WarningCode[]).filter((w) => !INLINE.includes(w));
+  const canAct = viewer.active && !cancelled;
+
+  const pill = cancelled ? (
+    <span className="pill handed">{sk.pill.cancelled}</span>
+  ) : p.status === 'packed' ? (
+    <span className="pill packed">{sk.pill.packed}</span>
+  ) : (
+    <span className="pill todo">{sk.pill.todo}</span>
+  );
+
+  return (
+    <article className={cls} id={`job-${p.id}`}>
+      <div className="jh">
+        <h3>{p.listing_name}</h3>
+        {pill}
+      </div>
+      {r.private && <div className="privbar">{sk.privateBanner}</div>}
+      {kid && <div className="kids">{kid}</div>}
+      <div className="meta">
+        {next ? (
+          r.sameDay ? (
+            <span className="tag rush">{sk.rushTag}</span>
+          ) : (
+            <span>{nextArrival(next.date)}</span>
+          )
+        ) : (
+          <span className="tag none">{sk.noNextTag}</span>
+        )}
+        <span>{peopleSentence(r)}</span>
+        {r.gap?.blocked === null && <span style={{ color: 'var(--muted)' }}>{sk.minNightsUnknown}</span>}
+        {cleaner && <span className="tag svc">{cleaner}</span>}
+      </div>
+      {changed && <div className="changed">{sk.changedAfterPacking}</div>}
+      {otherWarnings.length > 0 && (
+        <div className="warn-list">
+          {otherWarnings.map((w) => (
+            <span key={w}>{warningLine(w, r)}</span>
+          ))}
+        </div>
+      )}
+      {r.guestyNote && (
+        <div className="lnote">
+          <b>{sk.guestyNoteLabel}</b> {r.guestyNote}
+        </div>
+      )}
+      {r.linen.length > 0 && (
+        <ul className="items">
+          {r.linen.map((l) => (
+            <li key={l.key} className={l.source === 'guesty' ? 'cust' : undefined}>
+              <b>{l.n}</b>
+              <span>{l.label}</span>
+              <small>{l.size}</small>
+            </li>
+          ))}
+        </ul>
+      )}
+      {(r.consumables.length > 0 || r.capsules.length > 0) && (
+        <div className="cons">
+          <div className="cons-h">{sk.consumablesTitle}</div>
+          <ul>
+            {r.consumables.map((l) => (
+              <li key={l.key} className={l.source === 'guesty' ? 'cust' : undefined}>
+                <span>
+                  {l.label}
+                  {l.size ? <small> {l.size}</small> : null}
+                </span>
+                <b>{l.n}</b>
+              </li>
+            ))}
+            {r.capsules.map((c, i) => {
+              const t = capsuleLabel(c);
+              return (
+                <li key={`${c.typeKey || c.state}-${i}`} className={`${c.fixed ? 'cust' : ''}${t.note ? ' miss' : ''}`}>
+                  <span>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    {c.photo && <img className="capico" src={`/assets/${c.photo}`} alt="" />}
+                    {t.label}
+                    {t.note && <small> {t.note}</small>}
+                  </span>
+                  <b>{c.n}</b>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+      <div className="beds">
+        {sk.bedsLabel} {bedSummary(r)}
+        {sofa && (
+          <>
+            {' · '}
+            {r.beds.sofasUsed ? <b>{sofa}</b> : sofa}
+          </>
+        )}
+        {r.warnings.includes('bunk') && (
+          <>
+            {' · '}
+            <span className="warnTxt">{warningLine('bunk', r)}</span>
+          </>
+        )}
+        {' · '}
+        {duvet ? (
+          <>
+            {sk.duvetsLabel} <b>{duvet}</b>
+          </>
+        ) : (
+          <span className="warnTxt">{warningLine('no_duvet_info', r)}</span>
+        )}
+        {r.coffee && (
+          <>
+            {' · '}
+            {sk.coffeeLabel} <b>{r.coffee}</b>
+          </>
+        )}
+      </div>
+      {checklist.length > 0 && (
+        <div className="check">
+          <div className="check-h">
+            <span>{sk.checklistTitle}</span>
+            <span>
+              {done}/{checklist.length}
+            </span>
+          </div>
+          {checklist.map((item) => (
+            <button
+              key={item}
+              type="button"
+              className="ck"
+              aria-pressed={!!checked[item]}
+              disabled={!canAct || p.status !== 'todo' || busy}
+              onClick={() => handlers.onCheck(p, item, !checked[item])}
+            >
+              <i aria-hidden="true" />
+              {item}
+            </button>
+          ))}
+        </div>
+      )}
+      {p.note && (
+        <div className="note">
+          {p.note}
+          {p.note_by_name && p.note_at && (
+            <small style={{ display: 'block', color: 'var(--muted)', marginTop: 4 }}>
+              {sk.buttons.note} · {p.note_by_name} · {formatHM(new Date(p.note_at))}
+            </small>
+          )}
+        </div>
+      )}
+      {p.packed_at && <div className="who">{packedBy(p.packed_by_name, formatHM(new Date(p.packed_at)))}</div>}
+      {noteOpen && (
+        <form
+          className="noteform"
+          onSubmit={(e) => {
+            e.preventDefault();
+            handlers.onNote(p, noteRef.current?.value ?? '');
+            setNoteOpen(false);
+          }}
+        >
+          <input ref={noteRef} maxLength={NOTE_MAX_LENGTH} placeholder={sk.notePlaceholder} defaultValue={p.note} aria-label={sk.buttons.note} />
+          <button className="btn primary" style={{ flex: '0 0 auto', minHeight: 44 }} type="submit">
+            {sk.buttons.save}
+          </button>
+        </form>
+      )}
+      {cheer && (
+        <div className="cheer-in" role="status">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={AV} alt="Angelika sa usmieva" />
+          <div>
+            <b>{cheer}</b>
+            <span>{cheerDone(p.listing_name)}</span>
+          </div>
+        </div>
+      )}
+      {canAct && (
+        <div className="actions">
+          {p.status === 'todo' ? (
+            <button className="btn primary" type="button" disabled={busy} onClick={() => handlers.onPack(p)}>
+              {sk.buttons.pack}
+            </button>
+          ) : (
+            <>
+              <button className="btn done" type="button" disabled>
+                {sk.buttons.packed}
+              </button>
+              <button className="btn ghost" type="button" disabled={busy} onClick={() => handlers.onUndo(p)}>
+                {sk.buttons.undo}
+              </button>
+            </>
+          )}
+          <button className="btn ghost" type="button" onClick={() => setNoteOpen((o) => !o)}>
+            {p.note ? sk.buttons.editNote : sk.buttons.note}
+          </button>
+        </div>
+      )}
+    </article>
+  );
+}
