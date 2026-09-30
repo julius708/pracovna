@@ -44,7 +44,19 @@ const NAV: { href: string; label: string }[] = [
   { href: '/stav', label: 'Stav' },
 ];
 
-export function Header({ viewer, lastOkSyncAt, now, connected }: { viewer: Viewer; lastOkSyncAt: string | null; now: Date; connected: boolean }) {
+export function Header({
+  viewer,
+  lastOkSyncAt,
+  now,
+  connected,
+  showSync = true,
+}: {
+  viewer: Viewer;
+  lastOkSyncAt: string | null;
+  now: Date;
+  connected: boolean;
+  showSync?: boolean;
+}) {
   const path = usePathname();
   const admin = viewer.role === 'admin';
   return (
@@ -55,7 +67,7 @@ export function Header({ viewer, lastOkSyncAt, now, connected }: { viewer: Viewe
           <span className="sep" aria-hidden="true" />
           {sk.app}
         </h1>
-        <SyncBadge lastOkSyncAt={lastOkSyncAt} now={now} connected={connected} />
+        {showSync && <SyncBadge lastOkSyncAt={lastOkSyncAt} now={now} connected={connected} />}
       </div>
       <div className="nav" style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 8, flexWrap: 'wrap', fontSize: 13 }}>
         {admin &&

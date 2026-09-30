@@ -13,8 +13,8 @@ The full design is in [docs/PROPOSAL.md](docs/PROPOSAL.md).
 | 1 | Architecture, data model, screens | approved 2026-09-29 |
 | 2 | Packing calculator + laundry-field parser + unit tests | done |
 | 3 | Guesty client, reconciliation, webhooks, database schema, seed mode | done (live probe pending credentials) |
-| 4 | UI, auth, realtime, Settings, História | next |
-| 5 | Staging deploy on Vercel | – |
+| 4 | UI, auth, realtime, Settings, História, Stav | done (verified in seed mode; realtime needs the Supabase project) |
+| 5 | Staging deploy on Vercel | next |
 
 ## Repository layout
 
@@ -24,7 +24,9 @@ src/core/i18n/      every Slovak string of the app
 src/guesty/         Open API client: token cache, HTTP backoff, endpoints, zod schemas, mappers, fake client, fixtures
 src/sync/           reconcile (every 3 min), recompute of the 3-day window, listings, min-nights, webhooks, nightly, alerts, seed
 src/db/             repo interface, memory repo (tests/seed), Supabase repo (service role), server client (auth)
+src/app/            pages: / (board), /login, /nastavenia, /historia (+export.csv), /stav; _lib (viewer, board data, server actions)
 src/app/api/        route handlers: guesty/webhook, cron/reconcile, cron/nightly, admin/sync-now, admin/webhooks/register
+src/ui/             Board, PackageCard, Summary, Header, SettingsForm, StatusPanel, LoginForm, board-model (pure), useLiveBoard
 src/app/health/     public health JSON
 supabase/           migrations and seed.sql (default settings)
 scripts/            guesty-probe.ts (records real API shapes), build-seed-listings.mjs
@@ -48,6 +50,8 @@ pnpm dev                          # http://localhost:3000
 Node 22+ and pnpm are required. On Windows: `winget install --source winget OpenJS.NodeJS.LTS` and `npm i -g pnpm`.
 
 ### Seed mode
+
+Without Supabase keys the login page offers two development stand-ins ("Test správca", "Test personál") so the whole app can be exercised locally; with Supabase configured the real e-mail/password login is used and the stand-ins disappear.
 
 `SEED_MODE=true` swaps the Guesty client for a fake one with the 107 real listing shapes and generated reservations around today (same-day check-ins with children, 1–2-night gaps with min. stay 1/2, blocked calendar days, no next reservation, two check-outs of one flat, a multi-listing stay, a cancelled reservation). Without Supabase keys the data lives in memory for the lifetime of the server process. Seed mode is refused when `APP_ENV=production`.
 

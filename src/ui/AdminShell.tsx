@@ -7,7 +7,7 @@ export function AdminShell({ viewer, children }: { viewer: Viewer; children: Rea
   return (
     <div className="wrap">
       <header className="top">
-        <Header viewer={viewer} lastOkSyncAt={null} now={new Date()} connected={true} />
+        <Header viewer={viewer} lastOkSyncAt={null} now={new Date(0)} connected={true} showSync={false} />
       </header>
       {children}
     </div>
