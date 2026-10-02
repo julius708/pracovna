@@ -5,6 +5,7 @@ import {
   diffDays,
   formatDM,
   hashOf,
+  isYmd,
   mergeSettings,
   packageHash,
   parseLaundry,
@@ -12,9 +13,27 @@ import {
   todayInTz,
   weekdayShort,
   windowDates,
+  zonedMidnight,
   DEFAULT_SETTINGS,
 } from '@/core/packing';
-import { angelikaSentence, childrenBanner, dayLabel, dayWord, nextArrival, packedBy, plainText, pluralByt, pluralNoci, pluralOsob, warningText } from '@/core/i18n/sk';
+import {
+  angelikaSentence,
+  childrenBanner,
+  childrenBannerParts,
+  dayLabel,
+  dayWord,
+  nextArrival,
+  nextArrivalParts,
+  packedBy,
+  peopleParts,
+  peopleSentence,
+  plainText,
+  pluralBalicek,
+  pluralByt,
+  pluralNoci,
+  pluralOsob,
+  warningText,
+} from '@/core/i18n/sk';
 import { D0, pkg, reservation } from './helpers';
 
 describe('Slovak texts', () => {
@@ -22,6 +41,22 @@ describe('Slovak texts', () => {
     expect([1, 2, 4, 5, 18].map(pluralByt)).toEqual(['byt', 'byty', 'byty', 'bytov', 'bytov']);
     expect([1, 2, 5].map(pluralOsob)).toEqual(['osobu', 'osoby', 'osôb']);
     expect([1, 3, 5].map(pluralNoci)).toEqual(['voľná noc', 'voľné noci', 'voľných nocí']);
+    expect([0, 1, 2, 4, 5].map(pluralBalicek)).toEqual(['balíčkov', 'balíček', 'balíčky', 'balíčky', 'balíčkov']);
+  });
+
+  it('badge and banner parts: the number and the date are bold, the plain text is unchanged', () => {
+    expect(nextArrivalParts('2026-10-01')).toEqual([{ text: 'Ďalší príchod ' }, { text: 'št 1.10.', bold: true }]);
+    const same = computePackage(pkg({ next: reservation({ guestyId: 'R2', checkInDate: D0, guests: 3 }) }));
+    const later = computePackage(pkg({ next: reservation({ guestyId: 'R2', checkInDate: '2026-10-07', guests: 3, children: 0, infants: 1 }) }));
+    for (const r of [same, later, computePackage(pkg())]) {
+      const parts = peopleParts(r);
+      expect(parts.filter((p) => p.bold).map((p) => p.text)).toEqual([String(r.people)]);
+      expect(plainText(parts)).toBe(peopleSentence(r));
+    }
+    const kid = childrenBannerParts(computePackage(pkg({ next: reservation({ guestyId: 'R2', checkInDate: D0, guests: 4, children: 2, infants: 0 }) })));
+    expect(kid?.filter((p) => p.bold).map((p) => p.text)).toEqual(['2', '0']);
+    expect(plainText(kid!)).toBe('👶 Prichádzajúci hostia majú deti: 2 · batoľatá: 0');
+    expect(childrenBannerParts(computePackage(pkg()))).toBeNull();
   });
 
   it("Angelika's sentence from the spec", () => {
@@ -67,6 +102,25 @@ describe('dates in Europe/Bratislava', () => {
     expect(todayInTz(new Date('2026-09-29T22:30:00Z'))).toBe('2026-09-30');
     expect(todayInTz(new Date('2026-09-29T21:30:00Z'))).toBe('2026-09-29');
     expect(todayInTz(new Date('2026-12-31T23:30:00Z'))).toBe('2027-01-01');
+  });
+  it('local midnight: CEST in summer, CET in winter, both DST switch days', () => {
+    expect(zonedMidnight('2026-07-01').toISOString()).toBe('2026-06-30T22:00:00.000Z');
+    expect(zonedMidnight('2026-12-01').toISOString()).toBe('2026-11-30T23:00:00.000Z');
+    expect(zonedMidnight('2026-10-25').toISOString()).toBe('2026-10-24T22:00:00.000Z'); // clocks go back at 03:00 that day
+    expect(zonedMidnight('2026-10-26').toISOString()).toBe('2026-10-25T23:00:00.000Z');
+    expect(zonedMidnight('2026-03-29').toISOString()).toBe('2026-03-28T23:00:00.000Z'); // clocks go forward at 02:00 that day
+    expect(zonedMidnight('2026-03-30').toISOString()).toBe('2026-03-29T22:00:00.000Z');
+    // a History range "od 1.12. do 1.12." covers exactly the local day
+    expect(zonedMidnight('2026-12-02').getTime() - zonedMidnight('2026-12-01').getTime()).toBe(86_400_000);
+    expect(zonedMidnight('2026-10-26').getTime() - zonedMidnight('2026-10-25').getTime()).toBe(25 * 3_600_000);
+  });
+  it('isYmd accepts real calendar dates only', () => {
+    expect(isYmd('2026-10-01')).toBe(true);
+    expect(isYmd('2026-02-30')).toBe(false);
+    expect(isYmd('2026-13-01')).toBe(false);
+    expect(isYmd('2026-1-1')).toBe(false);
+    expect(isYmd('abc')).toBe(false);
+    expect(isYmd('')).toBe(false);
   });
   it('arithmetic and formatting', () => {
     expect(addDays('2026-12-31', 1)).toBe('2027-01-01');

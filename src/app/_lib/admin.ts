@@ -1,12 +1,15 @@
 import 'server-only';
-import { DEFAULT_SETTINGS, mergeSettings, type PackingSettings } from '@/core/packing';
+import { addDays, DEFAULT_SETTINGS, mergeSettings, todayInTz, windowDates, zonedMidnight, type PackingSettings } from '@/core/packing';
 import type { MemoryRepo } from '@/db/memory-repo';
 import type { DuvetTypes } from '@/db/repo';
 import { createServerSupabase } from '@/db/server';
 import type { PackageEventRow, ProfileRow, SyncRunRow, WebhookEventRow } from '@/db/types';
 import { env } from '@/env';
 import { createRepoFromEnv } from '@/sync/context';
+import { HISTORY_PAGE, type HistoryFilter } from './history-filter';
 import { DEV_VIEWERS, supabaseConfigured } from './viewer';
+
+export { HISTORY_PAGE, type HistoryFilter } from './history-filter';
 
 async function db() {
   const c = await createServerSupabase();
@@ -78,16 +81,8 @@ export async function loadSettingsView(): Promise<SettingsView> {
 
 /* ---------------- história ---------------- */
 
-export interface HistoryFilter {
-  from: string;
-  to: string;
-  listingId?: string;
-  actor?: string;
-  event?: string;
-  page: number;
-}
-
-export const HISTORY_PAGE = 100;
+/** Actor names the sync writes into package_events (recompute triggers), offered in the "Osoba" filter next to the staff. */
+export const AUTOMATED_ACTORS = ['sync', 'webhook', 'nightly', 'manual', 'settings'] as const;
 
 export interface HistoryView {
   rows: PackageEventRow[];
@@ -97,27 +92,30 @@ export interface HistoryView {
 }
 
 export async function loadHistory(f: HistoryFilter): Promise<HistoryView> {
-  const fromIso = `${f.from}T00:00:00+02:00`;
-  const toIso = `${f.to}T23:59:59.999+02:00`;
+  // Bratislava calendar days: from local midnight of `from` up to (not including) local midnight after `to`
+  const fromIso = zonedMidnight(f.from).toISOString();
+  const toIso = zonedMidnight(addDays(f.to, 1)).toISOString();
   const offset = Math.max(0, f.page - 1) * HISTORY_PAGE;
   if (supabaseConfigured()) {
     const c = await db();
-    let q = c.from('package_events').select('*').gte('created_at', fromIso).lte('created_at', toIso).order('created_at', { ascending: false }).range(offset, offset + HISTORY_PAGE);
+    let q = c.from('package_events').select('*').gte('created_at', fromIso).lt('created_at', toIso).order('created_at', { ascending: false }).range(offset, offset + HISTORY_PAGE);
     if (f.listingId) q = q.eq('listing_id', f.listingId);
     if (f.actor) q = q.eq('actor_name', f.actor);
     if (f.event) q = q.eq('event', f.event);
     const [ev, ls, pr] = await Promise.all([q, c.from('listings').select('guesty_id, name').eq('in_scope', true).order('name'), c.from('profiles').select('display_name').order('display_name')]);
+    if (ev.error) throw new Error(`package_events: ${ev.error.message}`);
     const rows = (ev.data ?? []) as PackageEventRow[];
+    const people = ((pr.data ?? []) as { display_name: string }[]).map((p) => p.display_name);
     return {
       rows: rows.slice(0, HISTORY_PAGE),
       listings: ((ls.data ?? []) as { guesty_id: string; name: string }[]).map((l) => ({ id: l.guesty_id, name: l.name })),
-      actors: ((pr.data ?? []) as { display_name: string }[]).map((p) => p.display_name),
+      actors: [...new Set([...people, ...AUTOMATED_ACTORS])],
       hasMore: rows.length > HISTORY_PAGE,
     };
   }
   const repo = memory();
   const all = repo.events
-    .filter((e) => e.created_at >= new Date(fromIso).toISOString() && e.created_at <= new Date(toIso).toISOString())
+    .filter((e) => e.created_at >= fromIso && e.created_at < toIso)
     .filter((e) => !f.listingId || e.listing_id === f.listingId)
     .filter((e) => !f.actor || e.actor_name === f.actor)
     .filter((e) => !f.event || e.event === f.event)
@@ -125,7 +123,7 @@ export async function loadHistory(f: HistoryFilter): Promise<HistoryView> {
   return {
     rows: all.slice(offset, offset + HISTORY_PAGE),
     listings: (await repo.getListings()).filter((l) => l.in_scope).map((l) => ({ id: l.guesty_id, name: l.name })).sort((a, b) => a.name.localeCompare(b.name, 'sk')),
-    actors: [...new Set(repo.events.map((e) => e.actor_name))].sort(),
+    actors: [...new Set([...Object.values(DEV_VIEWERS).map((v) => v.name), ...repo.events.map((e) => e.actor_name), ...AUTOMATED_ACTORS])],
     hasMore: all.length > offset + HISTORY_PAGE,
   };
 }
@@ -144,11 +142,16 @@ export interface StatusView {
     multiStay: string[];
   };
   token: { expiresAt: string | null; mints24h: number };
+  /** Active packages of today..today+2 (what the board shows). */
   packagesInWindow: number;
+  /** ISO instant the data was read on the server; the client renders relative times from it first. */
+  loadedAt: string;
 }
 
 export async function loadStatus(): Promise<StatusView> {
-  const keys = ['last_ok_sync_at', 'consecutive_failures', 'partial_runs', 'listings_synced_at', 'last_webhook_at', 'alert_state', 'listing_drop', 'webhook_registration', 'listing_filter_supported', 'token_quota_warning'];
+  const loadedAt = new Date().toISOString();
+  const dates = windowDates(todayInTz(new Date()));
+  const keys =['last_ok_sync_at', 'consecutive_failures', 'partial_runs', 'listings_synced_at', 'last_webhook_at', 'alert_state', 'listing_drop', 'webhook_registration', 'listing_filter_supported', 'token_quota_warning'];
   const issues = { minNightsUnknown: [] as string[], bedsInsufficient: [] as string[], noLaundryField: [] as string[], bathroomsMissing: [] as string[], multiStay: [] as string[] };
   const collect = (packages: { listing_name: string; warnings: string[] }[], listings: { name: string; in_scope: boolean; laundry_raw: string | null }[]) => {
     for (const p of packages) {
@@ -166,7 +169,7 @@ export async function loadStatus(): Promise<StatusView> {
       c.from('app_state').select('key, value').in('key', keys),
       c.from('sync_runs').select('*').order('started_at', { ascending: false }).limit(50),
       c.from('webhook_events').select('id, svix_id, event_id, event, object_id, received_at, processed_at, status, attempts, error').order('received_at', { ascending: false }).limit(100),
-      c.from('packages').select('listing_name, warnings, status').eq('hidden', false),
+      c.from('packages').select('listing_name, warnings, status').eq('hidden', false).in('date', dates),
       c.from('listings').select('name, in_scope, laundry_raw'),
       c.from('guesty_tokens').select('expires_at, mints').eq('id', 1).maybeSingle(),
     ]);
@@ -182,12 +185,13 @@ export async function loadStatus(): Promise<StatusView> {
       issues,
       token: { expiresAt: token?.expires_at ?? null, mints24h: (token?.mints ?? []).filter((m) => Date.parse(m) > Date.now() - 24 * 3_600_000).length },
       packagesInWindow: packages.filter((p) => p.status !== 'cancelled').length,
+      loadedAt,
     };
   }
   const repo = memory();
   const state: Record<string, unknown> = {};
   for (const k of keys) state[k] = repo.state.get(k) ?? null;
-  const packages = [...repo.packages.values()].filter((p) => !p.hidden);
+  const packages = [...repo.packages.values()].filter((p) => !p.hidden && dates.includes(p.date));
   collect(packages, await repo.getListings());
   const token = await repo.tokenStore.read();
   return {
@@ -197,5 +201,6 @@ export async function loadStatus(): Promise<StatusView> {
     issues,
     token: { expiresAt: token.expiresAt, mints24h: token.mints.filter((m) => Date.parse(m) > Date.now() - 24 * 3_600_000).length },
     packagesInWindow: packages.filter((p) => p.status !== 'cancelled').length,
+    loadedAt,
   };
 }

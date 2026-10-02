@@ -1,11 +1,11 @@
 @import "tailwindcss";
 
-/* Theme tokens and component styles ported from the prototype (reference/pracovna.html). */
+/* Theme tokens and component styles ported from the owner's prototype pracovna.html (spec folder, not in this repo). */
 :root{
   --bg:#F4F2F0; --surface:#FFFFFF; --surface-2:#F6F4F2; --ink:#2E2E2E; --muted:#6B6661; --line:#E2DEDA;
   --accent:#E06A00; --accent-ink:#FFFFFF; --accent-soft:#FFEEDD; --brand:#FF7F00; --logo:#3A3A3A;
-  --ok:#1E7A4C; --ok-bg:#E3F3EA; --warn:#B42318; --warn-bg:#FDE7E4; --done:#5E6B78; --done-bg:#E9EBEE;
-  --todo-bg:#FDEDEC; --todo-line:#F2B8B3; --todo:#B42318; --kid:#2A5DB0; --kid-bg:#E3ECFA; --priv:#6B2FA3; --priv-bg:#F0E6F9;
+  --ok:#1E7A4C; --ok-bg:#E3F3EA; --ok-ink:#FFFFFF; --warn:#B42318; --warn-bg:#FDE7E4; --done:#5E6B78; --done-bg:#E9EBEE;
+  --todo-bg:#FDEDEC; --todo-line:#F2B8B3; --todo:#B42318; --todo-ink:#FFFFFF; --kid:#2A5DB0; --kid-bg:#E3ECFA; --priv:#6B2FA3; --priv-bg:#F0E6F9;
   --shadow:0 1px 2px rgba(58,40,20,.05),0 4px 14px rgba(58,40,20,.06);
   --display:var(--font-display),"Bricolage Grotesque","Arial Narrow",system-ui,sans-serif;
   --body:var(--font-body),"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -15,16 +15,16 @@
   color-scheme:dark;
   --bg:#141312; --surface:#1D1B1A; --surface-2:#262322; --ink:#EDEAE7; --muted:#A39D97; --line:#34302D;
   --accent:#FF8A1F; --accent-ink:#1E1100; --accent-soft:#3A2410; --brand:#FF8A1F; --logo:#EDEAE7;
-  --ok:#57C98F; --ok-bg:#15301F; --warn:#FF7B72; --warn-bg:#3B1C1A; --done:#A3AFBA; --done-bg:#24282C;
-  --todo-bg:#3A1C1B; --todo-line:#6E2F2B; --todo:#FF7B72; --kid:#8FB3F2; --kid-bg:#1B2842; --priv:#C79BF0; --priv-bg:#2C1E3C;
+  --ok:#57C98F; --ok-bg:#15301F; --ok-ink:#062915; --warn:#FF7B72; --warn-bg:#3B1C1A; --done:#A3AFBA; --done-bg:#24282C;
+  --todo-bg:#3A1C1B; --todo-line:#6E2F2B; --todo:#FF7B72; --todo-ink:#2B0B08; --kid:#8FB3F2; --kid-bg:#1B2842; --priv:#C79BF0; --priv-bg:#2C1E3C;
   --shadow:0 1px 0 rgba(0,0,0,.35);
 }}
 :root[data-theme="dark"]{
   color-scheme:dark;
   --bg:#141312; --surface:#1D1B1A; --surface-2:#262322; --ink:#EDEAE7; --muted:#A39D97; --line:#34302D;
   --accent:#FF8A1F; --accent-ink:#1E1100; --accent-soft:#3A2410; --brand:#FF8A1F; --logo:#EDEAE7;
-  --ok:#57C98F; --ok-bg:#15301F; --warn:#FF7B72; --warn-bg:#3B1C1A; --done:#A3AFBA; --done-bg:#24282C;
-  --todo-bg:#3A1C1B; --todo-line:#6E2F2B; --todo:#FF7B72; --kid:#8FB3F2; --kid-bg:#1B2842; --priv:#C79BF0; --priv-bg:#2C1E3C;
+  --ok:#57C98F; --ok-bg:#15301F; --ok-ink:#062915; --warn:#FF7B72; --warn-bg:#3B1C1A; --done:#A3AFBA; --done-bg:#24282C;
+  --todo-bg:#3A1C1B; --todo-line:#6E2F2B; --todo:#FF7B72; --todo-ink:#2B0B08; --kid:#8FB3F2; --kid-bg:#1B2842; --priv:#C79BF0; --priv-bg:#2C1E3C;
   --shadow:0 1px 0 rgba(0,0,0,.35);
 }
 *{box-sizing:border-box}
@@ -97,7 +97,7 @@ button{cursor:pointer}
 
 /* filters */
 .filters{display:flex;gap:6px;margin-top:18px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
-.chip{flex:0 0 auto;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:9px 15px;font-size:14px;font-weight:600}
+.chip{flex:0 0 auto;display:inline-flex;align-items:center;min-height:44px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:9px 15px;font-size:14px;font-weight:600}
 .chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
 .chip .c{font-variant-numeric:tabular-nums;opacity:.65;margin-left:5px}
 #cleaners{margin-top:18px}
@@ -111,14 +111,14 @@ button{cursor:pointer}
 .job.is-packed{background:color-mix(in srgb,var(--ok) 20%,var(--surface));border:2px solid var(--ok);box-shadow:none}
 .job.is-packed .items li,.job.is-packed .items li b,.job.is-packed .cons,.job.is-packed .ck,.job.is-packed .lnote,.job.is-packed .tag.none{background:color-mix(in srgb,var(--ok) 10%,var(--surface))}
 .job.is-packed .items li b{border-color:color-mix(in srgb,var(--ok) 40%,var(--line))}
-.pill.todo{background:var(--todo);color:#fff}
+.pill.todo{background:var(--todo);color:var(--todo-ink)}
 .job.is-todo .items li{background:color-mix(in srgb,var(--surface) 70%,transparent)}
 .job.is-todo .cons{background:var(--surface)}
 .job.is-handed{background:var(--done-bg);border-color:transparent;box-shadow:none;opacity:.8}
 .jh{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
 .jh h3{margin:0;font-family:var(--display);font-weight:700;font-size:22px;line-height:1.1;letter-spacing:-.015em;text-wrap:balance}
 .pill{flex:0 0 auto;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:5px 9px;border-radius:999px;background:var(--surface-2);color:var(--muted)}
-.pill.packed{background:var(--ok);color:#fff}
+.pill.packed{background:var(--ok);color:var(--ok-ink)}
 .pill.handed{background:var(--done);color:var(--bg)}
 .meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin-top:8px;font-size:14px;color:var(--muted)}
 .meta b{color:var(--ink)}
@@ -155,10 +155,8 @@ button{cursor:pointer}
 .cons li b small{font-family:var(--body);font-weight:500;font-size:12px;color:var(--muted)}
 .cons li span small{color:var(--muted);font-size:12px}
 .cons li.cust b{color:var(--accent)}
-.ico{width:22px;height:22px;flex:0 0 22px}
-.cons .ico{vertical-align:-6px;margin-right:6px}
-.tot .ico{width:26px;height:26px;flex-basis:26px}
-.capico{width:22px;height:22px;object-fit:contain;vertical-align:-6px;margin-right:6px}
+/* capsule photo before the row label; Tailwind's preflight makes img a block, so the display is explicit */
+.capico{display:inline-block;width:22px;height:22px;object-fit:contain;vertical-align:-6px;margin-right:6px;border-radius:4px}
 .cons li.miss span small{color:var(--warn);font-weight:600}
 .sumcons{margin-top:10px;background:var(--surface-2);border-color:transparent}
 /* checklist */
@@ -168,7 +166,7 @@ button{cursor:pointer}
 .ck i{flex:0 0 22px;height:22px;border:2px solid var(--muted);border-radius:6px;display:grid;place-items:center}
 .ck[aria-pressed="true"]{background:var(--ok-bg);border-color:transparent}
 .ck[aria-pressed="true"] i{background:var(--ok);border-color:var(--ok)}
-.ck[aria-pressed="true"] i::after{content:"";width:6px;height:11px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:translateY(-1px) rotate(45deg)}
+.ck[aria-pressed="true"] i::after{content:"";width:6px;height:11px;border:solid var(--ok-ink);border-width:0 2.5px 2.5px 0;transform:translateY(-1px) rotate(45deg)}
 .ck:disabled{cursor:default}
 .job.is-handed .ck{background:transparent}
 
@@ -181,7 +179,7 @@ button{cursor:pointer}
 .btn.primary:hover,.btn.go:hover{filter:brightness(1.08)}
 .btn.ghost{background:transparent;border:1px solid var(--line);flex:0 0 auto;font-size:15px}
 .btn:disabled{opacity:.5;cursor:default}
-.btn.done,.btn.done:disabled{background:var(--ok);color:#fff;opacity:1}
+.btn.done,.btn.done:disabled{background:var(--ok);color:var(--ok-ink);opacity:1}
 .who{margin-top:10px;font-size:13px;color:var(--muted)}
 .noteform{display:flex;gap:8px;margin-top:10px}
 .noteform input{flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:10px 12px}
@@ -208,7 +206,7 @@ td input.lbl{width:190px;text-align:left}
 .dvrow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed var(--line);font-size:14px}
 .dvrow select{border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:6px}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:12px;font-weight:600;font-size:15px;z-index:9;max-width:calc(100% - 32px);box-shadow:0 8px 24px rgba(0,0,0,.2)}
-@media (max-width:420px){.tot .ico{display:none}.day .d{font-size:17px}.brand h1{font-size:24px}.items{grid-template-columns:1fr 1fr}.items li small{display:none}}
+@media (max-width:420px){.day .d{font-size:17px}.brand h1{font-size:24px}.items{grid-template-columns:1fr 1fr}.items li small{display:none}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 
 /* additions for the app */
@@ -218,8 +216,7 @@ td input.lbl{width:190px;text-align:left}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .changed{background:#3A2C10;color:#FFD48A}}
 .warn-list{margin-top:10px;display:flex;flex-direction:column;gap:4px}
 .warn-list span{color:var(--warn);font-weight:700;font-size:13px}
-.capico{width:22px;height:22px;object-fit:contain;vertical-align:-6px;margin-right:6px;border-radius:4px}
-.nav a{font-size:14px;font-weight:600;color:var(--muted)}
+.nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 2px;font-size:14px;font-weight:600;color:var(--muted)}
 .nav a[aria-current="page"]{color:var(--accent)}
 .form-row{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
 .form-row input,.form-row select{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:12px;font-size:16px}

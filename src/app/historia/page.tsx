@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { loadHistory, HISTORY_PAGE } from '@/app/_lib/admin';
+import { loadHistory } from '@/app/_lib/admin';
+import { HISTORY_PAGE, historyFilterFrom } from '@/app/_lib/history-filter';
 import { getViewer } from '@/app/_lib/viewer';
-import { addDays, formatDM, formatHM, todayInTz } from '@/core/packing';
+import { formatDM, formatHM, todayInTz } from '@/core/packing';
 import { sk } from '@/core/i18n/sk';
 import { AdminShell } from '@/ui/AdminShell';
 
@@ -49,15 +50,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Prom
   if (!viewer) redirect('/login');
   if (viewer.role !== 'admin') redirect('/');
   const sp = await searchParams;
-  const today = todayInTz(new Date());
-  const f = {
-    from: typeof sp.od === 'string' && sp.od ? sp.od : addDays(today, -7),
-    to: typeof sp.do === 'string' && sp.do ? sp.do : today,
-    listingId: typeof sp.byt === 'string' ? sp.byt : undefined,
-    actor: typeof sp.osoba === 'string' ? sp.osoba : undefined,
-    event: typeof sp.udalost === 'string' ? sp.udalost : undefined,
-    page: Math.max(1, parseInt(typeof sp.strana === 'string' ? sp.strana : '1', 10) || 1),
-  };
+  const f = historyFilterFrom((k) => (typeof sp[k] === 'string' ? (sp[k] as string) : undefined), todayInTz(new Date()));
   const view = await loadHistory(f);
   const qs = new URLSearchParams({ od: f.from, do: f.to, ...(f.listingId ? { byt: f.listingId } : {}), ...(f.actor ? { osoba: f.actor } : {}), ...(f.event ? { udalost: f.event } : {}) });
 

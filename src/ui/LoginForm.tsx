@@ -3,13 +3,16 @@
 import { useActionState } from 'react';
 import { devLoginAction, loginAction } from '@/app/_lib/actions';
 import { sk } from '@/core/i18n/sk';
+import type { LoginErrorKey } from '@/db/auth-errors';
 import { LogoMark } from './Header';
 
-const ERRORS: Record<string, string> = {
+/** Every key loginAction can return has a text; the type keeps the two in sync. */
+const ERRORS: Record<LoginErrorKey | 'deactivated', string> = {
   wrong: sk.login.wrong,
   tooMany: sk.login.tooMany,
   deactivated: sk.login.deactivated,
   offline: sk.login.offline,
+  failed: sk.login.failed,
 };
 
 export function LoginForm({ devAllowed }: { devAllowed: boolean }) {
@@ -50,7 +53,7 @@ export function LoginForm({ devAllowed }: { devAllowed: boolean }) {
             </div>
             {state.error && (
               <div className="note" role="alert">
-                {ERRORS[state.error] ?? sk.login.wrong}
+                {ERRORS[state.error as keyof typeof ERRORS] ?? sk.login.failed}
               </div>
             )}
             <div className="actions">

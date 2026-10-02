@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import { currentProfile } from '@/db/server';
-import { env, missingSupabaseEnv, type Env } from '@/env';
+import { env, missingSupabaseAuthEnv, type Env } from '@/env';
 
 export interface Viewer {
   id: string;
@@ -18,8 +18,13 @@ export const DEV_VIEWERS: Record<'admin' | 'staff', Viewer> = {
   staff: { id: '00000000-0000-4000-8000-00000000005f', name: 'Test personál', role: 'staff', active: true, dev: true },
 };
 
+/**
+ * Supabase sign-in is in use. The same predicate as the proxy and the server
+ * client (URL + anon key); loadEnv() refuses a half-configured Supabase, so the
+ * service-role key the sync needs is then present as well.
+ */
 export function supabaseConfigured(e: Env = env()): boolean {
-  return missingSupabaseEnv(e).length === 0;
+  return missingSupabaseAuthEnv(e).length === 0;
 }
 
 /** Development login is possible only in seed mode without a database. */

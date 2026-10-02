@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { isTransientAuthError } from '@/db/auth-errors';
 
 const PUBLIC = ['/login', '/health', '/api/'];
 const ADMIN = ['/nastavenia', '/historia', '/stav'];
@@ -38,13 +39,16 @@ export async function proxy(request: NextRequest) {
       },
     },
   });
-  const { data } = await supabase.auth.getClaims();
+  const { data, error } = await supabase.auth.getClaims();
+  // an outage is not "signed out": let the page report the error instead of showing the login form over a valid session
+  if (isTransientAuthError(error)) return response;
   if (!data?.claims?.sub) {
     const login = new URL('/login', request.url);
     return NextResponse.redirect(login);
   }
   if (ADMIN.some((p) => path.startsWith(p))) {
-    const { data: profile } = await supabase.from('profiles').select('role, active').eq('id', data.claims.sub).maybeSingle();
+    const { data: profile, error: profileError } = await supabase.from('profiles').select('role, active').eq('id', data.claims.sub).maybeSingle();
+    if (profileError) return response;
     const p = profile as { role: string; active: boolean } | null;
     if (!p || !p.active || p.role !== 'admin') return NextResponse.redirect(new URL('/', request.url));
   }

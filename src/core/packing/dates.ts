@@ -27,6 +27,41 @@ export function diffDays(a: Ymd, b: Ymd): number {
   return Math.round((ymdToDate(b).getTime() - ymdToDate(a).getTime()) / 86_400_000);
 }
 
+/** True for a real calendar date written as "YYYY-MM-DD" (2026-02-30 is not one). */
+export function isYmd(s: string): s is Ymd {
+  const m = YMD.exec(s);
+  if (!m) return false;
+  return dateToYmd(new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], 12, 0, 0))) === s;
+}
+
+/** Offset of `tz` from UTC at `instant`, in ms (CEST → 7 200 000, CET → 3 600 000). */
+function tzOffsetMs(instant: Date, tz: string): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(instant);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  const wall = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour'), get('minute'), get('second'));
+  return wall - Math.floor(instant.getTime() / 1000) * 1000;
+}
+
+/** The instant at which the calendar day `ymd` begins (00:00) in `tz`; DST-aware. */
+export function zonedMidnight(ymd: Ymd, tz: string = TZ): Date {
+  const m = YMD.exec(ymd);
+  if (!m) throw new Error(`Invalid date: ${ymd}`);
+  const wall = Date.UTC(+m[1], +m[2] - 1, +m[3], 0, 0, 0);
+  let t = wall - tzOffsetMs(new Date(wall), tz);
+  const off = tzOffsetMs(new Date(t), tz);
+  if (wall - off !== t) t = wall - off;
+  return new Date(t);
+}
+
 /** The calendar date "now" in Europe/Bratislava. */
 export function todayInTz(now: Date = new Date(), tz: string = TZ): Ymd {
   return new Intl.DateTimeFormat('en-CA', {

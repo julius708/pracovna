@@ -78,7 +78,7 @@ export function Header({
           ))}
         <form action={logoutAction} style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
           <span style={{ color: 'var(--muted)' }}>{viewer.name}</span>
-          <button type="submit" style={{ background: 'none', border: 0, padding: 0, fontSize: 13, fontWeight: 600, color: 'var(--accent)', minHeight: 32 }}>
+          <button type="submit" style={{ background: 'none', border: 0, padding: '0 6px', fontSize: 13, fontWeight: 600, color: 'var(--accent)', minHeight: 44 }}>
             {sk.buttons.logout}
           </button>
         </form>

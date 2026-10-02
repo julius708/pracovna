@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useRef, useState, useTransition } from 'react';
 import type { SettingsView } from '@/app/_lib/admin';
 import { saveSettingsAction, setProfileAction } from '@/app/_lib/admin-actions';
 import type { BedGroup, Counts, ItemDef, PackingSettings } from '@/core/packing';
-import { sk } from '@/core/i18n/sk';
+import { pluralBalicek, sk } from '@/core/i18n/sk';
 
 const GROUPS: { key: BedGroup; label: string }[] = [
   { key: 'dvoj', label: 'Manželská' },
@@ -24,14 +24,24 @@ function cell(s: PackingSettings, col: string, item: string): number {
   return o?.[item] ?? 0;
 }
 
-export function SettingsForm({ view }: { view: SettingsView }) {
+export function SettingsForm({ view, meId }: { view: SettingsView; meId: string }) {
   const [s, setS] = useState<PackingSettings>(view.linen);
   const [duvets, setDuvets] = useState<Record<string, string>>(view.duvetTypes);
   const [checklist, setChecklist] = useState(view.linen.checklist.join('\n'));
   const [linenVersion, setLinenVersion] = useState(view.linenVersion);
   const [duvetVersion, setDuvetVersion] = useState(view.duvetVersion);
+  const [profiles, setProfiles] = useState(view.profiles);
+  /** Problems stay on screen until the next attempt; confirmations show as a toast and disappear. */
   const [msg, setMsg] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [pending, start] = useTransition();
+
+  const showToast = (text: string) => {
+    setToast(text);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 3500);
+  };
 
   const setCell = (col: string, item: string, raw: string) => {
     const n = Math.max(0, Math.min(20, parseInt(raw, 10) || 0));
@@ -53,21 +63,47 @@ export function SettingsForm({ view }: { view: SettingsView }) {
     start(async () => {
       setMsg(null);
       const linen: PackingSettings = { ...s, checklist: checklist.split('\n').map((x) => x.trim()).filter(Boolean) };
-      const r1 = await saveSettingsAction('linen_table', linen, linenVersion);
-      if (!r1.ok) {
-        setMsg(r1.conflict ? 'Nastavenie medzitým zmenil niekto iný, načítaj znova.' : r1.error === 'unauthorized' ? sk.toasts.adminOnly : sk.toasts.saveFailed);
-        return;
+      try {
+        const r1 = await saveSettingsAction('linen_table', linen, linenVersion);
+        if (!r1.ok) {
+          setMsg(r1.conflict ? sk.admin.conflict : r1.error === 'unauthorized' ? sk.toasts.adminOnly : sk.toasts.saveFailed);
+          return;
+        }
+        setLinenVersion(r1.version ?? linenVersion + 1);
+        const clean: Record<string, string> = {};
+        for (const [k, v] of Object.entries(duvets)) if (v === 'male' || v === 'velke') clean[k] = v;
+        const r2 = await saveSettingsAction('duvet_types', clean, duvetVersion);
+        if (!r2.ok) {
+          setMsg(r2.conflict ? sk.admin.conflict : sk.toasts.saveFailed);
+          return;
+        }
+        setDuvetVersion(r2.version ?? duvetVersion + 1);
+        if (r1.recomputeFailed || r2.recomputeFailed) {
+          setMsg(sk.toasts.savedRecomputeFailed);
+          return;
+        }
+        const n = (r1.recomputed ?? 0) + (r2.recomputed ?? 0);
+        showToast(`${sk.toasts.saved} · prepočítané ${n} ${pluralBalicek(n)}`);
+      } catch {
+        setMsg(sk.toasts.saveFailed);
       }
-      const clean: Record<string, string> = {};
-      for (const [k, v] of Object.entries(duvets)) if (v === 'male' || v === 'velke') clean[k] = v;
-      const r2 = await saveSettingsAction('duvet_types', clean, duvetVersion);
-      if (!r2.ok) {
-        setMsg(r2.conflict ? 'Nastavenie medzitým zmenil niekto iný, načítaj znova.' : sk.toasts.saveFailed);
-        return;
+    });
+
+  /** Controlled inputs: the row changes only after the server confirmed, so a refused change snaps back. */
+  const changeProfile = (id: string, role: 'staff' | 'admin' | null, active: boolean | null) =>
+    start(async () => {
+      setMsg(null);
+      try {
+        const r = await setProfileAction(id, role, active);
+        if (r.ok) {
+          setProfiles((list) => list.map((p) => (p.id === id ? { ...p, role: role ?? p.role, active: active ?? p.active } : p)));
+          showToast(sk.admin.userUpdated);
+          return;
+        }
+        setMsg(r.error === 'self' ? sk.admin.selfChange : r.error === 'unauthorized' ? sk.toasts.adminOnly : sk.toasts.saveFailed);
+      } catch {
+        setMsg(sk.toasts.saveFailed);
       }
-      setLinenVersion(r1.version ?? linenVersion + 1);
-      setDuvetVersion(r2.version ?? duvetVersion + 1);
-      setMsg(`${sk.toasts.saved} · prepočítané: ${(r1.recomputed ?? 0) + (r2.recomputed ?? 0)} balíčkov`);
     });
 
   return (
@@ -155,33 +191,43 @@ export function SettingsForm({ view }: { view: SettingsView }) {
             </tr>
           </thead>
           <tbody>
-            {view.profiles.map((p) => (
-              <tr key={p.id}>
-                <td>{p.display_name}</td>
-                <td>
-                  <select
-                    defaultValue={p.role}
-                    aria-label={`Rola – ${p.display_name}`}
-                    onChange={(e) => start(async () => setMsg((await setProfileAction(p.id, e.target.value as 'staff' | 'admin', null)).ok ? 'Používateľ upravený' : sk.toasts.saveFailed))}
-                  >
-                    <option value="staff">personál</option>
-                    <option value="admin">správca</option>
-                  </select>
-                </td>
-                <td>
-                  <input
-                    type="checkbox"
-                    defaultChecked={p.active}
-                    aria-label={`Aktívny – ${p.display_name}`}
-                    onChange={(e) => start(async () => setMsg((await setProfileAction(p.id, null, e.target.checked)).ok ? 'Používateľ upravený' : sk.toasts.saveFailed))}
-                  />
-                </td>
-              </tr>
-            ))}
+            {profiles.map((p) => {
+              const mine = p.id === meId;
+              return (
+                <tr key={p.id}>
+                  <td>
+                    {p.display_name}
+                    {mine && <small style={{ color: 'var(--muted)' }}> ({sk.admin.ownAccount})</small>}
+                  </td>
+                  <td>
+                    <select
+                      value={p.role}
+                      disabled={mine || pending}
+                      title={mine ? sk.admin.selfChange : undefined}
+                      aria-label={`Rola – ${p.display_name}`}
+                      onChange={(e) => changeProfile(p.id, e.target.value as 'staff' | 'admin', null)}
+                    >
+                      <option value="staff">personál</option>
+                      <option value="admin">správca</option>
+                    </select>
+                  </td>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={p.active}
+                      disabled={mine || pending}
+                      title={mine ? sk.admin.selfChange : undefined}
+                      aria-label={`Aktívny – ${p.display_name}`}
+                      onChange={(e) => changeProfile(p.id, null, e.target.checked)}
+                    />
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
-      <p style={{ marginTop: 8 }}>Nových používateľov pridáva správca v Supabase (Authentication → Add user).</p>
+      <p style={{ marginTop: 8 }}>Nových používateľov pridáva správca v Supabase (Authentication → Add user). Vlastný účet si správca nemôže deaktivovať ani odobrať rolu.</p>
 
       <h3>Vylúčené byty</h3>
       <div className="dvlist">
@@ -196,7 +242,7 @@ export function SettingsForm({ view }: { view: SettingsView }) {
       </div>
 
       {msg && (
-        <div className="note" role="status" style={{ marginTop: 12 }}>
+        <div className="note" role="alert" style={{ marginTop: 12 }}>
           {msg}
         </div>
       )}
@@ -205,6 +251,11 @@ export function SettingsForm({ view }: { view: SettingsView }) {
           {sk.buttons.saveSettings}
         </button>
       </div>
+      {toast && (
+        <div className="toast" role="status">
+          {toast}
+        </div>
+      )}
     </section>
   );
 }

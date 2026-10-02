@@ -1,7 +1,7 @@
 import 'server-only';
-import { NOTE_MAX_LENGTH } from '@/core/packing';
+import { addDays, NOTE_MAX_LENGTH, todayInTz } from '@/core/packing';
 import type { MemoryRepo } from '@/db/memory-repo';
-import type { PackageEventInsert } from '@/db/types';
+import type { PackageEventInsert, PackageRow } from '@/db/types';
 import type { Viewer } from './viewer';
 
 /**
@@ -27,10 +27,22 @@ function replayed(repo: MemoryRepo, actionId: string | null): boolean {
   return !!actionId && repo.events.some((e) => e.client_action_id === actionId);
 }
 
+/**
+ * Staff may change only what the board shows them: visible rows from yesterday
+ * to the day after tomorrow (Bratislava). Admins may touch any row. Mirrors the
+ * check inside the Postgres RPCs.
+ */
+export function outOfWindow(repo: MemoryRepo, viewer: Viewer, p: PackageRow): boolean {
+  if (viewer.role === 'admin') return false;
+  const today = todayInTz(repo.now());
+  return p.hidden || p.date < addDays(today, -1) || p.date > addDays(today, 2);
+}
+
 export async function memoryPack(repo: MemoryRepo, viewer: Viewer, id: string, actionId: string | null): Promise<StaffResult> {
   const p = repo.packages.get(id);
   if (!p) throw new Error('package not found');
   if (replayed(repo, actionId)) return { ok: true, replayed: true, status: p.status };
+  if (outOfWindow(repo, viewer, p)) return { ok: false, status: 'out_of_window' };
   if (p.status === 'packed') return { ok: false, already_packed: true, packed_by_name: p.packed_by_name, status: p.status };
   if (p.status !== 'todo') return { ok: false, status: p.status };
   const now = repo.now().toISOString();
@@ -43,6 +55,7 @@ export async function memoryUnpack(repo: MemoryRepo, viewer: Viewer, id: string,
   const p = repo.packages.get(id);
   if (!p) throw new Error('package not found');
   if (replayed(repo, actionId)) return { ok: true, replayed: true };
+  if (outOfWindow(repo, viewer, p)) return { ok: false, status: 'out_of_window' };
   if (p.status !== 'packed') return { ok: false, status: p.status };
   const previously = p.packed_by_name;
   Object.assign(p, { status: 'todo', packed_by: null, packed_by_name: null, packed_at: null, packed_hash: null, updated_at: repo.now().toISOString() });
@@ -54,6 +67,7 @@ export async function memoryNote(repo: MemoryRepo, viewer: Viewer, id: string, n
   const p = repo.packages.get(id);
   if (!p) throw new Error('package not found');
   if (replayed(repo, actionId)) return { ok: true, replayed: true };
+  if (outOfWindow(repo, viewer, p)) return { ok: false, status: 'out_of_window' };
   if (p.status === 'cancelled') return { ok: false, status: p.status };
   const clean = (note ?? '').slice(0, NOTE_MAX_LENGTH);
   const previous = p.note;
@@ -67,6 +81,7 @@ export async function memoryCheck(repo: MemoryRepo, viewer: Viewer, id: string, 
   const p = repo.packages.get(id);
   if (!p) throw new Error('package not found');
   if (replayed(repo, actionId)) return { ok: true, replayed: true };
+  if (outOfWindow(repo, viewer, p)) return { ok: false, status: 'out_of_window' };
   if (p.status !== 'todo') return { ok: false, status: p.status };
   const map = { ...(p.checklist?.checked ?? {}) };
   if (checked) map[item] = true;

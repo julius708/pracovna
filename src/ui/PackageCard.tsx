@@ -4,11 +4,15 @@ import { useEffect, useRef, useState } from 'react';
 import type { BoardPackage } from '@/app/_lib/board';
 import type { Viewer } from '@/app/_lib/viewer';
 import { formatHM, NOTE_MAX_LENGTH, type PackingResult, type WarningCode } from '@/core/packing';
-import { bedSummary, capsuleLabel, cheerDone, childrenBanner, duvetText, nextArrival, packedBy, peopleSentence, sk, sofaText, warningLine } from '@/core/i18n/sk';
+import { bedSummary, capsuleLabel, cheerDone, childrenBannerParts, duvetText, nextArrivalParts, packedBy, peopleParts, sk, sofaText, warningLine, type TextPart } from '@/core/i18n/sk';
 
 const AV = '/assets/angelika.jpg';
-/** Warnings shown inline in the beds line, as in the prototype. */
-const INLINE: WarningCode[] = ['bunk', 'no_duvet_info'];
+/** Warnings already shown inline (beds line, badge line), so they are not repeated in the red list. */
+const INLINE: WarningCode[] = ['bunk', 'no_duvet_info', 'min_nights_unknown'];
+
+function Parts({ parts }: { parts: TextPart[] }) {
+  return <>{parts.map((x, i) => (x.bold ? <b key={i}>{x.text}</b> : <span key={i}>{x.text}</span>))}</>;
+}
 
 export interface CardHandlers {
   onPack: (p: BoardPackage) => void;
@@ -42,7 +46,7 @@ export function PackageCard({
   const cancelled = p.status === 'cancelled';
   const cls = cancelled ? 'job cancelled-card' : `job is-${p.status}`;
   const next = r.next;
-  const kid = childrenBanner(r);
+  const kid = childrenBannerParts(r);
   const sofa = sofaText(r);
   const duvet = duvetText(r);
   const changed = p.status === 'packed' && p.packed_hash && p.packed_hash !== p.computed_hash;
@@ -66,22 +70,31 @@ export function PackageCard({
         <h3>{p.listing_name}</h3>
         {pill}
       </div>
-      {r.private && <div className="privbar">{sk.privateBanner}</div>}
-      {kid && <div className="kids">{kid}</div>}
+      {/* spec §5 order: badges, then banners (children, private linen) */}
       <div className="meta">
         {next ? (
           r.sameDay ? (
             <span className="tag rush">{sk.rushTag}</span>
           ) : (
-            <span>{nextArrival(next.date)}</span>
+            <span>
+              <Parts parts={nextArrivalParts(next.date)} />
+            </span>
           )
         ) : (
           <span className="tag none">{sk.noNextTag}</span>
         )}
-        <span>{peopleSentence(r)}</span>
-        {r.gap?.blocked === null && <span style={{ color: 'var(--muted)' }}>{sk.minNightsUnknown}</span>}
+        <span>
+          <Parts parts={peopleParts(r)} />
+        </span>
+        {r.gap?.blocked === null && <span className="warnTxt">{sk.minNightsUnknown}</span>}
         {cleaner && <span className="tag svc">{cleaner}</span>}
       </div>
+      {kid && (
+        <div className="kids">
+          <Parts parts={kid} />
+        </div>
+      )}
+      {r.private && <div className="privbar">{sk.privateBanner}</div>}
       {changed && <div className="changed">{sk.changedAfterPacking}</div>}
       {otherWarnings.length > 0 && (
         <div className="warn-list">
@@ -140,7 +153,7 @@ export function PackageCard({
         {sk.bedsLabel} {bedSummary(r)}
         {sofa && (
           <>
-            {' · '}
+            {bedSummary(r) ? ' · ' : ' '}
             {r.beds.sofasUsed ? <b>{sofa}</b> : sofa}
           </>
         )}

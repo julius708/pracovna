@@ -49,6 +49,8 @@ pnpm dev                          # http://localhost:3000
 
 Node 22+ and pnpm are required. On Windows: `winget install --source winget OpenJS.NodeJS.LTS` and `npm i -g pnpm`.
 
+Set all three Supabase variables or none: with only some of them the app refuses to start (a half-configured database would mix the development sign-in with real sessions).
+
 ### Seed mode
 
 Without Supabase keys the login page offers two development stand-ins ("Test správca", "Test personál") so the whole app can be exercised locally; with Supabase configured the real e-mail/password login is used and the stand-ins disappear.
@@ -103,8 +105,20 @@ Vercel sends `Authorization: Bearer <CRON_SECRET>`; set `CRON_SECRET` (random, 3
 Migrations are plain SQL in `supabase/migrations/`, applied with the Supabase CLI (`supabase db push`) or pasted into the SQL editor; `supabase/seed.sql` loads the default linen table. Rules that the schema enforces:
 
 - staff can only change packages through the RPCs `pack_package`, `unpack_package`, `set_note`, `toggle_check`; the sync writes only the computed columns through `sync_upsert_package`; a guard trigger refuses any other update;
+- the staff RPCs act only on the rows the board shows to staff (visible, yesterday to the day after tomorrow); admins may touch any row;
 - `package_events` is append-only and kept forever;
-- row visibility follows Bratislava's calendar date (`today_ba()`).
+- row visibility follows Bratislava's calendar date (`today_ba()`);
+- a deactivated user can still read their own profile row (so the app can say "Účet je deaktivovaný"), nothing else; an admin cannot deactivate or demote their own account.
+
+## Deliberate differences from the prototype
+
+The owner's prototype (`pracovna.html` in the `reference/` folder of the spec directory, not part of this repository) is the reference for rules, texts and look; the owner's spec wins where they disagree. These are the knowing deviations:
+
+- Angelika's bubble before the first sync says „Dáta z Guesty sa ešte načítavajú.“ instead of the prototype's „…po rannom syncu“: the app syncs every 3 minutes, there is no morning sync.
+- The children banner always shows both counts, „deti: N · batoľatá: N“, as written in the spec (the prototype hid a zero part). Numbers are bold like in the prototype.
+- Card content order follows the spec: name, badges (Rýchla výmena, „Balíme na N osôb …“, next arrival), then banners (children, private linen). The prototype printed the banners first.
+- Item pictograms are off, as in the prototype (`ICONS_ON = false`); only the capsule photos are shown.
+- Dark mode uses dark text on the green/red status pills and the „Zabalené ✓“ button (the prototype's white text had about 2:1 contrast there).
 
 ## Alerts and health
 

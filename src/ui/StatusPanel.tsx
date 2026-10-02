@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { StatusView } from '@/app/_lib/admin';
 import { syncNowAction, type SyncJob } from '@/app/_lib/admin-actions';
@@ -21,14 +21,24 @@ function age(iso: unknown, now: number): string {
 
 export function StatusPanel({ view }: { view: StatusView }) {
   const [msg, setMsg] = useState<string | null>(null);
-  const [now] = useState(() => Date.now());
+  // "pred N min" is rendered from the server's instant first (identical SSR and hydration markup), then ticks
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setTick(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
+  const now = Math.max(tick, Date.parse(view.loadedAt));
   const [pending, start] = useTransition();
   const router = useRouter();
   const run = (job: SyncJob) =>
     start(async () => {
       setMsg('Spúšťam…');
-      const r = await syncNowAction(job);
-      setMsg(r.summary);
+      try {
+        const r = await syncNowAction(job);
+        setMsg(r.summary);
+      } catch {
+        setMsg(sk.admin.serverUnreachable);
+      }
       router.refresh();
     });
   const s = view.state;

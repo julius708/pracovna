@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { env } from '@/env';
+import { isTransientAuthError } from './auth-errors';
 import type { ProfileRow } from './types';
 
 /** Supabase client bound to the request's auth cookies (server components, route handlers). */
@@ -22,13 +23,19 @@ export async function createServerSupabase() {
   });
 }
 
-/** The signed-in user's profile, or null. Verifies the token signature (getClaims), never trusts getSession. */
+/**
+ * The signed-in user's profile, or null when there is no session or no row.
+ * Verifies the token signature (getClaims), never trusts getSession. An outage
+ * (network, 5xx) throws instead, so callers never mistake it for "signed out".
+ */
 export async function currentProfile(): Promise<ProfileRow | null> {
   const db = await createServerSupabase();
   if (!db) return null;
-  const { data: claims } = await db.auth.getClaims();
+  const { data: claims, error: claimsError } = await db.auth.getClaims();
+  if (isTransientAuthError(claimsError)) throw claimsError;
   const sub = claims?.claims?.sub;
   if (!sub) return null;
-  const { data } = await db.from('profiles').select('*').eq('id', sub).maybeSingle();
+  const { data, error } = await db.from('profiles').select('*').eq('id', sub).maybeSingle();
+  if (error) throw new Error(`profiles: ${error.message}`);
   return (data as ProfileRow | null) ?? null;
 }

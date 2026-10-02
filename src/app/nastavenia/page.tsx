@@ -13,7 +13,7 @@ export default async function SettingsPage() {
   const view = await loadSettingsView();
   return (
     <AdminShell viewer={viewer}>
-      <SettingsForm view={view} />
+      <SettingsForm view={view} meId={viewer.id} />
     </AdminShell>
   );
 }

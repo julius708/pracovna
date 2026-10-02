@@ -43,6 +43,11 @@ export function loadEnv(source: Record<string, string | undefined> = process.env
   }
   const env = parsed.data;
   if (env.SEED_MODE && env.APP_ENV === 'production') throw new EnvError('SEED_MODE is refused when APP_ENV=production');
+  // all three Supabase variables or none: a half-configured database would mix the dev sign-in with real sessions
+  const supabaseMissing = missingSupabaseEnv(env);
+  if (supabaseMissing.length > 0 && supabaseMissing.length < 3) {
+    throw new EnvError(`Supabase is only partly configured, missing: ${supabaseMissing.join(', ')}`);
+  }
   return env;
 }
 
@@ -54,11 +59,17 @@ export function missingGuestyEnv(env: Env): string[] {
   return missing;
 }
 
-/** Names of the variables the database needs; empty when all are set. */
-export function missingSupabaseEnv(env: Env): string[] {
+/** Names of the variables the sign-in (browser + proxy) needs; empty when all are set. */
+export function missingSupabaseAuthEnv(env: Env): string[] {
   const missing: string[] = [];
   if (!env.NEXT_PUBLIC_SUPABASE_URL) missing.push('NEXT_PUBLIC_SUPABASE_URL');
   if (!env.NEXT_PUBLIC_SUPABASE_ANON_KEY) missing.push('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  return missing;
+}
+
+/** Names of the variables the database (sign-in and the service-role sync) needs; empty when all are set. */
+export function missingSupabaseEnv(env: Env): string[] {
+  const missing = missingSupabaseAuthEnv(env);
   if (!env.SUPABASE_SERVICE_ROLE_KEY) missing.push('SUPABASE_SERVICE_ROLE_KEY');
   return missing;
 }

@@ -6,6 +6,7 @@ import type { BoardData, BoardPackage } from '@/app/_lib/board';
 import type { Viewer } from '@/app/_lib/viewer';
 import { formatDM } from '@/core/packing';
 import { dayLabel, dayWord, packedOf, sk } from '@/core/i18n/sk';
+import { newActionId } from './action-id';
 import { angelikaNumbers, applyCleaner, cleanerOptions, counts, dayJobs, FILTER_KEYS, summaryLines, visibleJobs, type Filter } from './board-model';
 import { Header } from './Header';
 import { PackageCard, type CardHandlers } from './PackageCard';
@@ -31,7 +32,7 @@ function store(key: string, value: string) {
 }
 
 export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer }) {
-  const { data, setData, refresh, connected } = useLiveBoard(initial);
+  const { data, setData, refresh, connected, track } = useLiveBoard(initial);
   const [sel, setSel] = useState(0);
   const [filter, setFilter] = useState<Filter>('todo');
   const [cleaner, setCleaner] = useState('');
@@ -39,7 +40,8 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
   const [busy, setBusy] = useState<Set<string>>(() => new Set());
   const [cheer, setCheer] = useState<{ id: string; msg: string } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const [now, setNow] = useState(() => new Date());
+  // seeded from the server's instant so the hydrated header matches the SSR markup
+  const [now, setNow] = useState(() => new Date(initial.loadedAt));
   const cheerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -110,7 +112,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
       setKeep((k) => new Set(k).add(p.id));
       let res: ActionResult;
       try {
-        res = await packAction(p.id, crypto.randomUUID());
+        res = await track(() => packAction(p.id, newActionId()));
       } catch {
         res = { ok: false, error: 'failed' };
       }
@@ -132,7 +134,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
       setKeep((k) => new Set(k).add(p.id));
       let res: ActionResult;
       try {
-        res = await unpackAction(p.id, crypto.randomUUID());
+        res = await track(() => unpackAction(p.id, newActionId()));
       } catch {
         res = { ok: false, error: 'failed' };
       }
@@ -145,7 +147,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
       patch(p.id, (x) => ({ ...x, note: clean, note_by_name: clean ? viewer.name : null, note_at: clean ? new Date().toISOString() : null }));
       let res: ActionResult;
       try {
-        res = await noteAction(p.id, clean, crypto.randomUUID());
+        res = await track(() => noteAction(p.id, clean, newActionId()));
       } catch {
         res = { ok: false, error: 'failed' };
       }
@@ -167,7 +169,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
       });
       let res: ActionResult;
       try {
-        res = await checkAction(p.id, item, checked, crypto.randomUUID());
+        res = await track(() => checkAction(p.id, item, checked, newActionId()));
       } catch {
         res = { ok: false, error: 'failed' };
       }

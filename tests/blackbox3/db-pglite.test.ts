@@ -19,6 +19,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 const MIG1 = readFileSync(new URL('../../supabase/migrations/0001_init.sql', import.meta.url), 'utf8');
 const MIG2 = readFileSync(new URL('../../supabase/migrations/0002_sync_helpers.sql', import.meta.url), 'utf8');
+const MIG6 = readFileSync(new URL('../../supabase/migrations/0006_access_rules.sql', import.meta.url), 'utf8');
 
 const STUBS = `
 create role authenticated nologin;
@@ -61,7 +62,9 @@ describe('migrations', () => {
       expect(e1, `0001_init.sql failed: ${e1?.code} ${e1?.message} (line ${lineOf(MIG1, e1?.position)})`).toBeNull();
       const e2 = await pgError(fresh.exec(MIG2));
       expect(e2, `0002_sync_helpers.sql failed: ${e2?.code} ${e2?.message} (line ${lineOf(MIG2, e2?.position)})`).toBeNull();
-      const fns = (await fresh.query<Row>("select proname from pg_proc where pronamespace = 'public'::regnamespace order by 1")).rows.map((r) => r.proname);
+      const e6 = await pgError(fresh.exec(MIG6));
+      expect(e6, `0006_access_rules.sql failed: ${e6?.code} ${e6?.message} (line ${lineOf(MIG6, e6?.position)})`).toBeNull();
+      const fns =(await fresh.query<Row>("select proname from pg_proc where pronamespace = 'public'::regnamespace order by 1")).rows.map((r) => r.proname);
       expect(fns).toEqual(expect.arrayContaining(['today_ba', 'is_admin', 'is_active_user', 'handle_new_user', 'sync_upsert_package', 'sync_set_lifecycle', 'pack_package', 'unpack_package', 'set_note', 'toggle_check', 'save_settings', 'admin_set_profile', 'acquire_lock', 'run_retention', 'increment_not_found']));
     } finally {
       await fresh.close();
@@ -75,6 +78,8 @@ describe('migrations', () => {
 // The shared instance loads the untouched files with body checking off; everything else is identical.
 let db: PGlite;
 let seq = 0;
+/** today_ba() of the test database; packages default to it so the staff RPCs see them inside the visible window (0006). */
+let todayBa = '2026-10-05';
 
 const q = async <T extends Row = Row>(text: string, params: unknown[] = []) => (await db.query<T>(text, params)).rows;
 const one = async <T extends Row = Row>(text: string, params: unknown[] = []) => (await q<T>(text, params))[0];
@@ -96,7 +101,7 @@ function computed(over: Row = {}) {
     outgoing_reservation_id: `res-${++seq}`,
     listing_id: 'lst-1',
     listing_name: 'BA: Test 1',
-    date: '2026-10-05',
+    date: todayBa,
     incoming_reservation_id: null,
     same_day: false,
     gap_nights: 2,
@@ -127,7 +132,9 @@ beforeAll(async () => {
   await db.exec('set check_function_bodies = off');
   await db.exec(MIG1);
   await db.exec(MIG2);
+  await db.exec(MIG6);
   await db.exec('set check_function_bodies = on');
+  todayBa = (await one('select public.today_ba()::text as d')).d as string;
 });
 afterAll(async () => {
   await db?.close();
@@ -207,7 +214,7 @@ describe('sync_upsert_package', () => {
       checklist: { items: [], checked: {} },
     });
     expect(row.computed_items).toEqual(c.computed_items);
-    expect((await pkg(row.id)).date).toBe('2026-10-05');
+    expect((await pkg(row.id)).date).toBe(todayBa);
   });
 
   it('a second call for the same reservation updates only the computed columns and keeps note and packed state', async () => {
@@ -279,7 +286,7 @@ describe('pack_package / unpack_package', () => {
     const ev = await events(id, 'packed');
     expect(ev).toHaveLength(1);
     expect(ev[0]).toMatchObject({ actor: angelika, actor_name: 'Angelika', client_action_id: action, listing_id: 'lst-1', listing_name: 'BA: Test 1' });
-    expect(String(ev[0].package_date instanceof Date ? ev[0].package_date.toISOString().slice(0, 10) : ev[0].package_date)).toBe('2026-10-05');
+    expect(String(ev[0].package_date instanceof Date ? ev[0].package_date.toISOString().slice(0, 10) : ev[0].package_date)).toBe(todayBa);
   });
 
   it('a second packer gets already_packed with the first name and no event is written', async () => {
@@ -660,6 +667,84 @@ describe('row level security', () => {
     for (const k of ['lock', 'retention', 'upsert', 'lifecycle', 'notFound'] as const) {
       expect((r[k] as PgErr | null)?.code, `${k} must be refused for authenticated`).toBe('42501');
     }
+  });
+});
+
+// ------------------------------------------------------------------ 9b. access rules of 0006
+describe('0006 access rules', () => {
+  async function asAuthenticated<T>(userId: string | null, fn: () => Promise<T>): Promise<T> {
+    await actAs(userId);
+    await db.exec('set role authenticated');
+    try {
+      return await fn();
+    } finally {
+      await db.exec('reset role');
+    }
+  }
+
+  it('a deactivated user reads their own profile row and nothing else; active users still see everyone', async () => {
+    const inactive = await newUser('Gone', { active: false });
+    const other = await newUser('Other');
+    const mine = await asAuthenticated(inactive, () => q('select id, active from public.profiles where id in ($1, $2)', [inactive, other]));
+    expect(mine).toEqual([{ id: inactive, active: false }]);
+    const all = await asAuthenticated(other, () => q('select id from public.profiles where id in ($1, $2) order by 1', [inactive, other]));
+    expect(all.map((r) => r.id)).toEqual([inactive, other].sort());
+    // still no data rows for the deactivated user
+    expect(await asAuthenticated(inactive, () => q('select 1 from public.settings limit 1'))).toEqual([]);
+  });
+
+  it('an admin cannot deactivate or demote their own account, but may change other admins', async () => {
+    const admin = await newUser('Admin', { role: 'admin' });
+    const colleague = await newUser('Colleague', { role: 'admin' });
+    await actAs(admin);
+    const e1 = await pgError(q('select public.admin_set_profile($1, $2, $3)', [admin, null, false]));
+    expect(e1?.message).toContain('self_change');
+    const e2 = await pgError(q('select public.admin_set_profile($1, $2, $3)', [admin, 'staff', null]));
+    expect(e2?.message).toContain('self_change');
+    expect(await one('select role, active from public.profiles where id = $1', [admin])).toEqual({ role: 'admin', active: true });
+    // a harmless self-change (keeping admin + active) and changes to others go through
+    await q('select public.admin_set_profile($1, $2, $3)', [admin, 'admin', true]);
+    await q('select public.admin_set_profile($1, $2, $3)', [colleague, 'staff', false]);
+    expect(await one('select role, active from public.profiles where id = $1', [colleague])).toEqual({ role: 'staff', active: false });
+    const missing = await pgError(q('select public.admin_set_profile($1, $2, $3)', [randomUUID(), 'admin', true]));
+    expect(missing?.code).toBe('P0002');
+  });
+
+  it('staff RPCs refuse hidden rows and rows outside yesterday..day+2; admins may touch them', async () => {
+    const staff = await newUser('Staff');
+    const admin = await newUser('Admin', { role: 'admin' });
+    const today = (await one('select public.today_ba()::text as d')).d as string;
+    const shift = (n: number) => {
+      const d = new Date(`${today}T12:00:00Z`);
+      d.setUTCDate(d.getUTCDate() + n);
+      return d.toISOString().slice(0, 10);
+    };
+    const old = await newPackage({ date: shift(-5) });
+    const future = await newPackage({ date: shift(3) });
+    const hidden = await newPackage({ date: shift(0) });
+    await q('select public.sync_set_lifecycle($1, $2, $3, $4)', [hidden.id, null, true, null]);
+    const edgeLow = await newPackage({ date: shift(-1) });
+    const edgeHigh = await newPackage({ date: shift(2) });
+    const refused = { ok: false, status: 'out_of_window' };
+
+    await actAs(staff);
+    expect((await one('select public.pack_package($1, $2) as r', [old.id, randomUUID()])).r).toEqual(refused);
+    expect((await one('select public.pack_package($1, $2) as r', [future.id, randomUUID()])).r).toEqual(refused);
+    expect((await one('select public.set_note($1, $2, $3) as r', [old.id, 'x', randomUUID()])).r).toEqual(refused);
+    expect((await one('select public.toggle_check($1, $2, $3, $4) as r', [hidden.id, 'Kľúče', true, randomUUID()])).r).toEqual(refused);
+    expect((await one('select public.pack_package($1, $2) as r', [hidden.id, randomUUID()])).r).toEqual(refused);
+    expect(await events(old.id)).toEqual([]);
+    expect((await pkg(old.id)).status).toBe('todo');
+    expect((await one('select public.pack_package($1, $2) as r', [edgeLow.id, randomUUID()])).r).toMatchObject({ ok: true, status: 'packed' });
+    expect((await one('select public.pack_package($1, $2) as r', [edgeHigh.id, randomUUID()])).r).toMatchObject({ ok: true, status: 'packed' });
+
+    await actAs(admin);
+    expect((await one('select public.pack_package($1, $2) as r', [old.id, randomUUID()])).r).toMatchObject({ ok: true, status: 'packed' });
+    expect((await one('select public.set_note($1, $2, $3) as r', [future.id, 'admin note', randomUUID()])).r).toEqual({ ok: true });
+
+    await actAs(staff);
+    expect((await one('select public.unpack_package($1, $2) as r', [old.id, randomUUID()])).r).toEqual(refused);
+    expect((await pkg(old.id)).status).toBe('packed');
   });
 });
 

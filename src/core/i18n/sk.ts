@@ -23,6 +23,10 @@ export function pluralOsob(n: number): string {
 export function pluralNoci(n: number): string {
   return n === 1 ? 'voľná noc' : n >= 2 && n <= 4 ? 'voľné noci' : 'voľných nocí';
 }
+/** 1 balíček, 2–4 balíčky, 5+ balíčkov */
+export function pluralBalicek(n: number): string {
+  return n === 1 ? 'balíček' : n >= 2 && n <= 4 ? 'balíčky' : 'balíčkov';
+}
 
 /* ---------- static strings ---------- */
 
@@ -97,12 +101,21 @@ export const sk = {
     checkNotSaved: 'Odškrtnutie sa neuložilo.',
     noteSaved: 'Poznámka uložená',
     noteNotSaved: 'Poznámka sa neuložila.',
+    savedRecomputeFailed: 'Nastavenie uložené, ale prepočet balíčkov zlyhal – spusti ho na stránke Stav.',
+  },
+  admin: {
+    userUpdated: 'Používateľ upravený',
+    conflict: 'Nastavenie medzitým zmenil niekto iný, načítaj znova.',
+    selfChange: 'Vlastný účet si nemôžeš deaktivovať ani odobrať rolu správcu.',
+    ownAccount: 'vlastný účet',
+    serverUnreachable: 'Zlyhalo: server neodpovedá, skús znova.',
   },
   login: {
     wrong: 'Nesprávny e-mail alebo heslo.',
     tooMany: 'Priveľa pokusov, skús o chvíľu.',
     deactivated: 'Účet je deaktivovaný.',
     offline: 'Bez pripojenia.',
+    failed: 'Prihlásenie zlyhalo, skús znova.',
   },
 } as const;
 
@@ -150,8 +163,13 @@ export function packedOf(done: number, total: number): string {
   return `${done}/${total} zabalené`;
 }
 
+/** "Ďalší príchod **št 1.10.**" – the date is bold, as in the prototype. */
+export function nextArrivalParts(ymd: Ymd): TextPart[] {
+  return [{ text: 'Ďalší príchod ' }, { text: `${weekdayShort(ymd)} ${formatDM(ymd)}`, bold: true }];
+}
+
 export function nextArrival(ymd: Ymd): string {
-  return `Ďalší príchod ${weekdayShort(ymd)} ${formatDM(ymd)}`;
+  return plainText(nextArrivalParts(ymd));
 }
 
 /** Day tab label: Dnes / Zajtra / weekday. */
@@ -167,27 +185,40 @@ export function dayWord(index: number, ymd: Ymd): string {
   return w.charAt(0).toUpperCase() + w.slice(1);
 }
 
-/** "Balíme na N osôb (…)" per spec §4 and the prototype. */
-export function peopleSentence(r: PackingResult): string {
+/** "Balíme na **N** osôb (…)" per spec §4 and the prototype; the number is bold. */
+export function peopleParts(r: PackingResult): TextPart[] {
   const n = r.people;
-  const who = `${n} ${pluralOsob(n)}`;
-  if (r.peopleSource === 'same_day') return `Balíme na ${who} (check-in v ten deň)`;
+  const count: TextPart = { text: String(n), bold: true };
+  const osob = ` ${pluralOsob(n)}`;
+  if (r.peopleSource === 'same_day') return [{ text: 'Balíme na ' }, count, { text: `${osob} (check-in v ten deň)` }];
   if (r.peopleSource === 'gap' && r.gap) {
     if (r.gap.reason === 'calendar_blocked') {
-      return `Balíme na ${who} (ďalšia rezervácia – medzera je v kalendári blokovaná)`;
+      return [{ text: 'Balíme na ' }, count, { text: `${osob} (ďalšia rezervácia – medzera je v kalendári blokovaná)` }];
     }
     const g = r.gap.nights;
-    return `Balíme na ${who} (ďalšia rezervácia – ${g} ${pluralNoci(g)}, min. pobyt ${r.gap.minNightsMax ?? '?'} – nič iné sa nezmestí)`;
+    return [{ text: 'Balíme na ' }, count, { text: `${osob} (ďalšia rezervácia – ${g} ${pluralNoci(g)}, min. pobyt ${r.gap.minNightsMax ?? '?'} – nič iné sa nezmestí)` }];
   }
   const extra = r.next?.guests ? ` (ďalší hostia: ${r.next.guests})` : '';
-  return `Balíme na max. kapacitu ${who}${extra}`;
+  return [{ text: 'Balíme na max. kapacitu ' }, count, { text: `${osob}${extra}` }];
 }
 
-/** Blue banner; null when the next reservation has no children or infants. */
-export function childrenBanner(r: PackingResult): string | null {
+export function peopleSentence(r: PackingResult): string {
+  return plainText(peopleParts(r));
+}
+
+/**
+ * Blue banner "👶 Prichádzajúci/Ďalší hostia majú deti: N · batoľatá: N" (spec §4, both
+ * counts always, numbers bold); null when the next reservation has no children or infants.
+ */
+export function childrenBannerParts(r: PackingResult): TextPart[] | null {
   if (!r.next || (!r.next.children && !r.next.infants)) return null;
   const who = r.sameDay ? 'Prichádzajúci hostia' : 'Ďalší hostia';
-  return `👶 ${who} majú deti: ${r.next.children} · batoľatá: ${r.next.infants}`;
+  return [{ text: `👶 ${who} majú deti: ` }, { text: String(r.next.children), bold: true }, { text: ' · batoľatá: ' }, { text: String(r.next.infants), bold: true }];
+}
+
+export function childrenBanner(r: PackingResult): string | null {
+  const parts = childrenBannerParts(r);
+  return parts ? plainText(parts) : null;
 }
 
 /** "1× king, 2× jednolôžko" (regular beds only, as in the prototype). */

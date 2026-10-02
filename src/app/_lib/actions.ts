@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { loginErrorKey } from '@/db/auth-errors';
 import type { MemoryRepo } from '@/db/memory-repo';
 import { createServerSupabase } from '@/db/server';
 import { env } from '@/env';
@@ -77,10 +78,15 @@ export async function loginAction(_prev: { error: string | null }, formData: For
   const password = String(formData.get('password') ?? '');
   const db = await createServerSupabase();
   if (!db) return { error: 'offline' };
-  const { error } = await db.auth.signInWithPassword({ email, password });
-  if (error) {
-    if (error.status === 429) return { error: 'tooMany' };
-    return { error: 'wrong' };
+  const { data, error } = await db.auth.signInWithPassword({ email, password });
+  if (error) return { error: loginErrorKey(error) };
+  // a deactivated account gets no session (RLS lets every user read their own profile row)
+  if (data.user) {
+    const { data: profile } = await db.from('profiles').select('active').eq('id', data.user.id).maybeSingle();
+    if (profile && !(profile as { active: boolean }).active) {
+      await db.auth.signOut();
+      return { error: 'deactivated' };
+    }
   }
   redirect('/');
 }
