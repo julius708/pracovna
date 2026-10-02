@@ -54,13 +54,14 @@ export async function searchReservations(http: GuestyHttp, p: ReservationSearch)
   }
 }
 
-/** GET /reservations-v3?reservationIds= in chunks of 10 (the documented maximum). */
+/** GET /reservations-v3?reservationIds[]=… in chunks of 10 (the documented maximum). */
 export async function getReservationsByIds(http: GuestyHttp, ids: string[]): Promise<ParsedReservation[]> {
   const out: ParsedReservation[] = [];
   const unique = [...new Set(ids)];
   for (let i = 0; i < unique.length; i += 10) {
     const chunk = unique.slice(i, i + 10);
-    const json = await http.get('/reservations-v3', { reservationIds: chunk });
+    // Guesty validates reservationIds as an array: bracket syntax (reservationIds[]=a&reservationIds[]=b); a comma-joined value is a 400
+    const json = await http.get('/reservations-v3?' + chunk.map((id) => 'reservationIds[]=' + encodeURIComponent(id)).join('&'));
     out.push(...parseMany(reservationSchema, extractResults(json)));
   }
   return out;

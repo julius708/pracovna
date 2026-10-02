@@ -1,0 +1,121 @@
+{
+  "results": [
+    {
+      "reservationId": "6a9a3aa96bba7f1c859f0fb9",
+      "confirmationCode": "HMM8X4S5WZ",
+      "status": "confirmed",
+      "guestId": "[redacted]",
+      "checkIn": "2026-10-05T16:00:00.000Z",
+      "checkOut": "2026-10-08T11:00:00.000Z",
+      "checkInDateLocalized": "2026-10-05",
+      "checkOutDateLocalized": "2026-10-08",
+      "source": "airbnb2",
+      "channel": "airbnb2",
+      "createdAt": "2026-09-04T03:27:37.394Z",
+      "bookingDate": "2026-09-04T03:27:02.708Z",
+      "notes": "[redacted]",
+      "stay": [
+        {
+          "listingId": "68592546458130001380dfc6",
+          "checkIn": "2026-10-05T16:00:00.000Z",
+          "checkOut": "2026-10-08T11:00:00.000Z",
+          "checkInDateLocalized": "2026-10-05",
+          "checkOutDateLocalized": "2026-10-08",
+          "guestsCount": 1,
+          "numberOfGuests": {
+            "numberOfAdults": 1,
+            "numberOfChildren": 0,
+            "numberOfInfants": 0,
+            "numberOfPets": 0
+          }
+        }
+      ],
+      "guestStay": {
+        "status": "not_set",
+        "createdAt": "2026-09-04T03:27:37.394Z",
+        "updatedAt": "2026-09-04T03:27:37.394Z"
+      },
+      "unifiedId": "v1-68592536afdc1ad47321e24b-2656516419",
+      "channelMetadata": "[redacted]"
+    },
+    {
+      "reservationId": "6a952ab0c06d20172d51ebc6",
+      "confirmationCode": "BC-jMwyDpzol",
+      "status": "confirmed",
+      "guestId": "[redacted]",
+      "checkIn": "2026-10-14T16:00:00.000Z",
+      "checkOut": "2026-10-17T11:00:00.000Z",
+      "checkInDateLocalized": "2026-10-14",
+      "checkOutDateLocalized": "2026-10-17",
+      "source": "Booking.com",
+      "channel": "bookingCom",
+      "createdAt": "2026-08-31T07:18:08.726Z",
+      "bookingDate": "2026-08-31T07:16:13.000Z",
+      "notes": "[redacted]",
+      "stay": [
+        {
+          "listingId": "68592546458130001380dfc6",
+          "checkIn": "2026-10-14T16:00:00.000Z",
+          "checkOut": "2026-10-17T11:00:00.000Z",
+          "checkInDateLocalized": "2026-10-14",
+          "checkOutDateLocalized": "2026-10-17",
+          "guestsCount": 1,
+          "numberOfGuests": {
+            "numberOfInfants": 0,
+            "numberOfChildren": 0,
+            "numberOfAdults": 1
+          }
+        }
+      ],
+      "guestStay": {
+        "status": "not_set",
+        "createdAt": "2026-08-31T07:18:08.749Z",
+        "updatedAt": "2026-08-31T07:18:08.749Z"
+      },
+      "unifiedId": "v1-682f39ceca0d576ff1aa1da7-BC-jMwyDpzol",
+      "channelMetadata": "[redacted]"
+    },
+    {
+      "reservationId": "6abd3105fc340c1a2f43ada5",
+      "confirmationCode": "BC-jkjxPNj2W",
+      "status": "confirmed",
+      "guestId": "[redacted]",
+      "checkIn": "2026-10-17T16:00:00.000Z",
+      "checkOut": "2026-10-20T11:00:00.000Z",
+      "checkInDateLocalized": "2026-10-17",
+      "checkOutDateLocalized": "2026-10-20",
+      "source": "Booking.com",
+      "channel": "bookingCom",
+      "createdAt": "2026-09-30T15:55:49.667Z",
+      "bookingDate": "2026-09-30T15:54:11.000Z",
+      "notes": "[redacted]",
+      "stay": [
+        {
+          "listingId": "68592546458130001380dfc6",
+          "checkIn": "2026-10-17T16:00:00.000Z",
+          "checkOut": "2026-10-20T11:00:00.000Z",
+          "checkInDateLocalized": "2026-10-17",
+          "checkOutDateLocalized": "2026-10-20",
+          "guestsCount": 2,
+          "numberOfGuests": {
+            "numberOfAdults": 2,
+            "numberOfChildren": 0,
+            "numberOfInfants": 0
+          }
+        }
+      ],
+      "guestStay": {
+        "status": "not_set",
+        "createdAt": "2026-09-30T15:55:49.689Z",
+        "updatedAt": "2026-09-30T15:55:49.689Z"
+      },
+      "unifiedId": "v1-682f39ceca0d576ff1aa1da7-BC-jkjxPNj2W",
+      "channelMetadata": "[redacted]"
+    }
+  ],
+  "pagination": {
+    "skip": 0,
+    "limit": 3,
+    "hasMore": true
+  }
+}

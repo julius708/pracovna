@@ -1,0 +1,61 @@
+{
+  "_id": "68592546458130001380dfc6",
+  "type": "SINGLE",
+  "tags": [
+    "pet friendly",
+    "LIVE-IN International s.r.o."
+  ],
+  "active": true,
+  "title": "Luxury with Danube River View",
+  "bedrooms": 1,
+  "bathrooms": 1,
+  "beds": 1,
+  "isListed": true,
+  "address": {
+    "city": "Bratislava"
+  },
+  "accommodates": 2,
+  "accountId": "682f39ceca0d576ff1aa1da7",
+  "nickname": "Pribinová, Luxury",
+  "listingRooms": [
+    {
+      "_id": "685925470625233b4d4db3f7",
+      "roomNumber": 0,
+      "beds": [
+        {
+          "_id": "69414debdd24da0014e4c47b",
+          "type": "KING_BED",
+          "quantity": 1
+        }
+      ]
+    },
+    {
+      "_id": "685925470625233b4d4db3f8",
+      "roomNumber": 1,
+      "beds": []
+    },
+    {
+      "_id": "692d8efb412d3b52408560fa",
+      "roomNumber": 2,
+      "beds": []
+    },
+    {
+      "_id": "69414dea38b659f1c8797aee",
+      "roomNumber": 0,
+      "beds": []
+    }
+  ],
+  "customFields": "[redacted]",
+  "financials": {
+    "channelCommission": {
+      "_id": "699877e3ef80e5a81706bb1e",
+      "accountId": "682f39ceca0d576ff1aa1da7",
+      "unitTypeId": "68592546458130001380dfc6",
+      "createdAt": "2026-02-20T15:04:03.969Z",
+      "updatedAt": "2026-02-20T15:04:08.200Z",
+      "__v": 0,
+      "useAccountSettings": true,
+      "manual": []
+    }
+  }
+}

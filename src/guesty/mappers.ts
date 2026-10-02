@@ -125,11 +125,13 @@ export function mapListing(raw: ParsedListing, ctx: ListingMapContext): ListingR
 /** Guesty reservation -> reservations row; null when it has no id, listing or dates. */
 export function mapReservation(raw: ParsedReservation, fetchedAt: string): ReservationRow | null {
   const id = raw._id ?? raw.reservationId ?? null;
-  const stay = (raw.stay ?? []).filter((s) => s && (s.listingId || s.unitId));
+  // the listing of a segment: listingId (search shape), else unitTypeId (by-ids shape; the unit type IS the listing), else unitId (single-unit listings)
+  const segListing = (s: { listingId?: string | null; unitTypeId?: string | null; unitId?: string | null }) => s.listingId ?? s.unitTypeId ?? s.unitId ?? null;
+  const stay = (raw.stay ?? []).filter((s) => s && segListing(s));
   const first = stay[0];
   const last = stay[stay.length - 1];
-  const listingId = last?.listingId ?? last?.unitId ?? raw.lastStayListingId ?? raw.listingId ?? null;
-  const arrivalListingId = first?.listingId ?? first?.unitId ?? raw.listingId ?? listingId;
+  const listingId = (last && segListing(last)) ?? raw.lastStayListingId ?? raw.listingId ?? null;
+  const arrivalListingId = (first && segListing(first)) ?? raw.listingId ?? listingId;
   const checkIn = first?.checkInDateLocalized ?? raw.checkInDateLocalized ?? null;
   const checkOut = last?.checkOutDateLocalized ?? raw.checkOutDateLocalized ?? null;
   if (!id || !listingId || !arrivalListingId || !checkIn || !checkOut) return null;
@@ -139,7 +141,7 @@ export function mapReservation(raw: ParsedReservation, fetchedAt: string): Reser
   const infants = ng?.numberOfInfants ?? null;
   const guestsRaw = first?.guestsCount ?? raw.guestsCount ?? null;
   const guests = guestsRaw && guestsRaw > 0 ? guestsRaw : adults !== null ? adults + (children ?? 0) : null;
-  const listingIds = new Set(stay.map((s) => s.listingId ?? s.unitId));
+  const listingIds = new Set(stay.map(segListing));
   return {
     guesty_id: id,
     listing_id: listingId,

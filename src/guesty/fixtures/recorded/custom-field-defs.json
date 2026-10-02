@@ -1,0 +1,95 @@
+[
+  {
+    "fieldId": "68b02510298d540010a4d3cf",
+    "options": [],
+    "key": "Company name",
+    "isPublic": true,
+    "displayName": "company_name",
+    "object": "listing",
+    "type": "text"
+  },
+  {
+    "fieldId": "68b02583aadb750012be778d",
+    "options": [],
+    "key": "LIVE-IN International",
+    "isPublic": true,
+    "displayName": "live-in_international",
+    "object": "listing",
+    "type": "text"
+  },
+  {
+    "fieldId": "68be98e2a3682c00126f30e2",
+    "options": [],
+    "key": "Predpripravený popis",
+    "isPublic": false,
+    "displayName": "predpripravený_popis",
+    "object": "listing",
+    "type": "longtext"
+  },
+  {
+    "fieldId": "68da7697f9ebcd00138bfb0e",
+    "options": [],
+    "key": "Check In Instructions Slovak",
+    "isPublic": true,
+    "displayName": "check_in_instructions_slovak",
+    "object": "listing",
+    "type": "longtext"
+  },
+  {
+    "fieldId": "69035407866182005abf8def",
+    "options": [],
+    "key": "Check Out Instructions Slovak",
+    "isPublic": true,
+    "displayName": "check_out_instructions_slovak",
+    "object": "listing",
+    "type": "longtext"
+  },
+  {
+    "fieldId": "69035e07adf86800138ec6e6",
+    "options": [],
+    "key": "House Rules Slovak",
+    "isPublic": false,
+    "displayName": "house_rules_slovak",
+    "object": "listing",
+    "type": "longtext"
+  },
+  {
+    "fieldId": "69736c8b8f7f4900132772f5",
+    "options": [],
+    "key": "breakfast",
+    "isPublic": true,
+    "displayName": "breakfast",
+    "object": "listing",
+    "type": "boolean"
+  },
+  {
+    "fieldId": "6ab25e49606ef7001113bb02",
+    "options": [],
+    "type": "longtext",
+    "object": "listing",
+    "displayName": "ai_instructions",
+    "key": "AI Instructions",
+    "isPublic": true,
+    "isRequired": false
+  },
+  {
+    "fieldId": "6ab385c5bcf98e0011a9419d",
+    "options": [],
+    "type": "longtext",
+    "object": "listing",
+    "displayName": "informácie_do_práčovne",
+    "key": "Informácie do práčovne",
+    "isPublic": true,
+    "isRequired": false
+  },
+  {
+    "fieldId": "6abb9464e2e00600136975c9",
+    "options": [],
+    "type": "longtext",
+    "object": "listing",
+    "displayName": "zamky_&_kamery",
+    "key": "Zamky & kamery",
+    "isPublic": true,
+    "isRequired": false
+  }
+]

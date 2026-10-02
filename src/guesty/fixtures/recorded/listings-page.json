@@ -1,0 +1,330 @@
+{
+  "results": [
+    {
+      "_id": "68592546458130001380dfc6",
+      "tags": [
+        "pet friendly",
+        "LIVE-IN International s.r.o."
+      ],
+      "active": true,
+      "title": "Luxury with Danube River View",
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "beds": 1,
+      "isListed": true,
+      "address": {
+        "city": "Bratislava"
+      },
+      "accommodates": 2,
+      "accountId": "682f39ceca0d576ff1aa1da7",
+      "nickname": "Pribinová, Luxury",
+      "listingRooms": [
+        {
+          "_id": "685925470625233b4d4db3f7",
+          "roomNumber": 0,
+          "beds": [
+            {
+              "_id": "69414debdd24da0014e4c47b",
+              "type": "KING_BED",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "_id": "685925470625233b4d4db3f8",
+          "roomNumber": 1,
+          "beds": []
+        },
+        {
+          "_id": "692d8efb412d3b52408560fa",
+          "roomNumber": 2,
+          "beds": []
+        },
+        {
+          "_id": "69414dea38b659f1c8797aee",
+          "roomNumber": 0,
+          "beds": []
+        }
+      ],
+      "customFields": "[redacted]"
+    },
+    {
+      "_id": "68592550e99bc60013ad2db2",
+      "tags": [
+        "LIVE-IN Management s.r.o."
+      ],
+      "active": true,
+      "title": "Trendy Apartment in Centrum 1",
+      "bedrooms": 2,
+      "bathrooms": 1,
+      "beds": 2,
+      "isListed": true,
+      "address": {
+        "city": "Bratislava - Old Town"
+      },
+      "accommodates": 4,
+      "accountId": "682f39ceca0d576ff1aa1da7",
+      "nickname": "Ferienčikova A",
+      "listingRooms": [
+        {
+          "_id": "68592551e34c876a9d7b35be",
+          "roomNumber": 0,
+          "beds": [
+            {
+              "_id": "694152cef904d30014bc5d24",
+              "type": "KING_BED",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "_id": "68592551e34c876a9d7b35bf",
+          "roomNumber": 1,
+          "beds": [
+            {
+              "_id": "694152cef904d30014bc5d26",
+              "type": "KING_BED",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "_id": "68592551e34c876a9d7b35c0",
+          "roomNumber": 2,
+          "beds": []
+        },
+        {
+          "_id": "692d8efd412d3b5240856139",
+          "roomNumber": 3,
+          "beds": []
+        },
+        {
+          "_id": "692d8efd412d3b524085613c",
+          "roomNumber": 4,
+          "beds": []
+        },
+        {
+          "_id": "692d8efd412d3b524085613e",
+          "roomNumber": 5,
+          "beds": []
+        },
+        {
+          "_id": "694152cc81ab3c7aa19e0c9b",
+          "roomNumber": 0,
+          "beds": []
+        }
+      ],
+      "customFields": "[redacted]"
+    },
+    {
+      "_id": "68592555458130001380e213",
+      "tags": [
+        "pet friendly",
+        "LIVE-IN International s.r.o."
+      ],
+      "active": true,
+      "title": "Elegant Apartment on Hlavná Košice",
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "beds": 2,
+      "isListed": true,
+      "address": {
+        "city": "Košice"
+      },
+      "accommodates": 3,
+      "accountId": "682f39ceca0d576ff1aa1da7",
+      "nickname": "KE: Hlavná, Elegant",
+      "listingRooms": [
+        {
+          "_id": "68592556e34c876a9d7b3607",
+          "roomNumber": 0,
+          "beds": [
+            {
+              "_id": "692d8fb579e0300013402e4a",
+              "type": "KING_BED",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "_id": "68592556e34c876a9d7b3608",
+          "roomNumber": 1,
+          "beds": []
+        },
+        {
+          "_id": "68592556e34c876a9d7b3609",
+          "roomNumber": 0,
+          "beds": [
+            {
+              "_id": "692d8fb579e0300013402e4d",
+              "type": "SOFA_BED",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "_id": "692d8efe412d3b5240856192",
+          "roomNumber": 3,
+          "beds": []
+        },
+        {
+          "_id": "692d8efe412d3b5240856194",
+          "roomNumber": 4,
+          "beds": []
+        }
+      ],
+      "customFields": "[redacted]"
+    },
+    {
+      "_id": "6859255a167a6d001324a29a",
+      "tags": [
+        "pet friendly",
+        "LIVE-IN International s.r.o.",
+        "distance"
+      ],
+      "active": true,
+      "title": "Charming Apartment for 8 - Old Town Bratislava",
+      "bedrooms": 3,
+      "bathrooms": 2,
+      "beds": 4,
+      "isListed": true,
+      "address": {
+        "city": "Bratislava - Old Town"
+      },
+      "accommodates": 8,
+      "accountId": "682f39ceca0d576ff1aa1da7",
+      "nickname": "Ventúrs. A, Charming",
+      "listingRooms": [
+        {
+          "_id": "6859255ae34c876a9d7b366a",
+          "roomNumber": 0,
+          "beds": [
+            {
+              "_id": "6a3d1280997e3e00138d4d3d",
+              "type": "KING_BED",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "_id": "6859255ae34c876a9d7b366b",
+          "roomNumber": 1,
+          "beds": [
+            {
+              "_id": "6a3d1280997e3e00138d4d3f",
+              "type": "KING_BED",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "_id": "6859255ae34c876a9d7b366c",
+          "roomNumber": 2,
+          "beds": [
+            {
+              "_id": "6a3d1280997e3e00138d4d41",
+              "type": "KING_BED",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "_id": "6859255ae34c876a9d7b366d",
+          "roomNumber": 3,
+          "beds": []
+        },
+        {
+          "_id": "6859255ae34c876a9d7b366e",
+          "roomNumber": 4,
+          "beds": []
+        },
+        {
+          "_id": "6941460581ab3c7aa19cb20c",
+          "roomNumber": 0,
+          "beds": [
+            {
+              "_id": "6a3d1280997e3e00138d4d45",
+              "type": "SOFA_BED",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "_id": "69414b3738b659f1c8792a9f",
+          "roomNumber": 6,
+          "beds": []
+        }
+      ],
+      "customFields": "[redacted]"
+    },
+    {
+      "_id": "6859255e167a6d001324a3d5",
+      "tags": [
+        "LIVE-IN International s.r.o.",
+        "parking"
+      ],
+      "active": true,
+      "title": "Riverside Luxury Apartment with Garage",
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "beds": 2,
+      "isListed": true,
+      "address": {
+        "city": "Bratislava - Old Town"
+      },
+      "accommodates": 4,
+      "accountId": "682f39ceca0d576ff1aa1da7",
+      "nickname": "Žižkova, Riverside",
+      "listingRooms": [
+        {
+          "_id": "6859255fe34c876a9d7b36b8",
+          "roomNumber": 0,
+          "beds": [
+            {
+              "_id": "69833eab7a240f0013cce07c",
+              "type": "KING_BED",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "_id": "6859255fe34c876a9d7b36b9",
+          "roomNumber": 1,
+          "beds": []
+        },
+        {
+          "_id": "692d8f01e3a47382d60a0f7e",
+          "roomNumber": 2,
+          "beds": []
+        },
+        {
+          "_id": "692d8f01e3a47382d60a0f87",
+          "roomNumber": 3,
+          "beds": []
+        },
+        {
+          "_id": "6941408f81ab3c7aa19c58da",
+          "roomNumber": 4,
+          "beds": []
+        },
+        {
+          "_id": "694140fb81ab3c7aa19c6042",
+          "roomNumber": 0,
+          "beds": [
+            {
+              "_id": "69833eab7a240f0013cce082",
+              "type": "SOFA_BED",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "customFields": "[redacted]"
+    }
+  ],
+  "title": "Listings Report",
+  "fields": "_id nickname title active isListed address.city accommodates bedrooms bathrooms beds tags customFields listingRooms",
+  "limit": 5,
+  "skip": 0,
+  "count": 132
+}

@@ -51,7 +51,7 @@ function shape(v: unknown, depth = 0): unknown {
   return v;
 }
 
-const SENSITIVE = new Set(['guestId', 'bookerId', 'guest', 'money', 'notes', 'conversationId', 'customFields']);
+const SENSITIVE = new Set(['guestId', 'bookerId', 'guest', 'guests', 'guestPreferences', 'money', 'moneyId', 'notes', 'conversationId', 'conversationExternalId', 'customFields', 'channelMetadata', 'integrationId']);
 function redact(v: unknown): unknown {
   if (Array.isArray(v)) return v.map(redact);
   if (v && typeof v === 'object') {
@@ -108,7 +108,7 @@ async function main() {
   record('reservations-search', search);
   const r0 = extractResults(search)[0] as { _id?: string; reservationId?: string } | undefined;
   const rid = r0?._id ?? r0?.reservationId;
-  if (rid) record('reservations-by-ids', await http.get('/reservations-v3', { reservationIds: [rid] }));
+  if (rid) record('reservations-by-ids', await http.get(`/reservations-v3?reservationIds[]=${encodeURIComponent(rid)}`));
   const byListing = first?._id
     ? await http.get('/reservations-v3/search', { 'filter[listingId]': [first._id], 'filter[checkIn][gte]': today, 'filter[status]': 'confirmed', sort: 'checkIn', limit: 3 }).catch((e) => ({ error: String(e) }))
     : null;

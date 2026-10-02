@@ -1,0 +1,1190 @@
+{
+  "status": 200,
+  "data": {
+    "days": [
+      {
+        "date": "2026-10-02",
+        "listingId": "68592546458130001380dfc6",
+        "currency": "EUR",
+        "price": 74,
+        "isBasePrice": false,
+        "basePrice": 90,
+        "minNights": 2,
+        "isBaseMinNights": false,
+        "baseMinNights": 2,
+        "maxNights": 90,
+        "status": "booked",
+        "blocks": {
+          "m": false,
+          "r": false,
+          "b": true,
+          "bd": false,
+          "sr": false,
+          "abl": false,
+          "a": false,
+          "bw": false,
+          "o": false,
+          "pt": false,
+          "an": true
+        },
+        "blockRefs": [
+          {
+            "_id": "6aa84edfd4eb08ef30a613bd",
+            "listingId": "68592546458130001380dfc6",
+            "startDate": "2026-10-01T00:00:00.000Z",
+            "endDate": "2026-10-04T00:00:00.000Z",
+            "type": "b",
+            "reservationId": "6aa84edfe75c0b7304fdebf3",
+            "reservation": {
+              "_id": "6aa84edfe75c0b7304fdebf3",
+              "listingId": "68592546458130001380dfc6",
+              "accountId": "682f39ceca0d576ff1aa1da7",
+              "checkInDateLocalized": "2026-10-01",
+              "checkOutDateLocalized": "2026-10-05",
+              "status": "confirmed",
+              "confirmationCode": "BC-KkoWnPEZl",
+              "source": "Booking.com",
+              "listing": {
+                "defaultCheckInTime": "16:00",
+                "timezone": "Europe/Bratislava",
+                "nickname": "Pribinová, Luxury"
+              },
+              "money": "[redacted]",
+              "nightsCount": 4,
+              "plannedArrival": "16:00",
+              "plannedDeparture": "11:00",
+              "guest": "[redacted]",
+              "guestsCount": 2,
+              "integration": {
+                "platform": "bookingCom"
+              },
+              "checkIn": "2026-10-01T16:00:00+00:00",
+              "checkOut": "2026-10-05T11:00:00+00:00",
+              "createdAt": "2026-09-14T19:45:35.000Z",
+              "reservedExpiresAt": null,
+              "notes": "[redacted]",
+              "createdBy": "ChannelService",
+              "numberOfGuests": {
+                "numberOfChildren": 0,
+                "numberOfInfants": 0,
+                "numberOfAdults": 2
+              },
+              "earlyCheckIn": {},
+              "lateCheckOut": {},
+              "guestStay": {
+                "status": "not_set"
+              },
+              "propertyLock": {},
+              "browserCheckIn": "2026-10-01 18:00",
+              "browserCheckOut": "2026-10-05 13:00"
+            },
+            "staysMetadata": {
+              "totalStays": 1,
+              "stayIndex": 1
+            },
+            "createdBy": "ChannelService",
+            "createdAt": "2026-09-14T19:45:35.512Z"
+          },
+          {
+            "listingId": "68592546458130001380dfc6",
+            "accountId": "682f39ceca0d576ff1aa1da7",
+            "type": "an",
+            "startDate": "2026-10-02T00:00:00.000Z",
+            "endDate": "2026-10-02T00:00:00.000Z",
+            "hours": 3,
+            "updatedAt": "2026-08-21T15:58:30.675Z",
+            "updatedBy": "AuthService"
+          }
+        ],
+        "reservationId": "6aa84edfe75c0b7304fdebf3",
+        "reservation": {
+          "_id": "6aa84edfe75c0b7304fdebf3",
+          "listingId": "68592546458130001380dfc6",
+          "accountId": "682f39ceca0d576ff1aa1da7",
+          "checkInDateLocalized": "2026-10-01",
+          "checkOutDateLocalized": "2026-10-05",
+          "status": "confirmed",
+          "confirmationCode": "BC-KkoWnPEZl",
+          "source": "Booking.com",
+          "listing": {
+            "defaultCheckInTime": "16:00",
+            "timezone": "Europe/Bratislava",
+            "nickname": "Pribinová, Luxury"
+          },
+          "money": "[redacted]",
+          "nightsCount": 4,
+          "plannedArrival": "16:00",
+          "plannedDeparture": "11:00",
+          "guest": "[redacted]",
+          "guestsCount": 2,
+          "integration": {
+            "platform": "bookingCom"
+          },
+          "checkIn": "2026-10-01T16:00:00+00:00",
+          "checkOut": "2026-10-05T11:00:00+00:00",
+          "createdAt": "2026-09-14T19:45:35.000Z",
+          "reservedExpiresAt": null,
+          "notes": "[redacted]",
+          "createdBy": "ChannelService",
+          "numberOfGuests": {
+            "numberOfChildren": 0,
+            "numberOfInfants": 0,
+            "numberOfAdults": 2
+          },
+          "earlyCheckIn": {},
+          "lateCheckOut": {},
+          "guestStay": {
+            "status": "not_set"
+          },
+          "propertyLock": {},
+          "browserCheckIn": "2026-10-01 18:00",
+          "browserCheckOut": "2026-10-05 13:00"
+        },
+        "cta": false,
+        "ctd": false,
+        "requestToBook": false,
+        "notDefaultAvailability": true,
+        "isBaseRestrictions": true,
+        "by": {
+          "minNights": {
+            "src": null,
+            "when": "2026-10-02T11:45:11.263Z",
+            "who": "AnpService"
+          },
+          "price": {
+            "src": null,
+            "when": "2026-10-02T11:45:11.263Z",
+            "who": "AnpService"
+          }
+        }
+      },
+      {
+        "date": "2026-10-03",
+        "listingId": "68592546458130001380dfc6",
+        "currency": "EUR",
+        "price": 78,
+        "isBasePrice": false,
+        "basePrice": 90,
+        "minNights": 2,
+        "isBaseMinNights": false,
+        "baseMinNights": 2,
+        "maxNights": 90,
+        "status": "booked",
+        "blocks": {
+          "m": false,
+          "r": false,
+          "b": true,
+          "bd": false,
+          "sr": false,
+          "abl": false,
+          "a": false,
+          "bw": false,
+          "o": false,
+          "pt": false
+        },
+        "blockRefs": [
+          {
+            "_id": "6aa84edfd4eb08ef30a613bd",
+            "listingId": "68592546458130001380dfc6",
+            "startDate": "2026-10-01T00:00:00.000Z",
+            "endDate": "2026-10-04T00:00:00.000Z",
+            "type": "b",
+            "reservationId": "6aa84edfe75c0b7304fdebf3",
+            "reservation": {
+              "_id": "6aa84edfe75c0b7304fdebf3",
+              "listingId": "68592546458130001380dfc6",
+              "accountId": "682f39ceca0d576ff1aa1da7",
+              "checkInDateLocalized": "2026-10-01",
+              "checkOutDateLocalized": "2026-10-05",
+              "status": "confirmed",
+              "confirmationCode": "BC-KkoWnPEZl",
+              "source": "Booking.com",
+              "listing": {
+                "defaultCheckInTime": "16:00",
+                "timezone": "Europe/Bratislava",
+                "nickname": "Pribinová, Luxury"
+              },
+              "money": "[redacted]",
+              "nightsCount": 4,
+              "plannedArrival": "16:00",
+              "plannedDeparture": "11:00",
+              "guest": "[redacted]",
+              "guestsCount": 2,
+              "integration": {
+                "platform": "bookingCom"
+              },
+              "checkIn": "2026-10-01T16:00:00+00:00",
+              "checkOut": "2026-10-05T11:00:00+00:00",
+              "createdAt": "2026-09-14T19:45:35.000Z",
+              "reservedExpiresAt": null,
+              "notes": "[redacted]",
+              "createdBy": "ChannelService",
+              "numberOfGuests": {
+                "numberOfChildren": 0,
+                "numberOfInfants": 0,
+                "numberOfAdults": 2
+              },
+              "earlyCheckIn": {},
+              "lateCheckOut": {},
+              "guestStay": {
+                "status": "not_set"
+              },
+              "propertyLock": {},
+              "browserCheckIn": "2026-10-01 18:00",
+              "browserCheckOut": "2026-10-05 13:00"
+            },
+            "staysMetadata": {
+              "totalStays": 1,
+              "stayIndex": 1
+            },
+            "createdBy": "ChannelService",
+            "createdAt": "2026-09-14T19:45:35.512Z"
+          }
+        ],
+        "reservationId": "6aa84edfe75c0b7304fdebf3",
+        "reservation": {
+          "_id": "6aa84edfe75c0b7304fdebf3",
+          "listingId": "68592546458130001380dfc6",
+          "accountId": "682f39ceca0d576ff1aa1da7",
+          "checkInDateLocalized": "2026-10-01",
+          "checkOutDateLocalized": "2026-10-05",
+          "status": "confirmed",
+          "confirmationCode": "BC-KkoWnPEZl",
+          "source": "Booking.com",
+          "listing": {
+            "defaultCheckInTime": "16:00",
+            "timezone": "Europe/Bratislava",
+            "nickname": "Pribinová, Luxury"
+          },
+          "money": "[redacted]",
+          "nightsCount": 4,
+          "plannedArrival": "16:00",
+          "plannedDeparture": "11:00",
+          "guest": "[redacted]",
+          "guestsCount": 2,
+          "integration": {
+            "platform": "bookingCom"
+          },
+          "checkIn": "2026-10-01T16:00:00+00:00",
+          "checkOut": "2026-10-05T11:00:00+00:00",
+          "createdAt": "2026-09-14T19:45:35.000Z",
+          "reservedExpiresAt": null,
+          "notes": "[redacted]",
+          "createdBy": "ChannelService",
+          "numberOfGuests": {
+            "numberOfChildren": 0,
+            "numberOfInfants": 0,
+            "numberOfAdults": 2
+          },
+          "earlyCheckIn": {},
+          "lateCheckOut": {},
+          "guestStay": {
+            "status": "not_set"
+          },
+          "propertyLock": {},
+          "browserCheckIn": "2026-10-01 18:00",
+          "browserCheckOut": "2026-10-05 13:00"
+        },
+        "cta": false,
+        "ctd": false,
+        "requestToBook": false,
+        "notDefaultAvailability": true,
+        "isBaseRestrictions": true,
+        "by": {
+          "minNights": {
+            "src": null,
+            "when": "2026-10-02T11:45:11.263Z",
+            "who": "AnpService"
+          },
+          "price": {
+            "src": null,
+            "when": "2026-10-02T11:45:11.263Z",
+            "who": "AnpService"
+          }
+        }
+      },
+      {
+        "date": "2026-10-04",
+        "listingId": "68592546458130001380dfc6",
+        "currency": "EUR",
+        "price": 64,
+        "isBasePrice": false,
+        "basePrice": 80,
+        "minNights": 2,
+        "isBaseMinNights": false,
+        "baseMinNights": 2,
+        "maxNights": 90,
+        "status": "booked",
+        "blocks": {
+          "m": false,
+          "r": false,
+          "b": true,
+          "bd": false,
+          "sr": false,
+          "abl": false,
+          "a": false,
+          "bw": false,
+          "o": false,
+          "pt": false
+        },
+        "blockRefs": [
+          {
+            "_id": "6aa84edfd4eb08ef30a613bd",
+            "listingId": "68592546458130001380dfc6",
+            "startDate": "2026-10-01T00:00:00.000Z",
+            "endDate": "2026-10-04T00:00:00.000Z",
+            "type": "b",
+            "reservationId": "6aa84edfe75c0b7304fdebf3",
+            "reservation": {
+              "_id": "6aa84edfe75c0b7304fdebf3",
+              "listingId": "68592546458130001380dfc6",
+              "accountId": "682f39ceca0d576ff1aa1da7",
+              "checkInDateLocalized": "2026-10-01",
+              "checkOutDateLocalized": "2026-10-05",
+              "status": "confirmed",
+              "confirmationCode": "BC-KkoWnPEZl",
+              "source": "Booking.com",
+              "listing": {
+                "defaultCheckInTime": "16:00",
+                "timezone": "Europe/Bratislava",
+                "nickname": "Pribinová, Luxury"
+              },
+              "money": "[redacted]",
+              "nightsCount": 4,
+              "plannedArrival": "16:00",
+              "plannedDeparture": "11:00",
+              "guest": "[redacted]",
+              "guestsCount": 2,
+              "integration": {
+                "platform": "bookingCom"
+              },
+              "checkIn": "2026-10-01T16:00:00+00:00",
+              "checkOut": "2026-10-05T11:00:00+00:00",
+              "createdAt": "2026-09-14T19:45:35.000Z",
+              "reservedExpiresAt": null,
+              "notes": "[redacted]",
+              "createdBy": "ChannelService",
+              "numberOfGuests": {
+                "numberOfChildren": 0,
+                "numberOfInfants": 0,
+                "numberOfAdults": 2
+              },
+              "earlyCheckIn": {},
+              "lateCheckOut": {},
+              "guestStay": {
+                "status": "not_set"
+              },
+              "propertyLock": {},
+              "browserCheckIn": "2026-10-01 18:00",
+              "browserCheckOut": "2026-10-05 13:00"
+            },
+            "staysMetadata": {
+              "totalStays": 1,
+              "stayIndex": 1
+            },
+            "createdBy": "ChannelService",
+            "createdAt": "2026-09-14T19:45:35.512Z"
+          }
+        ],
+        "reservationId": "6aa84edfe75c0b7304fdebf3",
+        "reservation": {
+          "_id": "6aa84edfe75c0b7304fdebf3",
+          "listingId": "68592546458130001380dfc6",
+          "accountId": "682f39ceca0d576ff1aa1da7",
+          "checkInDateLocalized": "2026-10-01",
+          "checkOutDateLocalized": "2026-10-05",
+          "status": "confirmed",
+          "confirmationCode": "BC-KkoWnPEZl",
+          "source": "Booking.com",
+          "listing": {
+            "defaultCheckInTime": "16:00",
+            "timezone": "Europe/Bratislava",
+            "nickname": "Pribinová, Luxury"
+          },
+          "money": "[redacted]",
+          "nightsCount": 4,
+          "plannedArrival": "16:00",
+          "plannedDeparture": "11:00",
+          "guest": "[redacted]",
+          "guestsCount": 2,
+          "integration": {
+            "platform": "bookingCom"
+          },
+          "checkIn": "2026-10-01T16:00:00+00:00",
+          "checkOut": "2026-10-05T11:00:00+00:00",
+          "createdAt": "2026-09-14T19:45:35.000Z",
+          "reservedExpiresAt": null,
+          "notes": "[redacted]",
+          "createdBy": "ChannelService",
+          "numberOfGuests": {
+            "numberOfChildren": 0,
+            "numberOfInfants": 0,
+            "numberOfAdults": 2
+          },
+          "earlyCheckIn": {},
+          "lateCheckOut": {},
+          "guestStay": {
+            "status": "not_set"
+          },
+          "propertyLock": {},
+          "browserCheckIn": "2026-10-01 18:00",
+          "browserCheckOut": "2026-10-05 13:00"
+        },
+        "cta": false,
+        "ctd": false,
+        "requestToBook": false,
+        "notDefaultAvailability": true,
+        "isBaseRestrictions": true,
+        "by": {
+          "minNights": {
+            "src": null,
+            "when": "2026-10-02T11:45:11.263Z",
+            "who": "AnpService"
+          },
+          "price": {
+            "src": null,
+            "when": "2026-10-02T11:45:11.263Z",
+            "who": "AnpService"
+          }
+        }
+      },
+      {
+        "date": "2026-10-05",
+        "listingId": "68592546458130001380dfc6",
+        "currency": "EUR",
+        "price": 73,
+        "isBasePrice": false,
+        "basePrice": 80,
+        "minNights": 2,
+        "isBaseMinNights": false,
+        "baseMinNights": 2,
+        "maxNights": 90,
+        "status": "booked",
+        "blocks": {
+          "m": false,
+          "r": false,
+          "b": true,
+          "bd": false,
+          "sr": false,
+          "abl": false,
+          "a": false,
+          "bw": false,
+          "o": false,
+          "pt": false
+        },
+        "blockRefs": [
+          {
+            "_id": "6a9a3aa9c3eae4006656f52f",
+            "listingId": "68592546458130001380dfc6",
+            "startDate": "2026-10-05T00:00:00.000Z",
+            "endDate": "2026-10-07T00:00:00.000Z",
+            "type": "b",
+            "reservationId": "6a9a3aa96bba7f1c859f0fb9",
+            "reservation": {
+              "_id": "6a9a3aa96bba7f1c859f0fb9",
+              "listingId": "68592546458130001380dfc6",
+              "accountId": "682f39ceca0d576ff1aa1da7",
+              "checkInDateLocalized": "2026-10-05",
+              "checkOutDateLocalized": "2026-10-08",
+              "status": "confirmed",
+              "confirmationCode": "HMM8X4S5WZ",
+              "source": "airbnb2",
+              "listing": {
+                "defaultCheckInTime": "16:00",
+                "timezone": "Europe/Bratislava",
+                "nickname": "Pribinová, Luxury"
+              },
+              "money": "[redacted]",
+              "nightsCount": 3,
+              "plannedArrival": "16:00",
+              "plannedDeparture": "11:00",
+              "guest": "[redacted]",
+              "guestsCount": 1,
+              "integration": {
+                "platform": "airbnb2"
+              },
+              "checkIn": "2026-10-05T16:00:00+00:00",
+              "checkOut": "2026-10-08T11:00:00+00:00",
+              "createdAt": "2026-09-04T03:27:37.000Z",
+              "reservedExpiresAt": null,
+              "notes": "[redacted]",
+              "createdBy": "ChannelService",
+              "numberOfGuests": {
+                "numberOfChildren": 0,
+                "numberOfInfants": 0,
+                "numberOfAdults": 1
+              },
+              "earlyCheckIn": {},
+              "lateCheckOut": {},
+              "guestStay": {
+                "status": "not_set"
+              },
+              "propertyLock": {},
+              "browserCheckIn": "2026-10-05 18:00",
+              "browserCheckOut": "2026-10-08 13:00"
+            },
+            "staysMetadata": {
+              "totalStays": 1,
+              "stayIndex": 1
+            },
+            "createdBy": "ChannelService",
+            "createdAt": "2026-09-04T03:27:37.895Z"
+          }
+        ],
+        "reservationId": "6a9a3aa96bba7f1c859f0fb9",
+        "reservation": {
+          "_id": "6a9a3aa96bba7f1c859f0fb9",
+          "listingId": "68592546458130001380dfc6",
+          "accountId": "682f39ceca0d576ff1aa1da7",
+          "checkInDateLocalized": "2026-10-05",
+          "checkOutDateLocalized": "2026-10-08",
+          "status": "confirmed",
+          "confirmationCode": "HMM8X4S5WZ",
+          "source": "airbnb2",
+          "listing": {
+            "defaultCheckInTime": "16:00",
+            "timezone": "Europe/Bratislava",
+            "nickname": "Pribinová, Luxury"
+          },
+          "money": "[redacted]",
+          "nightsCount": 3,
+          "plannedArrival": "16:00",
+          "plannedDeparture": "11:00",
+          "guest": "[redacted]",
+          "guestsCount": 1,
+          "integration": {
+            "platform": "airbnb2"
+          },
+          "checkIn": "2026-10-05T16:00:00+00:00",
+          "checkOut": "2026-10-08T11:00:00+00:00",
+          "createdAt": "2026-09-04T03:27:37.000Z",
+          "reservedExpiresAt": null,
+          "notes": "[redacted]",
+          "createdBy": "ChannelService",
+          "numberOfGuests": {
+            "numberOfChildren": 0,
+            "numberOfInfants": 0,
+            "numberOfAdults": 1
+          },
+          "earlyCheckIn": {},
+          "lateCheckOut": {},
+          "guestStay": {
+            "status": "not_set"
+          },
+          "propertyLock": {},
+          "browserCheckIn": "2026-10-05 18:00",
+          "browserCheckOut": "2026-10-08 13:00"
+        },
+        "cta": false,
+        "ctd": false,
+        "requestToBook": false,
+        "notDefaultAvailability": true,
+        "isBaseRestrictions": true,
+        "by": {
+          "minNights": {
+            "src": null,
+            "when": "2026-10-02T11:45:11.263Z",
+            "who": "AnpService"
+          },
+          "price": {
+            "src": null,
+            "when": "2026-10-02T11:45:11.263Z",
+            "who": "AnpService"
+          }
+        }
+      },
+      {
+        "date": "2026-10-02",
+        "listingId": "68592550e99bc60013ad2db2",
+        "currency": "EUR",
+        "price": 83,
+        "isBasePrice": false,
+        "basePrice": 110,
+        "minNights": 2,
+        "isBaseMinNights": false,
+        "baseMinNights": 1,
+        "maxNights": 90,
+        "status": "booked",
+        "blocks": {
+          "m": false,
+          "r": false,
+          "b": true,
+          "bd": false,
+          "sr": false,
+          "abl": false,
+          "a": false,
+          "bw": false,
+          "o": false,
+          "pt": false,
+          "an": true
+        },
+        "blockRefs": [
+          {
+            "_id": "6ab71893b0c54c6c8156f95e",
+            "listingId": "68592550e99bc60013ad2db2",
+            "startDate": "2026-10-01T00:00:00.000Z",
+            "endDate": "2026-10-05T00:00:00.000Z",
+            "type": "b",
+            "reservationId": "6ab7188f267fcb421c8ab818",
+            "reservation": {
+              "_id": "6ab7188f267fcb421c8ab818",
+              "listingId": "68592550e99bc60013ad2db2",
+              "accountId": "682f39ceca0d576ff1aa1da7",
+              "checkInDateLocalized": "2026-10-01",
+              "checkOutDateLocalized": "2026-10-06",
+              "status": "confirmed",
+              "confirmationCode": "BC-W1LY943qn",
+              "source": "Booking.com",
+              "listing": {
+                "defaultCheckInTime": "16:00",
+                "timezone": "Europe/Bratislava",
+                "nickname": "Ferienčikova A"
+              },
+              "money": "[redacted]",
+              "nightsCount": 5,
+              "plannedArrival": "16:00",
+              "plannedDeparture": "11:00",
+              "guest": "[redacted]",
+              "guestsCount": 4,
+              "integration": {
+                "platform": "bookingCom"
+              },
+              "checkIn": "2026-10-01T16:00:00+00:00",
+              "checkOut": "2026-10-06T11:00:00+00:00",
+              "createdAt": "2026-09-26T00:57:51.000Z",
+              "reservedExpiresAt": null,
+              "notes": "[redacted]",
+              "createdBy": "ChannelService",
+              "numberOfGuests": {
+                "numberOfChildren": 0,
+                "numberOfInfants": 0,
+                "numberOfAdults": 4
+              },
+              "earlyCheckIn": {},
+              "lateCheckOut": {},
+              "guestStay": {
+                "status": "not_set"
+              },
+              "propertyLock": {},
+              "browserCheckIn": "2026-10-01 18:00",
+              "browserCheckOut": "2026-10-06 13:00"
+            },
+            "staysMetadata": {
+              "totalStays": 1,
+              "stayIndex": 1
+            },
+            "createdBy": "ChannelService",
+            "createdAt": "2026-09-26T00:57:55.249Z"
+          },
+          {
+            "listingId": "68592550e99bc60013ad2db2",
+            "accountId": "682f39ceca0d576ff1aa1da7",
+            "type": "an",
+            "startDate": "2026-10-02T00:00:00.000Z",
+            "endDate": "2026-10-02T00:00:00.000Z",
+            "hours": 3,
+            "updatedAt": "2026-08-21T15:43:16.418Z",
+            "updatedBy": "AuthService"
+          }
+        ],
+        "reservationId": "6ab7188f267fcb421c8ab818",
+        "reservation": {
+          "_id": "6ab7188f267fcb421c8ab818",
+          "listingId": "68592550e99bc60013ad2db2",
+          "accountId": "682f39ceca0d576ff1aa1da7",
+          "checkInDateLocalized": "2026-10-01",
+          "checkOutDateLocalized": "2026-10-06",
+          "status": "confirmed",
+          "confirmationCode": "BC-W1LY943qn",
+          "source": "Booking.com",
+          "listing": {
+            "defaultCheckInTime": "16:00",
+            "timezone": "Europe/Bratislava",
+            "nickname": "Ferienčikova A"
+          },
+          "money": "[redacted]",
+          "nightsCount": 5,
+          "plannedArrival": "16:00",
+          "plannedDeparture": "11:00",
+          "guest": "[redacted]",
+          "guestsCount": 4,
+          "integration": {
+            "platform": "bookingCom"
+          },
+          "checkIn": "2026-10-01T16:00:00+00:00",
+          "checkOut": "2026-10-06T11:00:00+00:00",
+          "createdAt": "2026-09-26T00:57:51.000Z",
+          "reservedExpiresAt": null,
+          "notes": "[redacted]",
+          "createdBy": "ChannelService",
+          "numberOfGuests": {
+            "numberOfChildren": 0,
+            "numberOfInfants": 0,
+            "numberOfAdults": 4
+          },
+          "earlyCheckIn": {},
+          "lateCheckOut": {},
+          "guestStay": {
+            "status": "not_set"
+          },
+          "propertyLock": {},
+          "browserCheckIn": "2026-10-01 18:00",
+          "browserCheckOut": "2026-10-06 13:00"
+        },
+        "cta": false,
+        "ctd": false,
+        "requestToBook": false,
+        "notDefaultAvailability": true,
+        "isBaseRestrictions": true,
+        "by": {
+          "minNights": {
+            "src": null,
+            "when": "2026-10-02T13:25:16.542Z",
+            "who": "AnpService"
+          },
+          "price": {
+            "src": null,
+            "when": "2026-10-02T13:25:16.542Z",
+            "who": "AnpService"
+          }
+        }
+      },
+      {
+        "date": "2026-10-03",
+        "listingId": "68592550e99bc60013ad2db2",
+        "currency": "EUR",
+        "price": 87,
+        "isBasePrice": false,
+        "basePrice": 110,
+        "minNights": 2,
+        "isBaseMinNights": false,
+        "baseMinNights": 1,
+        "maxNights": 90,
+        "status": "booked",
+        "blocks": {
+          "m": false,
+          "r": false,
+          "b": true,
+          "bd": false,
+          "sr": false,
+          "abl": false,
+          "a": false,
+          "bw": false,
+          "o": false,
+          "pt": false
+        },
+        "blockRefs": [
+          {
+            "_id": "6ab71893b0c54c6c8156f95e",
+            "listingId": "68592550e99bc60013ad2db2",
+            "startDate": "2026-10-01T00:00:00.000Z",
+            "endDate": "2026-10-05T00:00:00.000Z",
+            "type": "b",
+            "reservationId": "6ab7188f267fcb421c8ab818",
+            "reservation": {
+              "_id": "6ab7188f267fcb421c8ab818",
+              "listingId": "68592550e99bc60013ad2db2",
+              "accountId": "682f39ceca0d576ff1aa1da7",
+              "checkInDateLocalized": "2026-10-01",
+              "checkOutDateLocalized": "2026-10-06",
+              "status": "confirmed",
+              "confirmationCode": "BC-W1LY943qn",
+              "source": "Booking.com",
+              "listing": {
+                "defaultCheckInTime": "16:00",
+                "timezone": "Europe/Bratislava",
+                "nickname": "Ferienčikova A"
+              },
+              "money": "[redacted]",
+              "nightsCount": 5,
+              "plannedArrival": "16:00",
+              "plannedDeparture": "11:00",
+              "guest": "[redacted]",
+              "guestsCount": 4,
+              "integration": {
+                "platform": "bookingCom"
+              },
+              "checkIn": "2026-10-01T16:00:00+00:00",
+              "checkOut": "2026-10-06T11:00:00+00:00",
+              "createdAt": "2026-09-26T00:57:51.000Z",
+              "reservedExpiresAt": null,
+              "notes": "[redacted]",
+              "createdBy": "ChannelService",
+              "numberOfGuests": {
+                "numberOfChildren": 0,
+                "numberOfInfants": 0,
+                "numberOfAdults": 4
+              },
+              "earlyCheckIn": {},
+              "lateCheckOut": {},
+              "guestStay": {
+                "status": "not_set"
+              },
+              "propertyLock": {},
+              "browserCheckIn": "2026-10-01 18:00",
+              "browserCheckOut": "2026-10-06 13:00"
+            },
+            "staysMetadata": {
+              "totalStays": 1,
+              "stayIndex": 1
+            },
+            "createdBy": "ChannelService",
+            "createdAt": "2026-09-26T00:57:55.249Z"
+          }
+        ],
+        "reservationId": "6ab7188f267fcb421c8ab818",
+        "reservation": {
+          "_id": "6ab7188f267fcb421c8ab818",
+          "listingId": "68592550e99bc60013ad2db2",
+          "accountId": "682f39ceca0d576ff1aa1da7",
+          "checkInDateLocalized": "2026-10-01",
+          "checkOutDateLocalized": "2026-10-06",
+          "status": "confirmed",
+          "confirmationCode": "BC-W1LY943qn",
+          "source": "Booking.com",
+          "listing": {
+            "defaultCheckInTime": "16:00",
+            "timezone": "Europe/Bratislava",
+            "nickname": "Ferienčikova A"
+          },
+          "money": "[redacted]",
+          "nightsCount": 5,
+          "plannedArrival": "16:00",
+          "plannedDeparture": "11:00",
+          "guest": "[redacted]",
+          "guestsCount": 4,
+          "integration": {
+            "platform": "bookingCom"
+          },
+          "checkIn": "2026-10-01T16:00:00+00:00",
+          "checkOut": "2026-10-06T11:00:00+00:00",
+          "createdAt": "2026-09-26T00:57:51.000Z",
+          "reservedExpiresAt": null,
+          "notes": "[redacted]",
+          "createdBy": "ChannelService",
+          "numberOfGuests": {
+            "numberOfChildren": 0,
+            "numberOfInfants": 0,
+            "numberOfAdults": 4
+          },
+          "earlyCheckIn": {},
+          "lateCheckOut": {},
+          "guestStay": {
+            "status": "not_set"
+          },
+          "propertyLock": {},
+          "browserCheckIn": "2026-10-01 18:00",
+          "browserCheckOut": "2026-10-06 13:00"
+        },
+        "cta": false,
+        "ctd": false,
+        "requestToBook": false,
+        "notDefaultAvailability": true,
+        "isBaseRestrictions": true,
+        "by": {
+          "minNights": {
+            "src": null,
+            "when": "2026-10-02T13:25:16.542Z",
+            "who": "AnpService"
+          },
+          "price": {
+            "src": null,
+            "when": "2026-10-02T13:25:16.542Z",
+            "who": "AnpService"
+          }
+        }
+      },
+      {
+        "date": "2026-10-04",
+        "listingId": "68592550e99bc60013ad2db2",
+        "currency": "EUR",
+        "price": 70,
+        "isBasePrice": false,
+        "basePrice": 98,
+        "minNights": 2,
+        "isBaseMinNights": false,
+        "baseMinNights": 1,
+        "maxNights": 90,
+        "status": "booked",
+        "blocks": {
+          "m": false,
+          "r": false,
+          "b": true,
+          "bd": false,
+          "sr": false,
+          "abl": false,
+          "a": false,
+          "bw": false,
+          "o": false,
+          "pt": false
+        },
+        "blockRefs": [
+          {
+            "_id": "6ab71893b0c54c6c8156f95e",
+            "listingId": "68592550e99bc60013ad2db2",
+            "startDate": "2026-10-01T00:00:00.000Z",
+            "endDate": "2026-10-05T00:00:00.000Z",
+            "type": "b",
+            "reservationId": "6ab7188f267fcb421c8ab818",
+            "reservation": {
+              "_id": "6ab7188f267fcb421c8ab818",
+              "listingId": "68592550e99bc60013ad2db2",
+              "accountId": "682f39ceca0d576ff1aa1da7",
+              "checkInDateLocalized": "2026-10-01",
+              "checkOutDateLocalized": "2026-10-06",
+              "status": "confirmed",
+              "confirmationCode": "BC-W1LY943qn",
+              "source": "Booking.com",
+              "listing": {
+                "defaultCheckInTime": "16:00",
+                "timezone": "Europe/Bratislava",
+                "nickname": "Ferienčikova A"
+              },
+              "money": "[redacted]",
+              "nightsCount": 5,
+              "plannedArrival": "16:00",
+              "plannedDeparture": "11:00",
+              "guest": "[redacted]",
+              "guestsCount": 4,
+              "integration": {
+                "platform": "bookingCom"
+              },
+              "checkIn": "2026-10-01T16:00:00+00:00",
+              "checkOut": "2026-10-06T11:00:00+00:00",
+              "createdAt": "2026-09-26T00:57:51.000Z",
+              "reservedExpiresAt": null,
+              "notes": "[redacted]",
+              "createdBy": "ChannelService",
+              "numberOfGuests": {
+                "numberOfChildren": 0,
+                "numberOfInfants": 0,
+                "numberOfAdults": 4
+              },
+              "earlyCheckIn": {},
+              "lateCheckOut": {},
+              "guestStay": {
+                "status": "not_set"
+              },
+              "propertyLock": {},
+              "browserCheckIn": "2026-10-01 18:00",
+              "browserCheckOut": "2026-10-06 13:00"
+            },
+            "staysMetadata": {
+              "totalStays": 1,
+              "stayIndex": 1
+            },
+            "createdBy": "ChannelService",
+            "createdAt": "2026-09-26T00:57:55.249Z"
+          }
+        ],
+        "reservationId": "6ab7188f267fcb421c8ab818",
+        "reservation": {
+          "_id": "6ab7188f267fcb421c8ab818",
+          "listingId": "68592550e99bc60013ad2db2",
+          "accountId": "682f39ceca0d576ff1aa1da7",
+          "checkInDateLocalized": "2026-10-01",
+          "checkOutDateLocalized": "2026-10-06",
+          "status": "confirmed",
+          "confirmationCode": "BC-W1LY943qn",
+          "source": "Booking.com",
+          "listing": {
+            "defaultCheckInTime": "16:00",
+            "timezone": "Europe/Bratislava",
+            "nickname": "Ferienčikova A"
+          },
+          "money": "[redacted]",
+          "nightsCount": 5,
+          "plannedArrival": "16:00",
+          "plannedDeparture": "11:00",
+          "guest": "[redacted]",
+          "guestsCount": 4,
+          "integration": {
+            "platform": "bookingCom"
+          },
+          "checkIn": "2026-10-01T16:00:00+00:00",
+          "checkOut": "2026-10-06T11:00:00+00:00",
+          "createdAt": "2026-09-26T00:57:51.000Z",
+          "reservedExpiresAt": null,
+          "notes": "[redacted]",
+          "createdBy": "ChannelService",
+          "numberOfGuests": {
+            "numberOfChildren": 0,
+            "numberOfInfants": 0,
+            "numberOfAdults": 4
+          },
+          "earlyCheckIn": {},
+          "lateCheckOut": {},
+          "guestStay": {
+            "status": "not_set"
+          },
+          "propertyLock": {},
+          "browserCheckIn": "2026-10-01 18:00",
+          "browserCheckOut": "2026-10-06 13:00"
+        },
+        "cta": false,
+        "ctd": false,
+        "requestToBook": false,
+        "notDefaultAvailability": true,
+        "isBaseRestrictions": true,
+        "by": {
+          "minNights": {
+            "src": null,
+            "when": "2026-10-02T13:25:16.542Z",
+            "who": "AnpService"
+          },
+          "price": {
+            "src": null,
+            "when": "2026-10-02T13:25:16.542Z",
+            "who": "AnpService"
+          }
+        }
+      },
+      {
+        "date": "2026-10-05",
+        "listingId": "68592550e99bc60013ad2db2",
+        "currency": "EUR",
+        "price": 65,
+        "isBasePrice": false,
+        "basePrice": 98,
+        "minNights": 2,
+        "isBaseMinNights": false,
+        "baseMinNights": 1,
+        "maxNights": 90,
+        "status": "booked",
+        "blocks": {
+          "m": false,
+          "r": false,
+          "b": true,
+          "bd": false,
+          "sr": false,
+          "abl": false,
+          "a": false,
+          "bw": false,
+          "o": false,
+          "pt": false
+        },
+        "blockRefs": [
+          {
+            "_id": "6ab71893b0c54c6c8156f95e",
+            "listingId": "68592550e99bc60013ad2db2",
+            "startDate": "2026-10-01T00:00:00.000Z",
+            "endDate": "2026-10-05T00:00:00.000Z",
+            "type": "b",
+            "reservationId": "6ab7188f267fcb421c8ab818",
+            "reservation": {
+              "_id": "6ab7188f267fcb421c8ab818",
+              "listingId": "68592550e99bc60013ad2db2",
+              "accountId": "682f39ceca0d576ff1aa1da7",
+              "checkInDateLocalized": "2026-10-01",
+              "checkOutDateLocalized": "2026-10-06",
+              "status": "confirmed",
+              "confirmationCode": "BC-W1LY943qn",
+              "source": "Booking.com",
+              "listing": {
+                "defaultCheckInTime": "16:00",
+                "timezone": "Europe/Bratislava",
+                "nickname": "Ferienčikova A"
+              },
+              "money": "[redacted]",
+              "nightsCount": 5,
+              "plannedArrival": "16:00",
+              "plannedDeparture": "11:00",
+              "guest": "[redacted]",
+              "guestsCount": 4,
+              "integration": {
+                "platform": "bookingCom"
+              },
+              "checkIn": "2026-10-01T16:00:00+00:00",
+              "checkOut": "2026-10-06T11:00:00+00:00",
+              "createdAt": "2026-09-26T00:57:51.000Z",
+              "reservedExpiresAt": null,
+              "notes": "[redacted]",
+              "createdBy": "ChannelService",
+              "numberOfGuests": {
+                "numberOfChildren": 0,
+                "numberOfInfants": 0,
+                "numberOfAdults": 4
+              },
+              "earlyCheckIn": {},
+              "lateCheckOut": {},
+              "guestStay": {
+                "status": "not_set"
+              },
+              "propertyLock": {},
+              "browserCheckIn": "2026-10-01 18:00",
+              "browserCheckOut": "2026-10-06 13:00"
+            },
+            "staysMetadata": {
+              "totalStays": 1,
+              "stayIndex": 1
+            },
+            "createdBy": "ChannelService",
+            "createdAt": "2026-09-26T00:57:55.249Z"
+          }
+        ],
+        "reservationId": "6ab7188f267fcb421c8ab818",
+        "reservation": {
+          "_id": "6ab7188f267fcb421c8ab818",
+          "listingId": "68592550e99bc60013ad2db2",
+          "accountId": "682f39ceca0d576ff1aa1da7",
+          "checkInDateLocalized": "2026-10-01",
+          "checkOutDateLocalized": "2026-10-06",
+          "status": "confirmed",
+          "confirmationCode": "BC-W1LY943qn",
+          "source": "Booking.com",
+          "listing": {
+            "defaultCheckInTime": "16:00",
+            "timezone": "Europe/Bratislava",
+            "nickname": "Ferienčikova A"
+          },
+          "money": "[redacted]",
+          "nightsCount": 5,
+          "plannedArrival": "16:00",
+          "plannedDeparture": "11:00",
+          "guest": "[redacted]",
+          "guestsCount": 4,
+          "integration": {
+            "platform": "bookingCom"
+          },
+          "checkIn": "2026-10-01T16:00:00+00:00",
+          "checkOut": "2026-10-06T11:00:00+00:00",
+          "createdAt": "2026-09-26T00:57:51.000Z",
+          "reservedExpiresAt": null,
+          "notes": "[redacted]",
+          "createdBy": "ChannelService",
+          "numberOfGuests": {
+            "numberOfChildren": 0,
+            "numberOfInfants": 0,
+            "numberOfAdults": 4
+          },
+          "earlyCheckIn": {},
+          "lateCheckOut": {},
+          "guestStay": {
+            "status": "not_set"
+          },
+          "propertyLock": {},
+          "browserCheckIn": "2026-10-01 18:00",
+          "browserCheckOut": "2026-10-06 13:00"
+        },
+        "cta": false,
+        "ctd": false,
+        "requestToBook": false,
+        "notDefaultAvailability": true,
+        "isBaseRestrictions": true,
+        "by": {
+          "minNights": {
+            "src": null,
+            "when": "2026-10-02T13:25:16.542Z",
+            "who": "AnpService"
+          },
+          "price": {
+            "src": null,
+            "when": "2026-10-02T13:25:16.542Z",
+            "who": "AnpService"
+          }
+        }
+      }
+    ]
+  },
+  "message": "OK"
+}

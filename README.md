@@ -79,7 +79,14 @@ pnpm probe                              # ~10 requests, one token
 pnpm probe -- --webhook-url https://<host>/api/guesty/webhook
 ```
 
-It writes `docs/guesty-notes.md` (field shapes, listing counts with and without the active/listed filters) and redacted fixtures to `src/guesty/fixtures/recorded/`. The open points it settles: whether `listingRooms`, `bathrooms` and inline `customFields` are returned by `GET /listings`, the response envelope of the listings endpoint, whether `filter[listingId]` accepts a list, and the calendar batch shape. The client already handles both answers to each question.
+It writes `docs/guesty-notes.md` (field shapes, listing counts with and without the active/listed filters) and redacted fixtures to `src/guesty/fixtures/recorded/`. Recorded on 2026-10-02 against the LIVE-IN account:
+
+- `GET /listings` returns `listingRooms`, `bathrooms` and inline `customFields`; envelope `{results, count, limit, skip}`; 132 listings, 131 with `active=true&listed=true`.
+- `GET /reservations-v3/search` answers `{results, pagination.hasMore}`; `filter[listingId]` takes a comma-separated string (bracket arrays are refused); stay segments carry `listingId`.
+- `GET /reservations-v3` needs `reservationIds[]=a&reservationIds[]=b` (a comma-joined value is a 400) and answers a plain array whose stay segments carry `unitTypeId` (the listing) and `unitId` instead of `listingId`.
+- The calendar batch takes `listingIds=a,b` and answers `{status, data: {days: [...]}, message}` with `listingId`, `minNights`, `status`, `cta` per day.
+
+`tests/unit/guesty/real-shapes.test.ts` pins these shapes.
 
 ### Registering the webhook
 

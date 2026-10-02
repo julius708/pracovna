@@ -1,0 +1,66 @@
+[
+  {
+    "_id": "6aa516eb4b0afa5c8ca1c984",
+    "accountId": "682f39ceca0d576ff1aa1da7",
+    "bookerId": "[redacted]",
+    "bookingDate": "2026-09-12T09:08:31.000Z",
+    "channelMetadata": "[redacted]",
+    "channelsSyncState": {
+      "listing": {
+        "syncMode": "ENABLED",
+        "unlockOnListingId": "6a2befa5ed0c9600117d7e48"
+      }
+    },
+    "confirmationCode": "BC-7JZlLjWo8",
+    "confirmedAt": "2026-09-12T09:08:31.000Z",
+    "conversationExternalId": "[redacted]",
+    "createdAt": "2026-09-12T09:10:03.751Z",
+    "guestPreferences": "[redacted]",
+    "guestStay": {
+      "status": "not_set",
+      "createdAt": "2026-09-12T09:10:03.774Z",
+      "updatedAt": "2026-09-12T09:10:03.774Z"
+    },
+    "guests": "[redacted]",
+    "integrationId": "[redacted]",
+    "isUsingVCC": false,
+    "moneyId": "[redacted]",
+    "platform": "bookingCom",
+    "ratePlans": [
+      {
+        "ratePlanId": "692570b6e67a91cd18ff3941",
+        "name": "Smart Non-Refundable",
+        "mealPlan": "There is no meal option with this room.",
+        "cancellationPolicy": "NON_REFUNDABLE",
+        "cancellationPolicyDescription": "The guest will be charged the total price if they cancel.",
+        "cancellationFee": 100,
+        "promotionData": {
+          "_id": "684fd344a7e1c776216a0afe",
+          "name": "Mobile Rate",
+          "externalPromotionId": "MR"
+        }
+      }
+    ],
+    "source": "Booking.com",
+    "status": "confirmed",
+    "stay": [
+      {
+        "checkInDateLocalized": "2026-09-20",
+        "checkOutDateLocalized": "2026-10-02",
+        "guestsCount": 1,
+        "numberOfGuests": {
+          "numberOfAdults": 1,
+          "numberOfChildren": 0,
+          "numberOfInfants": 0
+        },
+        "unitTypeId": "6a2befa5ed0c9600117d7e48",
+        "unitId": "6a2befa5ed0c9600117d7e48",
+        "eta": "2026-09-20T16:00:00.000Z",
+        "etd": "2026-10-02T11:00:00.000Z"
+      }
+    ],
+    "unifiedId": "v1-682f39ceca0d576ff1aa1da7-BC-7JZlLjWo8",
+    "conversationId": "[redacted]",
+    "money": "[redacted]"
+  }
+]

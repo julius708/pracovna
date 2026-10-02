@@ -1,0 +1,107 @@
+{
+  "unitTypeId": "68592546458130001380dfc6",
+  "bedroomsAllowed": true,
+  "bathrooms": 1,
+  "spaces": [
+    {
+      "_id": "685925470625233b4d4db3f7",
+      "unitTypeId": "68592546458130001380dfc6",
+      "accountId": "682f39ceca0d576ff1aa1da7",
+      "name": "Bedroom",
+      "type": "BEDROOM",
+      "roomNumber": 0,
+      "isPrivate": true,
+      "beds": {
+        "KING_BED": 1,
+        "QUEEN_BED": 0,
+        "DOUBLE_BED": 0,
+        "SINGLE_BED": 0,
+        "SOFA_BED": 0,
+        "AIR_MATTRESS": 0,
+        "BUNK_BED": 0
+      },
+      "other": {
+        "FLOOR_MATTRESS": 0,
+        "WATER_BED": 0,
+        "TODDLER_BED": 0,
+        "CRIB": 0
+      },
+      "__v": 0
+    },
+    {
+      "_id": "685925470625233b4d4db3f8",
+      "unitTypeId": "68592546458130001380dfc6",
+      "accountId": "682f39ceca0d576ff1aa1da7",
+      "name": "Full bathroom",
+      "type": "FULL_BATHROOM",
+      "roomNumber": 1,
+      "isPrivate": true,
+      "beds": {
+        "KING_BED": 0,
+        "QUEEN_BED": 0,
+        "DOUBLE_BED": 0,
+        "SINGLE_BED": 0,
+        "SOFA_BED": 0,
+        "AIR_MATTRESS": 0,
+        "BUNK_BED": 0
+      },
+      "other": {
+        "FLOOR_MATTRESS": 0,
+        "WATER_BED": 0,
+        "TODDLER_BED": 0,
+        "CRIB": 0
+      },
+      "__v": 0
+    },
+    {
+      "_id": "692d8efb412d3b52408560fa",
+      "unitTypeId": "68592546458130001380dfc6",
+      "accountId": "682f39ceca0d576ff1aa1da7",
+      "name": "Kitchen",
+      "type": "KITCHEN",
+      "roomNumber": 2,
+      "isPrivate": true,
+      "beds": {
+        "KING_BED": 0,
+        "QUEEN_BED": 0,
+        "DOUBLE_BED": 0,
+        "SINGLE_BED": 0,
+        "SOFA_BED": 0,
+        "AIR_MATTRESS": 0,
+        "BUNK_BED": 0
+      },
+      "other": {
+        "FLOOR_MATTRESS": 0,
+        "WATER_BED": 0,
+        "TODDLER_BED": 0,
+        "CRIB": 0
+      },
+      "__v": 0
+    },
+    {
+      "_id": "69414dea38b659f1c8797aee",
+      "unitTypeId": "68592546458130001380dfc6",
+      "accountId": "682f39ceca0d576ff1aa1da7",
+      "name": "Living room 1",
+      "type": "SHARED_SPACE",
+      "roomNumber": 4,
+      "isPrivate": true,
+      "beds": {
+        "KING_BED": 0,
+        "QUEEN_BED": 0,
+        "DOUBLE_BED": 0,
+        "SINGLE_BED": 0,
+        "SOFA_BED": 0,
+        "AIR_MATTRESS": 0,
+        "BUNK_BED": 0
+      },
+      "other": {
+        "FLOOR_MATTRESS": 0,
+        "WATER_BED": 0,
+        "TODDLER_BED": 0,
+        "CRIB": 0
+      },
+      "__v": 0
+    }
+  ]
+}

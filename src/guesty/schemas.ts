@@ -34,7 +34,9 @@ export const numberOfGuestsSchema = z.looseObject({
 });
 
 export const staySegmentSchema = z.looseObject({
+  /** v3 search gives listingId; GET /reservations-v3?reservationIds[] gives unitTypeId (= the listing) and unitId (the unit). */
   listingId: str,
+  unitTypeId: str,
   unitId: str,
   checkInDateLocalized: str,
   checkOutDateLocalized: str,
