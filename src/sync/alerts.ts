@@ -1,4 +1,5 @@
 import type { SyncRepo } from '@/db/repo';
+import type { Env } from '@/env';
 import type { Logger } from '@/guesty/log';
 import { silentLogger } from '@/guesty/log';
 
@@ -8,15 +9,73 @@ export interface AlertState {
   open: Partial<Record<AlertKind, { since: string; lastSent: string | null }>>;
 }
 
-export interface AlertDeps {
-  repo: SyncRepo;
+/** A Telegram bot that writes into one chat (the laundry group or Julius). */
+export interface TelegramSink {
+  botToken: string;
+  chatId: string;
+}
+
+export interface AlertSinks {
+  /** Generic JSON webhook: POST {text}. */
   webhookUrl?: string | null;
+  telegram?: TelegramSink | null;
   fetch?: typeof fetch;
   log?: Logger;
+}
+
+export interface AlertDeps extends AlertSinks {
+  repo: SyncRepo;
   now?: () => Date;
 }
 
 const RESEND_MS = 6 * 3_600_000;
+
+/** The sinks configured in the environment; Telegram needs both the token and the chat id. */
+export function alertSinksFromEnv(env: Env): Pick<AlertSinks, 'webhookUrl' | 'telegram'> {
+  return {
+    webhookUrl: env.ALERT_WEBHOOK_URL ?? null,
+    telegram: env.ALERT_TELEGRAM_BOT_TOKEN && env.ALERT_TELEGRAM_CHAT_ID ? { botToken: env.ALERT_TELEGRAM_BOT_TOKEN, chatId: env.ALERT_TELEGRAM_CHAT_ID } : null,
+  };
+}
+
+export interface Delivery {
+  /** null = sink not configured */
+  webhook: boolean | null;
+  telegram: boolean | null;
+}
+
+/** Sends one text to every configured sink. Failures are logged (without the bot token) and never thrown. */
+export async function sendAlert(sinks: AlertSinks, text: string): Promise<Delivery> {
+  const f = sinks.fetch ?? fetch;
+  const log = sinks.log ?? silentLogger;
+  const out: Delivery = { webhook: null, telegram: null };
+  if (sinks.webhookUrl) {
+    try {
+      const r = await f(sinks.webhookUrl, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text }) });
+      out.webhook = r.ok;
+      if (!r.ok) log.warn('alert.webhook_failed', { status: r.status });
+    } catch (e) {
+      out.webhook = false;
+      log.warn('alert.webhook_failed', { error: String(e) });
+    }
+  }
+  if (sinks.telegram) {
+    const { botToken, chatId } = sinks.telegram;
+    try {
+      const r = await f(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text, disable_web_page_preview: true }),
+      });
+      out.telegram = r.ok;
+      if (!r.ok) log.warn('alert.telegram_failed', { status: r.status });
+    } catch (e) {
+      out.telegram = false;
+      log.warn('alert.telegram_failed', { error: String(e).split(botToken).join('[token]') });
+    }
+  }
+  return out;
+}
 
 export const ALERT_TEXT: Record<AlertKind, string> = {
   sync_failed_twice: 'Synchronizácia s Guesty zlyhala dvakrát po sebe.',
@@ -27,13 +86,7 @@ export const ALERT_TEXT: Record<AlertKind, string> = {
 };
 
 async function post(deps: AlertDeps, text: string): Promise<void> {
-  if (!deps.webhookUrl) return;
-  const f = deps.fetch ?? fetch;
-  try {
-    await f(deps.webhookUrl, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text }) });
-  } catch (e) {
-    (deps.log ?? silentLogger).warn('alert.post_failed', { error: String(e) });
-  }
+  await sendAlert(deps, text);
 }
 
 /**

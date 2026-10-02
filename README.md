@@ -141,7 +141,14 @@ The owner's prototype (`pracovna.html` in the `reference/` folder of the spec di
 
 ## Alerts and health
 
-`/health` returns 503 when the database is down, the last successful sync is older than 30 minutes, or two syncs in a row failed. Point a free uptime monitor at it. `ALERT_WEBHOOK_URL` (optional) receives a JSON `{text}` when an alert opens, every 6 hours while it stays open, and once when it resolves.
+`/health` returns 503 when the database is down, the last successful sync is older than 30 minutes, or two syncs in a row failed. Point a free uptime monitor at it (for example UptimeRobot: HTTPS monitor of `https://pracovna-cyan.vercel.app/health`, 5-minute interval, keyword `"ok":true` must exist, alert contact your e-mail). That is the only check that still works when Vercel itself is down or the cron stopped.
+
+The app also raises its own alerts (sync failed twice in a row, Guesty token quota, webhook missing or silent, listing drop): once when the alert opens, every 6 hours while it stays open, and once when it resolves. Sinks, both optional:
+
+- **Telegram** (recommended, free, instant on the phone): in Telegram open @BotFather, send `/newbot`, pick a name and copy the token into `ALERT_TELEGRAM_BOT_TOKEN`. Send the new bot any message (or add it to the laundry group and write there), then put the chat id into `ALERT_TELEGRAM_CHAT_ID` (`https://api.telegram.org/bot<token>/getUpdates` shows it under `message.chat.id`; group ids are negative).
+- `ALERT_WEBHOOK_URL`: any endpoint that accepts a JSON `{text}` POST (Slack/Teams incoming webhook, Zapier, …).
+
+`POST /api/admin/webhooks/register`'s sibling `POST /api/admin/alerts/test` (cron secret or admin session) sends a test message through every configured sink and reports what was delivered.
 
 ## Packing rules
 

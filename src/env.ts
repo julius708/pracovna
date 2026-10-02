@@ -27,6 +27,9 @@ const schema = z.object({
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   PRICELABS_API_KEY: z.string().min(1).optional(),
   ALERT_WEBHOOK_URL: z.string().url().optional(),
+  /** Telegram bot (BotFather) and the chat it writes to; both or neither. */
+  ALERT_TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
+  ALERT_TELEGRAM_CHAT_ID: z.string().min(1).optional(),
   APP_VERSION: z.string().optional(),
 });
 

@@ -1,6 +1,6 @@
 import { isCronAuthorized, unauthorized } from '@/app/api/_auth';
 import { MAX_SERVER_MINTS_PER_24H } from '@/guesty/token';
-import { commonAlertConditions, evaluateAlerts } from '@/sync/alerts';
+import { alertSinksFromEnv, commonAlertConditions, evaluateAlerts } from '@/sync/alerts';
 import { createSyncContext } from '@/sync/context';
 import { reconcile } from '@/sync/reconcile';
 
@@ -18,7 +18,7 @@ export async function GET(req: Request) {
   );
   // only the alerts this job can judge; the webhook alerts belong to the nightly job
   await evaluateAlerts(
-    { repo: ctx.repo, webhookUrl: ctx.env.ALERT_WEBHOOK_URL ?? null, log: ctx.log },
+    { repo: ctx.repo, ...alertSinksFromEnv(ctx.env), log: ctx.log },
     await commonAlertConditions(ctx.repo, MAX_SERVER_MINTS_PER_24H),
   );
   return Response.json({ ok: result.ok, skipped: result.skipped, partial: result.partial, error: result.error, stats: result.stats });
