@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { env } from '@/env';
 import { isTransientAuthError } from './auth-errors';
+import { createRetryingFetch } from './fetch-retry';
 import type { ProfileRow } from './types';
 
 /** Supabase client bound to the request's auth cookies (server components, route handlers). */
@@ -10,6 +11,7 @@ export async function createServerSupabase() {
   if (!e.NEXT_PUBLIC_SUPABASE_URL || !e.NEXT_PUBLIC_SUPABASE_ANON_KEY) return null;
   const cookieStore = await cookies();
   return createServerClient(e.NEXT_PUBLIC_SUPABASE_URL, e.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+    global: { fetch: createRetryingFetch() },
     cookies: {
       getAll: () => cookieStore.getAll(),
       setAll: (list) => {

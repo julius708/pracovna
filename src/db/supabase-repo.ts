@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { TokenStore } from '@/guesty/token';
+import { createRetryingFetch } from './fetch-retry';
 import type { LifecyclePatch, ReservationFilter, RetentionResult, SyncRepo, WebhookEventInsert } from './repo';
 import type {
   AppStateKey,
@@ -17,7 +18,7 @@ import type {
 
 /** Service-role client: server only, bypasses RLS. Never import from client components. */
 export function createAdminClient(url: string, serviceRoleKey: string): SupabaseClient {
-  return createClient(url, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
+  return createClient(url, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false }, global: { fetch: createRetryingFetch() } });
 }
 
 function must<T>(r: { data: T | null; error: { message: string } | null }, what: string): T {

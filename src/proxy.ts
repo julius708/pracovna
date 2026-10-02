@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { isTransientAuthError } from '@/db/auth-errors';
+import { createRetryingFetch } from '@/db/fetch-retry';
 
 const PUBLIC = ['/login', '/health', '/api/'];
 const ADMIN = ['/nastavenia', '/historia', '/stav'];
@@ -30,6 +31,7 @@ export async function proxy(request: NextRequest) {
 
   let response = NextResponse.next({ request });
   const supabase = createServerClient(url, key, {
+    global: { fetch: createRetryingFetch() },
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll: (list) => {

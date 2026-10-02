@@ -13,8 +13,8 @@ The full design is in [docs/PROPOSAL.md](docs/PROPOSAL.md).
 | 1 | Architecture, data model, screens | approved 2026-09-29 |
 | 2 | Packing calculator + laundry-field parser + unit tests | done |
 | 3 | Guesty client, reconciliation, webhooks, database schema, seed mode | done (live probe pending credentials) |
-| 4 | UI, auth, realtime, Settings, História, Stav | done (verified in seed mode; realtime needs the Supabase project) |
-| 5 | Staging deploy on Vercel | next |
+| 4 | UI, auth, realtime, Settings, História, Stav | done (reviewed and re-reviewed 2026-10-02) |
+| 5 | Staging deploy on Vercel | done 2026-10-02: https://pracovna-cyan.vercel.app (team "Pracovna APP", Pro; crons every 3 min; Guesty webhook registered) |
 
 ## Repository layout
 
