@@ -51,6 +51,18 @@ Node 22+ and pnpm are required. On Windows: `winget install --source winget Open
 
 Set all three Supabase variables or none: with only some of them the app refuses to start (a half-configured database would mix the development sign-in with real sessions).
 
+### Sign-in and passwords
+
+Users are created in Supabase (Authentication → Add user, "Auto Confirm User" ticked); the `handle_new_user` trigger creates their staff profile. The login page has "Zabudnuté heslo?"; Supabase e-mails a link and the user sets a new password on `/nove-heslo`. Three Supabase settings make the links work:
+
+1. Authentication → URL Configuration: **Site URL** `https://pracovna-cyan.vercel.app`, **Redirect URLs** `https://pracovna-cyan.vercel.app/**` (plus `http://localhost:3000/**` for development).
+2. Authentication → Email Templates → **Reset Password**: replace the `{{ .ConfirmationURL }}` link with
+   `{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery&next=/nove-heslo`.
+   This token-hash form works on any device (request the link on the PC, open it on the phone); the default PKCE link only works in the browser that asked for it. The dashboard's "Send password recovery" uses the same template.
+3. Without custom SMTP Supabase sends only a few auth e-mails per hour and, on some plans, only to project members; set up SMTP (Authentication → SMTP Settings) before the team relies on it.
+
+Links that still arrive in the old formats are handled too: `?code=` is exchanged by `/auth/callback`, a `#access_token…&type=recovery` fragment is consumed by `/nove-heslo`, and either of them landing on the site root or `/login` is forwarded to the callback. Only recovery links are accepted by the callback.
+
 ### Seed mode
 
 Without Supabase keys the login page offers two development stand-ins ("Test správca", "Test personál") so the whole app can be exercised locally; with Supabase configured the real e-mail/password login is used and the stand-ins disappear.

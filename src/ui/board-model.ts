@@ -4,6 +4,7 @@
  */
 import { DEFAULT_ITEMS, type CapsuleLine, type LineItem, type PackingResult } from '@/core/packing';
 import type { BoardPackage } from '@/app/_lib/board';
+import { sk } from '@/core/i18n/sk';
 
 export type Filter = 'todo' | 'packed' | 'all';
 
@@ -154,4 +155,49 @@ export function syncState(lastOkSyncAt: string | null, now: Date): { stale: bool
   if (!lastOkSyncAt) return { stale: false, ageMinutes: null };
   const age = (now.getTime() - Date.parse(lastOkSyncAt)) / 60_000;
   return { stale: age > 30, ageMinutes: Math.max(0, Math.round(age)) };
+}
+
+/* ---------------- change notices ---------------- */
+
+/**
+ * What changed between two reads of the board, for the notices every device
+ * shows: packages that appeared, were cancelled or recomputed by the sync, and
+ * packs or undos done by someone else. `ownIds` are packages this device just
+ * changed itself (optimistic patches), which produce no notice. More than three
+ * changes collapse into one line.
+ */
+export function boardNotices(prev: BoardPackage[], next: BoardPackage[], myName: string, ownIds: Set<string>, dayLabelOf: (date: BoardPackage['date']) => string): string[] {
+  if (prev.length === 0) return [];
+  const before = new Map(prev.map((p) => [p.id, p]));
+  const out: string[] = [];
+  let guestyChanges = 0;
+  for (const n of next) {
+    if (n.hidden) continue;
+    const b = before.get(n.id);
+    if (!b) {
+      if (n.status !== 'cancelled') {
+        out.push(sk.notices.newPackage(n.listing_name, dayLabelOf(n.date)));
+        guestyChanges++;
+      }
+      continue;
+    }
+    if (b.status !== 'cancelled' && n.status === 'cancelled') {
+      out.push(sk.notices.cancelled(n.listing_name));
+      guestyChanges++;
+      continue;
+    }
+    if (!ownIds.has(n.id)) {
+      if (b.status === 'todo' && n.status === 'packed' && n.packed_by_name && n.packed_by_name !== myName) out.push(sk.notices.packedBy(n.packed_by_name, n.listing_name));
+      else if (b.status === 'packed' && n.status === 'todo') out.push(sk.notices.unpacked(n.listing_name));
+    }
+    if (b.computed_hash !== n.computed_hash) {
+      out.push(sk.notices.changed(n.listing_name));
+      guestyChanges++;
+    }
+  }
+  if (out.length > 3 && guestyChanges > 0) {
+    const staff = out.filter((t) => !t.startsWith('Nový balíček') && !t.startsWith('Zmena z Guesty') && !t.startsWith('Zrušené'));
+    return [sk.notices.many(guestyChanges), ...staff.slice(0, 2)];
+  }
+  return out.slice(0, 3);
 }

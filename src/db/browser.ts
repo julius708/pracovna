@@ -10,6 +10,8 @@ export function getBrowserSupabase(): SupabaseClient | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return null;
-  client = client ?? createBrowserClient(url, key);
+  // URL detection off: PKCE codes are exchanged on the server (/auth/callback) and the recovery
+  // fragment is consumed by /nove-heslo itself; auth-js would otherwise swallow an init error on such URLs
+  client = client ?? createBrowserClient(url, key, { auth: { detectSessionInUrl: false } });
   return client;
 }

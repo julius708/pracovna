@@ -4,8 +4,9 @@ import { LoginForm } from '@/ui/LoginForm';
 
 export const dynamic = 'force-dynamic';
 
-export default async function LoginPage() {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const viewer = await getViewer();
   if (viewer) redirect('/');
-  return <LoginForm devAllowed={devLoginAllowed()} />;
+  const sp = await searchParams;
+  return <LoginForm devAllowed={devLoginAllowed()} notice={sp.chyba === 'link' ? 'link' : null} />;
 }

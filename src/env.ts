@@ -20,6 +20,8 @@ const schema = z.object({
   GUESTY_LAUNDRY_FIELD_ID: z.string().min(1).default('6ab385c5bcf98e0011a9419d'),
   GUESTY_CLEANER_FIELD_ID: z.string().min(1).optional(),
   CRON_SECRET: z.string().min(16).optional(),
+  /** Public origin of the deployment (e-mail links, webhook URL); Vercel's production URL is the fallback. */
+  APP_URL: z.string().url().optional(),
   APP_ENV: z.enum(['staging', 'production']).default('staging'),
   SEED_MODE: bool,
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),

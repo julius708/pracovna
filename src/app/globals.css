@@ -206,6 +206,9 @@ td input.lbl{width:190px;text-align:left}
 .dvrow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed var(--line);font-size:14px}
 .dvrow select{border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:6px}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:12px;font-weight:600;font-size:15px;z-index:9;max-width:calc(100% - 32px);box-shadow:0 8px 24px rgba(0,0,0,.2)}
+/* change notices from other devices and from Guesty: a column above the toast */
+.notices{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:9;max-width:calc(100% - 32px);width:max-content}
+.notices .notice{background:var(--surface);color:var(--ink);border:2px solid var(--accent);padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
 @media (max-width:420px){.day .d{font-size:17px}.brand h1{font-size:24px}.items{grid-template-columns:1fr 1fr}.items li small{display:none}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 

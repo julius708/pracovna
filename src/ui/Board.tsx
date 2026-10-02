@@ -6,8 +6,10 @@ import type { BoardData, BoardPackage } from '@/app/_lib/board';
 import type { Viewer } from '@/app/_lib/viewer';
 import { formatDM } from '@/core/packing';
 import { dayLabel, dayWord, packedOf, sk } from '@/core/i18n/sk';
+import { useRouter } from 'next/navigation';
 import { newActionId } from './action-id';
-import { angelikaNumbers, applyCleaner, cleanerOptions, counts, dayJobs, FILTER_KEYS, summaryLines, visibleJobs, type Filter } from './board-model';
+import { isRecoveryHash } from './recovery';
+import { angelikaNumbers, applyCleaner, boardNotices, cleanerOptions, counts, dayJobs, FILTER_KEYS, summaryLines, visibleJobs, type Filter } from './board-model';
 import { Header } from './Header';
 import { PackageCard, type CardHandlers } from './PackageCard';
 import { Summary } from './Summary';
@@ -15,6 +17,9 @@ import { useLiveBoard } from './useLiveBoard';
 
 const AV = '/assets/angelika.jpg';
 const CHEER_MS = 3500;
+const NOTICE_MS = 7000;
+/** How long a package this device changed itself is exempt from "someone else changed it" notices. */
+const OWN_CHANGE_MS = 15_000;
 
 function readStored(key: string): string {
   try {
@@ -34,19 +39,57 @@ function store(key: string, value: string) {
 export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer }) {
   const { data, setData, refresh, connected, track } = useLiveBoard(initial);
   const [sel, setSel] = useState(0);
-  const [filter, setFilter] = useState<Filter>('todo');
+  // default "Všetko": packed cards stay in place (green, sorted after the open ones) across reloads and devices;
+  // the chosen filter is remembered per device below
+  const [filter, setFilter] = useState<Filter>('all');
   const [cleaner, setCleaner] = useState('');
   const [keep, setKeep] = useState<Set<string>>(() => new Set());
   const [busy, setBusy] = useState<Set<string>>(() => new Set());
   const [cheer, setCheer] = useState<{ id: string; msg: string } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [notices, setNotices] = useState<{ id: number; text: string }[]>([]);
   // seeded from the server's instant so the hydrated header matches the SSR markup
   const [now, setNow] = useState(() => new Date(initial.loadedAt));
   const cheerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevPackages = useRef(initial.packages);
+  const ownChanges = useRef(new Map<string, number>());
+  const noticeSeq = useRef(0);
+  const router = useRouter();
+  const dates = data.dates;
+
+  // notices about changes made elsewhere: other devices' packs/undos and Guesty updates (spec: everyone sees the same board)
+  useEffect(() => {
+    const prev = prevPackages.current;
+    prevPackages.current = data.packages;
+    if (prev === data.packages) return;
+    const cutoff = Date.now() - OWN_CHANGE_MS;
+    for (const [id, at] of ownChanges.current) if (at < cutoff) ownChanges.current.delete(id);
+    const texts = boardNotices(prev, data.packages, viewer.name, new Set(ownChanges.current.keys()), (d) => dayLabel(dates.indexOf(d as (typeof dates)[number]), d));
+    if (texts.length === 0) return;
+    const items = texts.map((text) => ({ id: ++noticeSeq.current, text }));
+    const show = setTimeout(() => {
+      setNotices((n) => [...n, ...items].slice(-4));
+      try {
+        navigator.vibrate?.(80);
+      } catch {
+        // not supported
+      }
+    }, 0);
+    const hide = setTimeout(() => setNotices((n) => n.filter((x) => !items.some((i) => i.id === x.id))), NOTICE_MS);
+    return () => {
+      clearTimeout(show);
+      clearTimeout(hide);
+    };
+  }, [data.packages, dates, viewer.name]);
 
   useEffect(() => {
-    // restore the per-device filter after hydration (the server always renders "Na balenie")
+    // a password-recovery link opened while signed in lands here with the session in the fragment
+    if (isRecoveryHash(window.location.hash)) {
+      router.replace(`/nove-heslo${window.location.hash}`);
+      return;
+    }
+    // restore the per-device filter after hydration (the server always renders "Všetko")
     const restore = setTimeout(() => {
       const f = readStored('pr-filter');
       if (f === 'todo' || f === 'packed' || f === 'all') setFilter(f);
@@ -57,7 +100,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
       clearTimeout(restore);
       clearInterval(t);
     };
-  }, []);
+  }, [router]);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -80,8 +123,10 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
   const list = useMemo(() => visibleJobs(jobs, filter, keep), [jobs, filter, keep]);
   const hasData = data.status.lastOkSyncAt !== null || data.packages.length > 0;
 
-  const patch = (id: string, fn: (p: BoardPackage) => BoardPackage) =>
+  const patch = (id: string, fn: (p: BoardPackage) => BoardPackage) => {
+    ownChanges.current.set(id, Date.now());
     setData((d) => ({ ...d, packages: d.packages.map((p) => (p.id === id ? fn(p) : p)) }));
+  };
   const setBusyFor = (id: string, on: boolean) =>
     setBusy((s) => {
       const n = new Set(s);
@@ -267,6 +312,15 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
         </div>
       )}
 
+      {notices.length > 0 && (
+        <div className="notices" role="status" aria-live="polite">
+          {notices.map((n) => (
+            <div className="notice" key={n.id}>
+              {n.text}
+            </div>
+          ))}
+        </div>
+      )}
       {toast && (
         <div className="toast" role="status">
           {toast}

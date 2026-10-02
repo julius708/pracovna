@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { isTransientAuthError } from '@/db/auth-errors';
 import { createRetryingFetch } from '@/db/fetch-retry';
 
-const PUBLIC = ['/login', '/health', '/api/'];
+const PUBLIC = ['/login', '/nove-heslo', '/auth/', '/health', '/api/'];
 const ADMIN = ['/nastavenia', '/historia', '/stav'];
 const DEV_ROLE_COOKIE = 'pr-dev-role';
 
@@ -18,6 +18,20 @@ function isPublic(path: string) {
  */
 export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
+
+  // an auth e-mail link that fell back to the Site URL (root or /login) is handed to the callback with its parameters
+  const sp = request.nextUrl.searchParams;
+  if ((path === '/' || path === '/login') && (sp.has('code') || (sp.has('token_hash') && sp.has('type')))) {
+    const cb = new URL('/auth/callback', request.url);
+    cb.search = request.nextUrl.search;
+    if (!cb.searchParams.has('next')) cb.searchParams.set('next', '/nove-heslo');
+    return NextResponse.redirect(cb);
+  }
+  // an expired or already used link reports its error as query parameters on the Site URL
+  if ((path === '/' || path === '/login') && (sp.has('error_code') || sp.has('error_description'))) {
+    return NextResponse.redirect(new URL('/login?chyba=link', request.url));
+  }
+
   if (isPublic(path)) return NextResponse.next();
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

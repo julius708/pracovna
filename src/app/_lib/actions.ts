@@ -1,12 +1,13 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { loginErrorKey } from '@/db/auth-errors';
+import { isTransientAuthError, loginErrorKey } from '@/db/auth-errors';
 import type { MemoryRepo } from '@/db/memory-repo';
 import { createServerSupabase } from '@/db/server';
 import { env } from '@/env';
+import { createLogger } from '@/guesty/log';
 import { createRepoFromEnv } from '@/sync/context';
 import { loadBoard, type BoardData } from './board';
 import { memoryCheck, memoryNote, memoryPack, memoryUnpack, type StaffResult } from './memory-staff';
@@ -89,6 +90,47 @@ export async function loginAction(_prev: { error: string | null }, formData: For
     }
   }
   redirect('/');
+}
+
+/** Public origin for links in e-mails: APP_URL, else the request's own origin. */
+async function requestOrigin(): Promise<string> {
+  const configured = env().APP_URL;
+  if (configured) return configured.replace(/\/$/, '');
+  const h = await headers();
+  const origin = h.get('origin');
+  if (origin) return origin;
+  const host = h.get('x-forwarded-host') ?? h.get('host');
+  return host ? `${h.get('x-forwarded-proto') ?? 'https'}://${host}` : '';
+}
+
+export interface ForgotState {
+  sent: boolean;
+  error: 'email' | 'tooMany' | 'offline' | 'failed' | null;
+}
+
+/** Supabase answers these when the project cannot send e-mail at all or the address is malformed. */
+const SEND_CONFIG_ERRORS = new Set(['email_address_not_authorized', 'email_provider_disabled', 'smtp_error', 'email_address_invalid', 'validation_failed']);
+
+/**
+ * "Zabudnuté heslo": asks Supabase to e-mail a recovery link that lands on
+ * /auth/callback and then /nove-heslo. Whether the e-mail exists is never
+ * revealed: unknown addresses get the same "sent" answer, and the per-address
+ * send limit (which only an existing account can hit) is reported as sent too,
+ * because a link really was sent a moment earlier.
+ */
+export async function forgotPasswordAction(_prev: ForgotState, formData: FormData): Promise<ForgotState> {
+  const email = String(formData.get('email') ?? '').trim();
+  if (!email) return { sent: false, error: 'email' };
+  const db = await createServerSupabase();
+  if (!db) return { sent: false, error: 'offline' };
+  const { error } = await db.auth.resetPasswordForEmail(email, { redirectTo: `${await requestOrigin()}/auth/callback?next=/nove-heslo` });
+  if (!error) return { sent: true, error: null };
+  createLogger({ level: env().LOG_LEVEL, bindings: { job: 'auth' } }).warn('auth.recover.failed', { code: error.code ?? null, status: error.status ?? null });
+  if (error.code === 'over_email_send_rate_limit') return { sent: true, error: null };
+  if (error.status === 429 || error.code === 'over_request_rate_limit') return { sent: false, error: 'tooMany' };
+  if (isTransientAuthError(error)) return { sent: false, error: 'offline' };
+  if (SEND_CONFIG_ERRORS.has(error.code ?? '')) return { sent: false, error: 'failed' };
+  return { sent: true, error: null };
 }
 
 export async function devLoginAction(role: 'admin' | 'staff'): Promise<void> {
