@@ -1,4 +1,6 @@
 allowBuilds:
+  # esbuild (tsx, vitest) only downloads its binary; pnpm 12 refuses to install otherwise (ERR_PNPM_IGNORED_BUILDS on Vercel)
+  esbuild: true
   sharp: false
   unrs-resolver: false
 minimumReleaseAgeExclude:
