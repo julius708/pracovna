@@ -93,16 +93,17 @@ describe('people – same-day check-in (spec §4 rule 1)', () => {
     expect(r.sameDay).toBe(true);
   });
 
-  it('1 incoming guest: towels/toilet paper follow people, regular beds still fully made (Q4)', () => {
+  it('1 incoming guest: towels/toilet paper follow people, one of the two kings is made (owner rule 2026-10-03)', () => {
     const r = computePackage(pkg({ listing: listing({ beds: { KING_BED: 2, SOFA_BED: 1 } }), next: nextIn(0, 1) }));
     expect(r.people).toBe(1);
     expect(count(r, 'osuskaV')).toBe(1);
     expect(count(r, 'uterakM')).toBe(1);
     expect(count(r, 'toaletak')).toBe(2);
-    // both kings get a full set, the sofa is not used
-    expect(count(r, 'paplonV')).toBe(2);
-    expect(count(r, 'vankus')).toBe(4);
-    expect(count(r, 'plachta')).toBe(2);
+    // one king gets a full set, the other stays unmade, the sofa is not used
+    expect(count(r, 'paplonV')).toBe(1);
+    expect(count(r, 'vankus')).toBe(2);
+    expect(count(r, 'plachta')).toBe(1);
+    expect(r.beds.usedGroups).toEqual(['dvoj']);
     expect(r.beds.sofasUsed).toBe(0);
   });
 });
@@ -545,13 +546,16 @@ describe('beds through computePackage', () => {
     expect(count(r, 'paplonV')).toBe(0);
   });
 
-  it('BUNK_BED flat for 1 guest: both singles still fully made (Q4), towels for 1', () => {
+  it('BUNK_BED flat for 1 guest: one of the two bunk singles is made (owner rule 2026-10-03), towels for 1', () => {
     const r = computePackage(pkg({ listing: listing({ beds: { BUNK_BED: 1 }, accommodates: 2 }), next: nextIn(0, 1) }));
     expect(r.people).toBe(1);
-    expect(r.beds.usedGroups).toEqual(['jedno', 'jedno']);
-    expect(count(r, 'paplonM')).toBe(2);
-    expect(count(r, 'plachtaM')).toBe(2);
+    expect(r.beds.usedGroups).toEqual(['jedno']);
+    expect(count(r, 'paplonM')).toBe(1);
+    expect(count(r, 'plachtaM')).toBe(1);
     expect(count(r, 'osuskaV')).toBe(1);
+    const two = computePackage(pkg({ listing: listing({ beds: { BUNK_BED: 1 }, accommodates: 2 }), next: nextIn(0, 2) }));
+    expect(two.beds.usedGroups).toEqual(['jedno', 'jedno']);
+    expect(count(two, 'paplonM')).toBe(2);
   });
 
   it('sofa-only flat for 2: the sofa is the bed', () => {

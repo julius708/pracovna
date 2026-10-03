@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BoardPackage } from '@/app/_lib/board';
-import { boardNotices } from '@/ui/board-model';
+import { boardNotices, noteNotices } from '@/ui/board-model';
 
 function pkg(over: Partial<BoardPackage> & { id: string; listing_name: string }): BoardPackage {
   return {
@@ -60,5 +60,15 @@ describe('boardNotices', () => {
     const packed = { ...a, status: 'packed' as const, packed_by_name: 'Eva', packed_at: 'x' };
     expect(boardNotices([a, b], [packed, b, ...many], 'Julius', none, day)).toEqual(['Zmeny z Guesty: 4 balíčky', 'Eva zabalil(a) Bajkalská, Luxe']);
     expect(boardNotices([a, b], [a, b, ...many, pkg({ id: 'g', listing_name: 'Byt g' })], 'Julius', none, day)).toEqual(['Zmeny z Guesty: 5 balíčkov']);
+  });
+});
+
+describe('noteNotices', () => {
+  const n = (id: string, author_name: string) => ({ id, text: 'x', author: null, author_name, created_at: '2026-10-03T10:00:00Z' });
+  it('announces notes by others that are new since the last read, never own ones', () => {
+    expect(noteNotices([n('1', 'Eva')], [n('2', 'Max'), n('1', 'Eva')], 'Julius')).toEqual(['📌 Nové dôležité info od Max']);
+    expect(noteNotices([], [n('1', 'Julius')], 'Julius')).toEqual([]);
+    expect(noteNotices([n('1', 'Eva')], [n('1', 'Eva')], 'Julius')).toEqual([]);
+    expect(noteNotices([n('1', 'Eva')], [], 'Julius')).toEqual([]);
   });
 });

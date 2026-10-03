@@ -3,7 +3,7 @@
  * counts, the summary totals and the sort order. Unit-tested.
  */
 import { DEFAULT_ITEMS, type CapsuleLine, type LineItem, type PackingResult } from '@/core/packing';
-import type { BoardPackage } from '@/app/_lib/board';
+import type { BoardNote, BoardPackage } from '@/app/_lib/board';
 import { sk } from '@/core/i18n/sk';
 
 export type Filter = 'todo' | 'packed' | 'all';
@@ -200,4 +200,10 @@ export function boardNotices(prev: BoardPackage[], next: BoardPackage[], myName:
     return [sk.notices.many(guestyChanges), ...staff.slice(0, 2)];
   }
   return out.slice(0, 3);
+}
+
+/** Notices for notice-board notes that appeared since the last read and were written by someone else. */
+export function noteNotices(prev: BoardNote[], next: BoardNote[], myName: string): string[] {
+  const before = new Set(prev.map((n) => n.id));
+  return next.filter((n) => !before.has(n.id) && n.author_name !== myName).map((n) => sk.notices.newNote(n.author_name));
 }

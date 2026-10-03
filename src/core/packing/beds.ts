@@ -29,9 +29,24 @@ export interface BedPlanResult {
 }
 
 /**
- * Expands the bed counts and decides which sofas to unfold.
- * Regular beds always get linen; sofas are added one by one only while the
- * regular capacity is below `people`. Bunk beds count as 2 single beds.
+ * How many regular beds of each group get linen for `people`: one bed per
+ * person (guests may not share), double beds first, then singles, never more
+ * than the flat has. With people >= beds every bed is made.
+ */
+export function bedsToMake(doubles: number, singles: number, people: number): { dvoj: number; jedno: number } {
+  const want = Math.max(1, Math.floor(people) || 0);
+  const dvoj = Math.min(doubles, want);
+  const jedno = Math.min(singles, Math.max(0, want - dvoj));
+  return { dvoj, jedno };
+}
+
+/**
+ * Expands the bed counts and decides which beds to make up (owner's rule of
+ * 2026-10-03, replacing proposal Q4): regular beds follow the people, one per
+ * person (see bedsToMake); sofas are unfolded one by one only while the made
+ * beds cannot sleep everyone. Bunk beds count as 2 single beds. `regular`
+ * lists every regular bed of the flat, `usedGroups` only the beds that get
+ * linen, in the flat's bed order.
  */
 export function planBeds(beds: Record<string, number>, people: number): BedPlanResult {
   const warnings: WarningCode[] = [];
@@ -60,18 +75,31 @@ export function planBeds(beds: Record<string, number>, people: number): BedPlanR
   }
   if (bunk) warnings.push('bunk');
 
-  const usedGroups: BedGroup[] = [];
   let capacityRegular = 0;
+  let doubles = 0;
+  let singles = 0;
   for (const b of regular) {
     const g = bedGroup(b.type);
-    for (let i = 0; i < b.qty; i++) {
+    capacityRegular += b.qty * SLEEPS[g];
+    if (g === 'jedno') singles += b.qty;
+    else doubles += b.qty;
+  }
+
+  const make = bedsToMake(doubles, singles, people);
+  const left = { dvoj: make.dvoj, jedno: make.jedno, gauc: 0 };
+  const usedGroups: BedGroup[] = [];
+  let capacity = 0;
+  for (const b of regular) {
+    const g = bedGroup(b.type);
+    const n = Math.min(b.qty, left[g]);
+    left[g] -= n;
+    for (let i = 0; i < n; i++) {
       usedGroups.push(g);
-      capacityRegular += SLEEPS[g];
+      capacity += SLEEPS[g];
     }
   }
 
   let sofasUsed = 0;
-  let capacity = capacityRegular;
   while (sofasUsed < sofasTotal && capacity < people) {
     usedGroups.push('gauc');
     capacity += SLEEPS.gauc;
@@ -84,6 +112,22 @@ export function planBeds(beds: Record<string, number>, people: number): BedPlanR
     plan: { regular, sofasTotal, sofasUsed, usedGroups, capacityRegular, capacityAll, bunk },
     warnings,
   };
+}
+
+/**
+ * The regular beds that get linen, per type and in the flat's order (derived
+ * from the plan, so old stored results need no new field). Doubles are made
+ * before singles, as in planBeds.
+ */
+export function madeBeds(plan: BedPlan): { type: string; qty: number; of: number }[] {
+  const left = { dvoj: 0, jedno: 0, gauc: 0 };
+  for (const g of plan.usedGroups) if (g !== 'gauc') left[g]++;
+  return plan.regular.map((b) => {
+    const g = bedGroup(b.type);
+    const qty = Math.min(b.qty, left[g]);
+    left[g] -= qty;
+    return { type: b.type, qty, of: b.qty };
+  });
 }
 
 /** Sleeping capacity of all beds including every sofa (fallback for missing accommodates). */

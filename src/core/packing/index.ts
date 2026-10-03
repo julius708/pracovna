@@ -4,9 +4,9 @@ export { norm, stripDiacritics, typeKey, firstInt, splitList, uniqueStrings } fr
 export { parseLaundry, parseCapsules, textSaysOwnerCleans } from './parser';
 export { listingScope, listingDisplayName } from './scope';
 export type { ScopeInput, ScopeResult, ExclusionReason } from './scope';
-export { planBeds, bedGroup, bedCapacity, isKnownBedType, SLEEPS, UNKNOWN_BED } from './beds';
+export { planBeds, bedsToMake, madeBeds, bedGroup, bedCapacity, isKnownBedType, SLEEPS, UNKNOWN_BED } from './beds';
 export { computePeople, evaluateGap } from './people';
-export { computeLinen, decideDuvets, bathroomCount } from './linen';
+export { computeLinen, decideDuvets, duvetsFor, bathroomCount } from './linen';
 export { capsuleRows, capsulePhoto } from './capsules';
 export { computePackage, packageHash } from './calculator';
 export { DEFAULT_SETTINGS, DEFAULT_ITEMS, mergeSettings } from './settings';

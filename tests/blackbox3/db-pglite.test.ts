@@ -20,6 +20,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 const MIG1 = readFileSync(new URL('../../supabase/migrations/0001_init.sql', import.meta.url), 'utf8');
 const MIG2 = readFileSync(new URL('../../supabase/migrations/0002_sync_helpers.sql', import.meta.url), 'utf8');
 const MIG6 = readFileSync(new URL('../../supabase/migrations/0006_access_rules.sql', import.meta.url), 'utf8');
+const MIG7 = readFileSync(new URL('../../supabase/migrations/0007_board_notes.sql', import.meta.url), 'utf8');
 
 const STUBS = `
 create role authenticated nologin;
@@ -64,8 +65,10 @@ describe('migrations', () => {
       expect(e2, `0002_sync_helpers.sql failed: ${e2?.code} ${e2?.message} (line ${lineOf(MIG2, e2?.position)})`).toBeNull();
       const e6 = await pgError(fresh.exec(MIG6));
       expect(e6, `0006_access_rules.sql failed: ${e6?.code} ${e6?.message} (line ${lineOf(MIG6, e6?.position)})`).toBeNull();
+      const e7 = await pgError(fresh.exec(MIG7));
+      expect(e7, `0007_board_notes.sql failed: ${e7?.code} ${e7?.message} (line ${lineOf(MIG7, e7?.position)})`).toBeNull();
       const fns =(await fresh.query<Row>("select proname from pg_proc where pronamespace = 'public'::regnamespace order by 1")).rows.map((r) => r.proname);
-      expect(fns).toEqual(expect.arrayContaining(['today_ba', 'is_admin', 'is_active_user', 'handle_new_user', 'sync_upsert_package', 'sync_set_lifecycle', 'pack_package', 'unpack_package', 'set_note', 'toggle_check', 'save_settings', 'admin_set_profile', 'acquire_lock', 'run_retention', 'increment_not_found']));
+      expect(fns).toEqual(expect.arrayContaining(['today_ba', 'is_admin', 'is_active_user', 'handle_new_user', 'sync_upsert_package', 'sync_set_lifecycle', 'pack_package', 'unpack_package', 'set_note', 'toggle_check', 'save_settings', 'admin_set_profile', 'acquire_lock', 'run_retention', 'increment_not_found', 'add_board_note', 'remove_board_note']));
     } finally {
       await fresh.close();
     }
@@ -133,6 +136,7 @@ beforeAll(async () => {
   await db.exec(MIG1);
   await db.exec(MIG2);
   await db.exec(MIG6);
+  await db.exec(MIG7);
   await db.exec('set check_function_bodies = on');
   todayBa = (await one('select public.today_ba()::text as d')).d as string;
 });
@@ -757,6 +761,7 @@ describe('notify_board', () => {
       await rt.exec('set check_function_bodies = off');
       await rt.exec(MIG1);
       await rt.exec(MIG2);
+      await rt.exec(MIG7);
       await rt.exec(`
         create schema realtime;
         create table realtime.messages (id bigserial primary key, topic text, event text, payload jsonb, private boolean);
@@ -766,12 +771,77 @@ describe('notify_board', () => {
       const c = computed();
       await rt.query('select public.sync_upsert_package($1::jsonb)', [JSON.stringify(c)]);
       await rt.query("insert into public.settings (key, value) values ('linen_table', '{}')");
+      await rt.query("insert into public.board_notes (text, author_name) values ('skúška', 'Test')");
       const msgs = (await rt.query<Row>('select topic, private from realtime.messages order by id')).rows;
-      expect(msgs.length).toBeGreaterThanOrEqual(2);
+      expect(msgs.length).toBeGreaterThanOrEqual(3);
       expect(msgs.every((m) => m.topic === 'board')).toBe(true);
       expect(msgs.every((m) => m.private === true)).toBe(true);
     } finally {
       await rt.close();
+    }
+  });
+});
+
+// ------------------------------------------------------------------ 11. notice board (0007)
+describe('board_notes: add_board_note / remove_board_note', () => {
+  it('an active user adds a note under their name; the same action id replays without a second row', async () => {
+    const eva = await newUser('Eva');
+    await actAs(eva);
+    const action = randomUUID();
+    const r1 = await one('select public.add_board_note($1, $2) as r', ['  Zajtra chýbajú malé paplóny!  ', action]);
+    expect(r1.r.ok).toBe(true);
+    const r2 = await one('select public.add_board_note($1, $2) as r', ['Zajtra chýbajú malé paplóny!', action]);
+    expect(r2.r).toMatchObject({ ok: true, replayed: true, id: r1.r.id });
+    const rows = await q('select * from public.board_notes where id = $1', [r1.r.id]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ text: 'Zajtra chýbajú malé paplóny!', author: eva, author_name: 'Eva', removed_at: null, client_action_id: action });
+  });
+
+  it('an empty note is refused; an inactive user or no session is not allowed', async () => {
+    const eva = await newUser('Eva');
+    await actAs(eva);
+    expect((await one('select public.add_board_note($1, $2) as r', ['   ', randomUUID()])).r).toEqual({ ok: false, status: 'empty' });
+    const gone = await newUser('Bývalá', { active: false });
+    await actAs(gone);
+    expect((await pgError(q('select public.add_board_note($1, $2)', ['x', randomUUID()])))?.code).toBe('42501');
+    await actAs(null);
+    expect((await pgError(q('select public.add_board_note($1, $2)', ['x', randomUUID()])))?.code).toBe('42501');
+  });
+
+  it('only the author or an admin removes a note; removal is recorded and idempotent; unknown id -> P0002', async () => {
+    const eva = await newUser('Eva');
+    const max = await newUser('Max');
+    const admin = await newUser('Julius', { role: 'admin' });
+    await actAs(eva);
+    const { r } = await one('select public.add_board_note($1, $2) as r', ['Kľúče od Klariskej sú u Maxa', randomUUID()]);
+    await actAs(max);
+    expect((await one('select public.remove_board_note($1, $2) as r', [r.id, randomUUID()])).r).toEqual({ ok: false, status: 'not_author' });
+    await actAs(admin);
+    expect((await one('select public.remove_board_note($1, $2) as r', [r.id, randomUUID()])).r).toEqual({ ok: true });
+    const row = await one('select * from public.board_notes where id = $1', [r.id]);
+    expect(row.removed_at).not.toBeNull();
+    expect(row).toMatchObject({ removed_by: admin, removed_by_name: 'Julius' });
+    expect((await one('select public.remove_board_note($1, $2) as r', [r.id, randomUUID()])).r).toEqual({ ok: true, replayed: true });
+    await actAs(eva);
+    const { r: own } = await one('select public.add_board_note($1, $2) as r', ['Druhá poznámka', randomUUID()]);
+    expect((await one('select public.remove_board_note($1, $2) as r', [own.id, randomUUID()])).r).toEqual({ ok: true });
+    expect((await pgError(q('select public.remove_board_note($1, $2)', [randomUUID(), randomUUID()])))?.code).toBe('P0002');
+  });
+
+  it('staff read only active notes through RLS; a plain insert as authenticated is refused', async () => {
+    const eva = await newUser('Eva');
+    await actAs(eva);
+    const { r: a } = await one('select public.add_board_note($1, $2) as r', ['Aktívna', randomUUID()]);
+    const { r: b } = await one('select public.add_board_note($1, $2) as r', ['Odstránená', randomUUID()]);
+    await q('select public.remove_board_note($1, $2)', [b.id, randomUUID()]);
+    await db.exec('set role authenticated');
+    try {
+      const seen = await q('select id from public.board_notes where id = any($1::uuid[])', [[a.id, b.id]]);
+      expect(seen.map((x) => x.id)).toEqual([a.id]);
+      const ins = await pgError(q("insert into public.board_notes (text, author_name) values ('x', 'y')"));
+      expect(ins?.code).toBe('42501');
+    } finally {
+      await db.exec('reset role');
     }
   });
 });

@@ -23,6 +23,19 @@ export function decideDuvets(laundry: ParsedLaundry | null, setting: 'male' | 'v
   return { source: 'default', type: 'velke', warnings: ['no_duvet_info'] };
 }
 
+/**
+ * Duvets to pack from the Guesty counts, which describe the flat's full set
+ * (what a full flat gets). Fewer guests get one duvet each: large duvets
+ * first, small ones for the rest, never more than the flat has. With people
+ * >= large + small the full set is packed, as before (owner's rule 2026-10-03).
+ */
+export function duvetsFor(full: { large: number; small: number }, people: number): { large: number; small: number } {
+  const n = Math.max(0, Math.floor(people) || 0);
+  const large = Math.min(Math.max(0, full.large), n);
+  const small = Math.min(Math.max(0, full.small), Math.max(0, n - large));
+  return { large, small };
+}
+
 /** Whole bathrooms only: 1.5 means bathroom + separate WC = 1. Unknown = 1 + warning. */
 export function bathroomCount(bathrooms: number | null | undefined): { n: number; warnings: WarningCode[] } {
   if (bathrooms === null || bathrooms === undefined || Number.isNaN(Number(bathrooms))) {
@@ -42,10 +55,12 @@ export interface LinenResult {
 
 /**
  * Linen and consumable counts for one package.
- * - per used bed from the table (small-duvet flats get 2 small instead of 1 large per double/sofa)
+ * - per made bed from the table (small-duvet flats get 2 small instead of 1 large per double/sofa)
  * - per person: towels; per bathroom: foot towel; per apartment: consumables
  * - toilet paper max(2, people)
- * - Guesty exact duvet counts and per-item overrides replace the calculated numbers
+ * - Guesty duvet counts are the flat's full set: one duvet per person is taken
+ *   from it, large ones first, never more than the flat has (see duvetsFor)
+ * - per-item overrides from Guesty replace the calculated numbers
  * - private linen: no linen rows at all, consumables are still packed
  */
 export function computeLinen(args: {
@@ -79,8 +94,9 @@ export function computeLinen(args: {
 
   const overridden = new Set<string>();
   if (laundry?.duvetCounts) {
-    counts.paplonV = laundry.duvetCounts.large;
-    counts.paplonM = laundry.duvetCounts.small;
+    const d = duvetsFor(laundry.duvetCounts, people);
+    counts.paplonV = d.large;
+    counts.paplonM = d.small;
     overridden.add('paplonV');
     overridden.add('paplonM');
   }

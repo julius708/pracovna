@@ -2,6 +2,7 @@ import 'server-only';
 import { addDays, NOTE_MAX_LENGTH, todayInTz } from '@/core/packing';
 import type { MemoryRepo } from '@/db/memory-repo';
 import type { PackageEventInsert, PackageRow } from '@/db/types';
+import { randomUUID } from 'node:crypto';
 import type { Viewer } from './viewer';
 
 /**
@@ -11,6 +12,8 @@ import type { Viewer } from './viewer';
 export interface StaffResult {
   ok: boolean;
   status?: string;
+  /** add_board_note: the id of the note. */
+  id?: string;
   already_packed?: boolean;
   packed_by_name?: string | null;
   replayed?: boolean;
@@ -90,4 +93,37 @@ export async function memoryCheck(repo: MemoryRepo, viewer: Viewer, id: string, 
   p.updated_at = repo.now().toISOString();
   await event(repo, p, viewer, 'checklist', actionId, { item, checked });
   return { ok: true, checked: map };
+}
+
+/** add_board_note: a note on the shared notice board, replay-safe on the action id. */
+export async function memoryAddBoardNote(repo: MemoryRepo, viewer: Viewer, text: string, actionId: string | null): Promise<StaffResult> {
+  const existing = actionId ? repo.boardNotes.find((n) => n.client_action_id === actionId) : undefined;
+  if (existing) return { ok: true, replayed: true, id: existing.id };
+  const clean = text.trim().slice(0, 500);
+  if (!clean) return { ok: false, status: 'empty' };
+  const row = {
+    id: randomUUID(),
+    text: clean,
+    author: viewer.id,
+    author_name: viewer.name,
+    created_at: repo.now().toISOString(),
+    removed_at: null,
+    removed_by: null,
+    removed_by_name: null,
+    client_action_id: actionId,
+  };
+  repo.boardNotes.push(row);
+  return { ok: true, id: row.id };
+}
+
+/** remove_board_note: by the author or an admin; removing twice is a no-op. */
+export async function memoryRemoveBoardNote(repo: MemoryRepo, viewer: Viewer, id: string): Promise<StaffResult> {
+  const n = repo.boardNotes.find((x) => x.id === id);
+  if (!n) throw new Error('note not found');
+  if (n.removed_at) return { ok: true, replayed: true };
+  if (n.author !== viewer.id && viewer.role !== 'admin') return { ok: false, status: 'not_author' };
+  n.removed_at = repo.now().toISOString();
+  n.removed_by = viewer.id;
+  n.removed_by_name = viewer.name;
+  return { ok: true };
 }

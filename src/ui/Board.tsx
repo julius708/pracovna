@@ -1,16 +1,17 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { checkAction, noteAction, packAction, unpackAction, type ActionResult } from '@/app/_lib/actions';
-import type { BoardData, BoardPackage } from '@/app/_lib/board';
+import { addBoardNoteAction, checkAction, noteAction, packAction, removeBoardNoteAction, unpackAction, type ActionResult } from '@/app/_lib/actions';
+import type { BoardData, BoardNote, BoardPackage } from '@/app/_lib/board';
 import type { Viewer } from '@/app/_lib/viewer';
 import { formatDM } from '@/core/packing';
 import { dayLabel, dayWord, packedOf, sk } from '@/core/i18n/sk';
 import { useRouter } from 'next/navigation';
 import { newActionId } from './action-id';
 import { isRecoveryHash } from './recovery';
-import { angelikaNumbers, applyCleaner, boardNotices, cleanerOptions, counts, dayJobs, FILTER_KEYS, summaryLines, visibleJobs, type Filter } from './board-model';
+import { angelikaNumbers, applyCleaner, boardNotices, cleanerOptions, counts, dayJobs, FILTER_KEYS, noteNotices, summaryLines, visibleJobs, type Filter } from './board-model';
 import { Header } from './Header';
+import { NoticeBoard } from './NoticeBoard';
 import { PackageCard, type CardHandlers } from './PackageCard';
 import { Summary } from './Summary';
 import { useLiveBoard } from './useLiveBoard';
@@ -53,6 +54,8 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
   const cheerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevPackages = useRef(initial.packages);
+  const prevNotes = useRef(initial.notes);
+  const [noteBusy, setNoteBusy] = useState(false);
   const ownChanges = useRef(new Map<string, number>());
   const noticeSeq = useRef(0);
   const router = useRouter();
@@ -61,11 +64,16 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
   // notices about changes made elsewhere: other devices' packs/undos and Guesty updates (spec: everyone sees the same board)
   useEffect(() => {
     const prev = prevPackages.current;
+    const prevN = prevNotes.current;
     prevPackages.current = data.packages;
-    if (prev === data.packages) return;
+    prevNotes.current = data.notes;
+    if (prev === data.packages && prevN === data.notes) return;
     const cutoff = Date.now() - OWN_CHANGE_MS;
     for (const [id, at] of ownChanges.current) if (at < cutoff) ownChanges.current.delete(id);
-    const texts = boardNotices(prev, data.packages, viewer.name, new Set(ownChanges.current.keys()), (d) => dayLabel(dates.indexOf(d as (typeof dates)[number]), d));
+    const texts = [
+      ...(prev === data.packages ? [] : boardNotices(prev, data.packages, viewer.name, new Set(ownChanges.current.keys()), (d) => dayLabel(dates.indexOf(d as (typeof dates)[number]), d))),
+      ...(prevN === data.notes ? [] : noteNotices(prevN, data.notes, viewer.name)),
+    ];
     if (texts.length === 0) return;
     const items = texts.map((text) => ({ id: ++noticeSeq.current, text }));
     const show = setTimeout(() => {
@@ -81,7 +89,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
       clearTimeout(show);
       clearTimeout(hide);
     };
-  }, [data.packages, dates, viewer.name]);
+  }, [data.packages, data.notes, dates, viewer.name]);
 
   useEffect(() => {
     // a password-recovery link opened while signed in lands here with the session in the fragment
@@ -225,6 +233,45 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
     },
   };
 
+  const addNote = async (text: string) => {
+    const temp: BoardNote = { id: `temp-${newActionId()}`, text, author: viewer.id, author_name: viewer.name, created_at: new Date().toISOString() };
+    setNoteBusy(true);
+    setData((d) => ({ ...d, notes: [temp, ...d.notes] }));
+    let res: ActionResult;
+    try {
+      res = await track(() => addBoardNoteAction(text, newActionId()));
+    } catch {
+      res = { ok: false, error: 'failed' };
+    }
+    setNoteBusy(false);
+    if (res.ok) {
+      if (res.id) setData((d) => ({ ...d, notes: d.notes.map((n) => (n.id === temp.id ? { ...n, id: res.id as string } : n)) }));
+      void refresh();
+    } else {
+      setData((d) => ({ ...d, notes: d.notes.filter((n) => n.id !== temp.id) }));
+      showToast(res.error === 'unauthorized' ? sk.toasts.noPermission : sk.noticeBoard.notSaved);
+    }
+  };
+
+  const removeNote = async (note: BoardNote) => {
+    const before = data.notes;
+    setNoteBusy(true);
+    setData((d) => ({ ...d, notes: d.notes.filter((n) => n.id !== note.id) }));
+    let res: ActionResult;
+    try {
+      res = await track(() => removeBoardNoteAction(note.id, newActionId()));
+    } catch {
+      res = { ok: false, error: 'failed' };
+    }
+    setNoteBusy(false);
+    if (res.ok) {
+      void refresh();
+    } else {
+      setData((d) => ({ ...d, notes: before }));
+      showToast(res.status === 'not_author' ? sk.noticeBoard.notAuthor : res.error === 'unauthorized' ? sk.toasts.noPermission : sk.noticeBoard.notRemoved);
+    }
+  };
+
   const selectDay = (i: number) => {
     setSel(i);
     setKeep(new Set());
@@ -265,6 +312,8 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
           })}
         </nav>
       </header>
+
+      <NoticeBoard notes={data.notes} viewer={viewer} now={now} busy={noteBusy} onAdd={(t) => void addNote(t)} onRemove={(n) => void removeNote(n)} />
 
       <Summary dayWord={dayWord(sel, date)} hasData={hasData} numbers={numbers} lines={lines} hasJobs={jobs.length > 0} />
 

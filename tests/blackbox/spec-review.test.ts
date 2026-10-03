@@ -113,9 +113,10 @@ describe('§4 beds', () => {
   it('KING/QUEEN/DOUBLE + unknown = double for 2; SINGLE = 1; BUNK = 2 singles + warning', () => {
     expect(planBeds({ KING_BED: 1, QUEEN_BED: 1, DOUBLE_BED: 1, WATER_BED: 1 }, 1).plan.capacityRegular).toBe(8);
     expect(planBeds({ SINGLE_BED: 3 }, 1).plan.capacityRegular).toBe(3);
-    const b = planBeds({ BUNK_BED: 1 }, 1);
+    const b = planBeds({ BUNK_BED: 1 }, 2);
     expect(b.plan.capacityRegular).toBe(2);
     expect(b.plan.usedGroups).toEqual(['jedno', 'jedno']);
+    expect(planBeds({ BUNK_BED: 1 }, 1).plan.usedGroups).toEqual(['jedno']);
     expect(b.warnings).toContain('bunk');
     expect(warningText.bunk).toBe('Poschodová posteľ – over balenie');
   });

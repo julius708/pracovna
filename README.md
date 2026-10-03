@@ -150,12 +150,16 @@ The app also raises its own alerts (sync failed twice in a row, Guesty token quo
 
 `POST /api/admin/webhooks/register`'s sibling `POST /api/admin/alerts/test` (cron secret or admin session) sends a test message through every configured sink and reports what was delivered.
 
+## Notice board
+
+"Dôležité info pre Angeliku a Maxa" sits above the apartment list on every day. Any active user can add a note (up to 500 characters); the author's name and time are shown with it, and every device gets a "Nové dôležité info od …" notice. A note is removed by its author or an admin; removed notes stay in `board_notes` for the record (admins can still read them). Writes go through the `add_board_note` / `remove_board_note` RPCs (migration 0007).
+
 ## Packing rules
 
 The rules are specified in the owner's spec and refined in `docs/PROPOSAL.md` section 6. In short:
 
 - A package exists for every in-scope apartment with a check-out on a given day.
 - People to pack for: same-day check-in → that reservation's guests; later check-in whose gap cannot be sold (min. nights or blocked calendar) → the next reservation's guests; otherwise the listing's capacity.
-- Beds: king/queen/double and unknown types sleep 2; single sleeps 1; bunk = 2 singles with a warning; sofa beds are unfolded one by one only when regular beds cannot cover the people.
-- Linen per bed, per person and per bathroom from the editable table; exact duvet counts and per-item overrides from the Guesty field "Informácie do práčovne" replace the calculation.
+- Beds follow the people: one regular bed per person (double beds first, then singles, never more than the flat has); king/queen/double and unknown types sleep 2, single sleeps 1, bunk = 2 singles with a warning; sofa beds are unfolded one by one only when the made beds cannot sleep everyone. The card shows "2× king (z 3)" when fewer beds than the flat has are made.
+- Linen per made bed, per person and per bathroom from the editable table. The duvet counts in the Guesty field "Informácie do práčovne" are the flat's full set: each guest gets one duvet from it (large first, small for the rest, never more than the flat has); per-item overrides (osušky, uteráky, predložky) replace the calculation as absolute numbers.
 - Consumables: toilet paper `max(2, people)`, fixed items, and coffee capsules per type (count = people unless "N ks").

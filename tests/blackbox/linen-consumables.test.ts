@@ -112,14 +112,14 @@ describe('linen table per bed group (spec §4, proposal Q4)', () => {
     expect(count(r, 'plachta')).toBe(0);
   });
 
-  it('Q4: every regular bed gets its full set even when packing for fewer people; towels follow people', () => {
+  it('beds follow people (owner rule 2026-10-03, replacing Q4): 1 guest in a 2-king flat gets one made bed; towels follow people', () => {
     const r = computePackage(
       pkg({ listing: listing({ beds: { KING_BED: 2 }, accommodates: 4, laundry: pl({ duvetType: 'velke' }) }), next: sameDay(1) }),
     );
     expect(r.people).toBe(1);
-    expect(count(r, 'paplonV')).toBe(2);
-    expect(count(r, 'vankus')).toBe(4);
-    expect(count(r, 'plachta')).toBe(2);
+    expect(count(r, 'paplonV')).toBe(1);
+    expect(count(r, 'vankus')).toBe(2);
+    expect(count(r, 'plachta')).toBe(1);
     expect(count(r, 'osuskaV')).toBe(1);
     expect(count(r, 'uterakM')).toBe(1);
   });
@@ -185,21 +185,24 @@ describe('small-duvet flats (spec §4 table row 2)', () => {
 /* ====================================================== DUVET PRECEDENCE */
 
 describe('exact duvet counts and precedence (spec §3 table, proposal §6 "Duvet precedence")', () => {
-  it('only "Paplón veľký: 3": large = 3, small = 0 (missing line = 0); pillows and sheets still from the beds', () => {
+  it('only "Paplón veľký: 3": the flat has 3 large, 0 small (missing line = 0); 2 guests get one each, 4 guests the full set', () => {
     const r = computePackage(pkg({ listing: listing({ laundry: parseLaundry('Paplón veľký: 3') }), next: sameDay(2) }));
     expect(r.duvetSource).toBe('guesty_exact');
     expect(r.duvetType).toBe('exact');
-    expect(count(r, 'paplonV')).toBe(3);
+    expect(count(r, 'paplonV')).toBe(2);
     expect(count(r, 'paplonM')).toBe(0);
     expect(count(r, 'vankus')).toBe(2);
     expect(count(r, 'plachta')).toBe(1);
-    expect(duvetText(r)).toBe('presný počet z Guesty');
+    expect(duvetText(r)).toBe('podľa Guesty');
+    const full = computePackage(pkg({ listing: listing({ laundry: parseLaundry('Paplón veľký: 3') }), next: sameDay(4) }));
+    expect(count(full, 'paplonV')).toBe(3);
   });
 
-  it('only "Paplón malý: 4": small = 4, large = 0', () => {
+  it('only "Paplón malý: 4": 2 guests get 2 small, 4 guests the full 4; large = 0', () => {
     const r = computePackage(pkg({ listing: listing({ laundry: parseLaundry('Paplón malý: 4') }), next: sameDay(2) }));
-    expect(count(r, 'paplonM')).toBe(4);
+    expect(count(r, 'paplonM')).toBe(2);
     expect(count(r, 'paplonV')).toBe(0);
+    expect(count(computePackage(pkg({ listing: listing({ laundry: parseLaundry('Paplón malý: 4') }), next: sameDay(4) })), 'paplonM')).toBe(4);
   });
 
   it('exact counts beat both the "Paplóny:" type line and the Settings choice', () => {
@@ -255,12 +258,13 @@ describe('exact duvet counts and precedence (spec §3 table, proposal §6 "Duvet
     expect(count(r, 'plachta')).toBe(2);
   });
 
-  it('both exact lines present: both counts are taken as written', () => {
-    const r = computePackage(
-      pkg({ listing: listing({ laundry: parseLaundry('Paplón veľký: 1\nPaplón malý: 2') }), next: sameDay(2) }),
-    );
-    expect(count(r, 'paplonV')).toBe(1);
-    expect(count(r, 'paplonM')).toBe(2);
+  it('both exact lines present: one duvet per guest, large first, small for the rest; the full set with enough guests', () => {
+    const two = computePackage(pkg({ listing: listing({ laundry: parseLaundry('Paplón veľký: 1\nPaplón malý: 2') }), next: sameDay(2) }));
+    expect(count(two, 'paplonV')).toBe(1);
+    expect(count(two, 'paplonM')).toBe(1);
+    const three = computePackage(pkg({ listing: listing({ laundry: parseLaundry('Paplón veľký: 1\nPaplón malý: 2') }), next: sameDay(3) }));
+    expect(count(three, 'paplonV')).toBe(1);
+    expect(count(three, 'paplonM')).toBe(2);
   });
 });
 

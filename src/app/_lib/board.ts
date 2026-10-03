@@ -1,5 +1,6 @@
 import 'server-only';
 import { todayInTz, windowDates, type PackingResult, type Ymd } from '@/core/packing';
+import type { MemoryRepo } from '@/db/memory-repo';
 import { createServerSupabase } from '@/db/server';
 import type { Checklist, PackageStatus } from '@/db/types';
 import { env } from '@/env';
@@ -30,6 +31,17 @@ export interface BoardPackage {
   packed_hash: string | null;
 }
 
+/** A note on the notice board above the list. */
+export interface BoardNote {
+  id: string;
+  text: string;
+  author: string | null;
+  author_name: string;
+  created_at: string;
+}
+
+export const NOTE_COLUMNS = 'id, text, author, author_name, created_at';
+
 export const BOARD_COLUMNS =
   'id, listing_id, listing_name, date, status, hidden, cancel_reason, same_day, target_people, incoming_reservation_id, computed_items, computed_hash, warnings, note, note_by_name, note_at, checklist, packed_by_name, packed_at, packed_hash';
 
@@ -37,6 +49,8 @@ export interface BoardData {
   today: Ymd;
   dates: [Ymd, Ymd, Ymd];
   packages: BoardPackage[];
+  /** "Dôležité info pre Angeliku a Maxa", newest first. */
+  notes: BoardNote[];
   /** listing id -> cleaning company (null when none). */
   cleaners: Record<string, string | null>;
   status: { lastOkSyncAt: string | null; consecutiveFailures: number };
@@ -56,12 +70,14 @@ export async function loadBoard(viewer: Viewer): Promise<BoardData> {
   if (supabaseConfigured(e)) {
     const db = await createServerSupabase();
     if (!db) throw new Error('Supabase client unavailable');
-    const [pk, ls, st] = await Promise.all([
+    const [pk, ls, st, nt] = await Promise.all([
       db.from('packages').select(BOARD_COLUMNS).in('date', dates),
       db.from('listings').select('guesty_id, cleaner'),
       db.rpc('board_status'),
+      db.from('board_notes').select(NOTE_COLUMNS).is('removed_at', null).order('created_at', { ascending: false }),
     ]);
     if (pk.error) throw new Error(`packages: ${pk.error.message}`);
+    if (nt.error) throw new Error(`board_notes: ${nt.error.message}`);
     const cleaners: Record<string, string | null> = {};
     for (const l of (ls.data ?? []) as { guesty_id: string; cleaner: string | null }[]) cleaners[l.guesty_id] = l.cleaner;
     const status = (st.data ?? {}) as { last_ok_sync_at?: string | null; consecutive_failures?: number };
@@ -69,6 +85,7 @@ export async function loadBoard(viewer: Viewer): Promise<BoardData> {
       today,
       dates,
       packages: (pk.data ?? []) as unknown as BoardPackage[],
+      notes: (nt.data ?? []) as BoardNote[],
       cleaners,
       status: { lastOkSyncAt: status.last_ok_sync_at ?? null, consecutiveFailures: status.consecutive_failures ?? 0 },
       loadedAt,
@@ -108,6 +125,10 @@ export async function loadBoard(viewer: Viewer): Promise<BoardData> {
       packed_at: p.packed_at,
       packed_hash: p.packed_hash,
     })),
+    notes: ((repo as MemoryRepo).boardNotes ?? [])
+      .filter((n) => !n.removed_at)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .map((n) => ({ id: n.id, text: n.text, author: n.author, author_name: n.author_name, created_at: n.created_at })),
     cleaners,
     status: { lastOkSyncAt: lastOk, consecutiveFailures: failures ?? 0 },
     loadedAt,

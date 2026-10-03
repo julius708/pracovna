@@ -2,7 +2,8 @@
  * Every Slovak string of the app, verbatim from the prototype where one existed.
  * Pure functions only, so the texts are unit-testable.
  */
-import { formatDM, weekdayShort } from '../packing/dates';
+import { madeBeds } from '../packing/beds';
+import { formatDM, formatHM, todayInTz, weekdayShort } from '../packing/dates';
 import type { CapsuleLine, PackingResult, WarningCode, Ymd } from '../packing/types';
 
 /* ---------- plurals ---------- */
@@ -82,7 +83,7 @@ export const sk = {
   capsuleUnsure: 'druh treba upresniť',
   capsuleMissing: 'druh nezadaný v Guesty',
   sofaNotNeeded: 'gauč netreba',
-  duvetSource: { exact: 'presný počet z Guesty', male: 'malé', velke: 'veľké' },
+  duvetSource: { exact: 'podľa Guesty', male: 'malé', velke: 'veľké' },
   cheers: ['Super, ďakujem!', 'Výborne, ďalší hotový!', 'Paráda, len tak ďalej!', 'Skvelá práca!', 'Perfektné!'],
   empty: {
     allPacked: 'Všetko zabalené',
@@ -125,7 +126,19 @@ export const sk = {
     emailRequired: 'Zadaj e-mail.',
     back: 'Späť na prihlásenie',
   },
+  noticeBoard: {
+    title: 'Dôležité info pre Angeliku a Maxa',
+    empty: 'Zatiaľ nič. Sem napíš, čo majú Angelika a Max vedieť – uvidia to všetci.',
+    placeholder: 'Napíš dôležitú informáciu…',
+    add: 'Pridať',
+    remove: 'Odstrániť',
+    by: (name: string, time: string) => `${name} · ${time}`,
+    notSaved: 'Info sa neuložilo. Skús znova.',
+    notRemoved: 'Info sa nepodarilo odstrániť.',
+    notAuthor: 'Odstrániť môže len autor alebo admin.',
+  },
   notices: {
+    newNote: (who: string) => `📌 Nové dôležité info od ${who}`,
     newPackage: (name: string, day: string) => `Nový balíček z Guesty: ${name} (${day})`,
     packedBy: (who: string, name: string) => `${who} zabalil(a) ${name}`,
     unpacked: (name: string) => `${name} je späť na balenie`,
@@ -253,9 +266,10 @@ export function childrenBanner(r: PackingResult): string | null {
 }
 
 /** "1× king, 2× jednolôžko" (regular beds only, as in the prototype). */
+/** "2× king (z 3), 1× jednolôžko": the beds to make, with the flat's total when fewer are made. */
 export function bedSummary(r: PackingResult): string {
-  return r.beds.regular
-    .map((b) => `${b.qty}× ${bedLabel[b.type] ?? b.type.toLowerCase().replace('_bed', '')}`)
+  return madeBeds(r.beds)
+    .map((b) => `${b.qty}× ${bedLabel[b.type] ?? b.type.toLowerCase().replace('_bed', '')}${b.qty < b.of ? ` (z ${b.of})` : ''}`)
     .join(', ');
 }
 
@@ -266,7 +280,7 @@ export function sofaText(r: PackingResult): string | null {
   return r.beds.sofasUsed > 1 ? `rozložiť gauč ×${r.beds.sofasUsed}` : 'rozložiť gauč';
 }
 
-/** "presný počet z Guesty" / "malé" / "veľké" or null when no duvet info (warning shows instead). */
+/** "podľa Guesty" / "malé" / "veľké" or null when no duvet info (warning shows instead). */
 export function duvetText(r: PackingResult): string | null {
   if (r.duvetSource === 'default') return null;
   return r.duvetType === 'exact' ? sk.duvetSource.exact : sk.duvetSource[r.duvetType];
@@ -281,6 +295,15 @@ export function capsuleLabel(c: CapsuleLine): { label: string; note: string | nu
 
 export function packedBy(name: string | null | undefined, hm: string): string {
   return `Zabalil(a) ${name || '—'} · ${hm}`;
+}
+
+/** "14:32" today, "so 3.10. 14:32" on other days (Bratislava time). */
+export function noteTime(iso: string, now: Date = new Date()): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const ymd = todayInTz(d);
+  const hm = formatHM(d);
+  return ymd === todayInTz(now) ? hm : `${weekdayShort(ymd)} ${formatDM(ymd)} ${hm}`;
 }
 
 export function cheerDone(name: string): string {

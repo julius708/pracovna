@@ -10,7 +10,7 @@ import { env } from '@/env';
 import { createLogger } from '@/guesty/log';
 import { createRepoFromEnv } from '@/sync/context';
 import { loadBoard, type BoardData } from './board';
-import { memoryCheck, memoryNote, memoryPack, memoryUnpack, type StaffResult } from './memory-staff';
+import { memoryAddBoardNote, memoryCheck, memoryNote, memoryPack, memoryRemoveBoardNote, memoryUnpack, type StaffResult } from './memory-staff';
 import { DEV_ROLE_COOKIE, devLoginAllowed, getViewer, supabaseConfigured } from './viewer';
 
 export interface ActionResult extends StaffResult {
@@ -68,6 +68,22 @@ export async function checkAction(packageId: string, item: string, checked: bool
 }
 
 /** Fresh board data for the live-update refetch. */
+/** "Dôležité info pre Angeliku a Maxa": adds a note under the viewer's name. */
+export async function addBoardNoteAction(text: string, actionId: string): Promise<ActionResult> {
+  return withViewer(async (viewer) => {
+    if (supabaseConfigured()) return rpc('add_board_note', { p_text: text, p_action_id: actionId });
+    return memoryAddBoardNote(memoryRepo(), viewer, text, actionId);
+  });
+}
+
+/** Removes a notice-board note (author or admin). */
+export async function removeBoardNoteAction(id: string, actionId: string): Promise<ActionResult> {
+  return withViewer(async (viewer) => {
+    if (supabaseConfigured()) return rpc('remove_board_note', { p_id: id, p_action_id: actionId });
+    return memoryRemoveBoardNote(memoryRepo(), viewer, id);
+  });
+}
+
 export async function refreshBoard(): Promise<BoardData | null> {
   const viewer = await getViewer();
   if (!viewer || !viewer.active) return null;

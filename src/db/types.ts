@@ -208,3 +208,16 @@ export type AppStateKey =
   | 'listing_filter_supported'
   | 'reconcile_change_at'
   | 'token_quota_warning';
+
+/** A note on the shared notice board ("Dôležité info pre Angeliku a Maxa"). */
+export interface BoardNoteRow {
+  id: string;
+  text: string;
+  author: string | null;
+  author_name: string;
+  created_at: Instant;
+  removed_at: Instant | null;
+  removed_by: string | null;
+  removed_by_name: string | null;
+  client_action_id: string | null;
+}

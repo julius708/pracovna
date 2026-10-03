@@ -32,12 +32,13 @@ describe('test 5: the sofa bed is used only when needed', () => {
     expect(r3.beds.sofasUsed).toBe(1);
   });
 
-  it('regular beds are always fully made even for fewer people (Q4)', () => {
+  it('beds follow people (owner rule 2026-10-03): 1 guest in a 2-king flat gets one made bed', () => {
     const r = computePackage(pkg({ listing: listing({ beds: { KING_BED: 2 }, accommodates: 4 }), next: sameDay(1) }));
-    expect(count(r, 'paplonV')).toBe(2);
-    expect(count(r, 'vankus')).toBe(4);
-    expect(count(r, 'plachta')).toBe(2);
+    expect(count(r, 'paplonV')).toBe(1);
+    expect(count(r, 'vankus')).toBe(2);
+    expect(count(r, 'plachta')).toBe(1);
     expect(count(r, 'osuskaV')).toBe(1);
+    expect(bedSummary(r)).toBe('1× king (z 2)');
     expect(sofaText(r)).toBeNull();
   });
 
@@ -101,15 +102,16 @@ describe('test 6: exact duvet counts override the beds', () => {
     expect(count(r, 'paplonV')).toBe(0);
     expect(r.linen.find((l) => l.key === 'paplonM')?.source).toBe('guesty');
     expect(r.duvetSource).toBe('guesty_exact');
-    expect(duvetText(r)).toBe('presný počet z Guesty');
+    expect(duvetText(r)).toBe('podľa Guesty');
     expect(r.warnings).not.toContain('no_duvet_info');
   });
 
-  it('only Paplón veľký: 2 -> small is 0, independent of people and sofas', () => {
+  it('only Paplón veľký: 2 -> small is 0; 1 guest gets 1 of the 2 large, 2 guests both', () => {
     const r = computePackage(pkg({ listing: listing({ laundry: laundry('Paplón veľký: 2') }), next: sameDay(1) }));
-    expect(count(r, 'paplonV')).toBe(2);
+    expect(count(r, 'paplonV')).toBe(1);
     expect(count(r, 'paplonM')).toBe(0);
     expect(count(r, 'vankus')).toBe(2);
+    expect(count(computePackage(pkg({ listing: listing({ laundry: laundry('Paplón veľký: 2') }), next: sameDay(2) })), 'paplonV')).toBe(2);
   });
 
   it('exact counts win over the Paplóny: line and the Settings choice', () => {
