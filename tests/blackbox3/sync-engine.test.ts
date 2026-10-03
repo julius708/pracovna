@@ -462,6 +462,23 @@ describe('recomputeWindow – settings, calendar, moves, scope, cancellation', (
     expect(diff).not.toContain('utierky'); // per apartment, unchanged
     expect(JSON.stringify(diffComputed(after, after))).not.toContain('people');
   });
+
+  it('diffComputed names a changed bed plan and never logs an empty diff for a changed hash', async () => {
+    const repo = newRepo();
+    await repo.upsertListings([listingRow('L1')]);
+    await repo.upsertReservations([resRow('R1', 'L1', addDays(D0, -2), D0, 4), resRow('A1', 'L1', D0, D2, 3)]);
+    await recomputeWindow(rdeps(repo), 'cron');
+    const before = { ...pkgOf(repo, 'R1') };
+    await repo.upsertReservations([resRow('A1', 'L1', D0, D2, 1, { fetched_at: shift(H) })]);
+    await recomputeWindow(rdeps(repo, at(shift(H))), 'cron');
+    const after = pkgOf(repo, 'R1');
+    expect((diffComputed(before, after).changed as string[]).some((c) => c.startsWith('postele '))).toBe(true);
+    // only the hash differs (e.g. a private-linen flat whose bed plan changed): the diff still says something
+    const ghost = { ...after, computed_hash: 'other', computed_items: { ...after.computed_items, beds: before.computed_items.beds } };
+    const d = diffComputed(after, { ...after, computed_hash: 'other' });
+    expect(d.changed).toEqual(['iné (texty / plán postelí)']);
+    expect((diffComputed(after, ghost).changed as string[]).length).toBeGreaterThan(0);
+  });
 });
 
 // =====================================================================

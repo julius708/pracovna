@@ -74,6 +74,7 @@ export const sk = {
   privateBanner: 'Súkromné prádlo – nebaliť z našej bielizne',
   guestyNoteLabel: 'Z Guesty:',
   bedsLabel: 'Postele:',
+  bedNotNeeded: 'netreba',
   duvetsLabel: 'Paplóny:',
   coffeeLabel: 'Kávovar:',
   checklistTitle: 'Checklist',
@@ -167,6 +168,7 @@ export const sk = {
 export const warningText: Record<WarningCode, string> = {
   bunk: 'Poschodová posteľ – over balenie',
   no_duvet_info: 'Typ paplónov nezadaný – over na byte',
+  duvets_short: 'Paplónov v Guesty je menej ako postelí – over na byte',
   beds_insufficient: 'Postele v Guesty stačia len pre N osôb – over na byte',
   guests_missing: 'Počet hostí nezadaný v Guesty – balíme na max. kapacitu',
   capacity_missing: 'Kapacita nezadaná v Guesty – over na byte',
@@ -266,11 +268,22 @@ export function childrenBanner(r: PackingResult): string | null {
 }
 
 /** "1× king, 2× jednolôžko" (regular beds only, as in the prototype). */
-/** "2× king (z 3), 1× jednolôžko": the beds to make, with the flat's total when fewer are made. */
+/** "z 3" / "zo 4" (Slovak: "zo" before 4, 7, 14, 17, 40…). */
+function ofWord(n: number): string {
+  return /^[47]/.test(String(n)) ? 'zo' : 'z';
+}
+
+/**
+ * "2× king (z 3), 1× jednolôžko": the beds to make, with the flat's total when
+ * a group is only partly made; beds not made at all are named once at the end
+ * ("· 1× jednolôžko netreba"), never as "0× …".
+ */
 export function bedSummary(r: PackingResult): string {
-  return madeBeds(r.beds)
-    .map((b) => `${b.qty}× ${bedLabel[b.type] ?? b.type.toLowerCase().replace('_bed', '')}${b.qty < b.of ? ` (z ${b.of})` : ''}`)
-    .join(', ');
+  const label = (t: string) => bedLabel[t] ?? t.toLowerCase().replace('_bed', '');
+  const made = madeBeds(r.beds);
+  const parts = made.filter((b) => b.qty > 0).map((b) => `${b.qty}× ${label(b.type)}${b.qty < b.of ? ` (${ofWord(b.of)} ${b.of})` : ''}`);
+  const unmade = made.filter((b) => b.qty === 0).map((b) => `${b.of}× ${label(b.type)}`);
+  return unmade.length ? `${parts.join(', ')} · ${unmade.join(', ')} ${sk.bedNotNeeded}` : parts.join(', ');
 }
 
 /** "rozložiť gauč", "rozložiť gauč ×2", "gauč netreba" or null when the flat has no sofa. */

@@ -97,6 +97,8 @@ export function computeLinen(args: {
     const d = duvetsFor(laundry.duvetCounts, people);
     counts.paplonV = d.large;
     counts.paplonM = d.small;
+    // the Guesty set is smaller than the beds that get linen: a bed would go without a duvet
+    if (d.large + d.small < plan.usedGroups.length) warnings.push('duvets_short');
     overridden.add('paplonV');
     overridden.add('paplonM');
   }

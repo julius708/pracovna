@@ -131,6 +131,7 @@ export type PeopleSource = 'same_day' | 'gap' | 'capacity' | 'capacity_from_beds
 export type WarningCode =
   | 'bunk'
   | 'no_duvet_info'
+  | 'duvets_short'
   | 'beds_insufficient'
   | 'guests_missing'
   | 'capacity_missing'

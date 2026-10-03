@@ -49,7 +49,7 @@ describe('beds follow the people', () => {
     expect(count(r, 'plachtaM')).toBe(0);
     expect(count(r, 'vankus')).toBe(6);
     expect(r.beds.usedGroups).toEqual(['dvoj', 'dvoj', 'dvoj']);
-    expect(bedSummary(r)).toBe('1× king, 2× queen, 0× jednolôžko (z 1)');
+    expect(bedSummary(r)).toBe('1× king, 2× queen · 1× jednolôžko netreba');
     // 7 guests: every bed, the full set of 4 large duvets
     const full = computePackage(
       pkg({ listing: listing({ beds: { KING_BED: 1, QUEEN_BED: 2, SINGLE_BED: 1 }, accommodates: 7, laundry: laundry('Paplón veľký: 4') }), next: sameDay(7) }),
@@ -57,6 +57,16 @@ describe('beds follow the people', () => {
     expect(count(full, 'paplonV')).toBe(4);
     expect(count(full, 'plachtaM')).toBe(1);
     expect(bedSummary(full)).toBe('1× king, 2× queen, 1× jednolôžko');
+  });
+
+  it('bed summary: partly made groups say "(z N)" / "(zo 4)", unmade groups are named once as "netreba"', () => {
+    const one = computePackage(pkg({ listing: listing({ beds: { KING_BED: 1, QUEEN_BED: 2, SINGLE_BED: 1 }, accommodates: 7 }), next: sameDay(1) }));
+    expect(bedSummary(one)).toBe('1× king · 2× queen, 1× jednolôžko netreba');
+    const four = computePackage(pkg({ listing: listing({ beds: { KING_BED: 4 }, accommodates: 8 }), next: sameDay(3) }));
+    expect(bedSummary(four)).toBe('3× king (zo 4)');
+    const singlesFirst = computePackage(pkg({ listing: listing({ beds: { SINGLE_BED: 2, KING_BED: 1 }, accommodates: 4 }), next: sameDay(1) }));
+    expect(singlesFirst.beds.usedGroups).toEqual(['dvoj']);
+    expect(bedSummary(singlesFirst)).toBe('1× king · 2× jednolôžko netreba');
   });
 
   it('double beds are made before singles; singles take the people left over', () => {
@@ -105,6 +115,17 @@ describe('beds follow the people', () => {
     expect(duvetsFor({ large: 2, small: 0 }, 1)).toEqual({ large: 1, small: 0 });
     expect(duvetsFor({ large: 0, small: 0 }, 3)).toEqual({ large: 0, small: 0 });
     expect(duvetsFor({ large: -1, small: 2 }, 3)).toEqual({ large: 0, small: 2 });
+  });
+
+  it('warns when the Guesty set has fewer duvets than beds that get linen (Tri Veže: 1 large, king + sofa, 3 guests)', () => {
+    const short = computePackage(pkg({ listing: listing({ beds: { KING_BED: 1, SOFA_BED: 1 }, accommodates: 4, laundry: laundry('Paplón veľký: 1') }), next: sameDay(3) }));
+    expect(short.beds.usedGroups).toEqual(['dvoj', 'gauc']);
+    expect(count(short, 'paplonV')).toBe(1);
+    expect(short.warnings).toContain('duvets_short');
+    const fine = computePackage(pkg({ listing: listing({ beds: { KING_BED: 3 }, accommodates: 6, laundry: laundry('Paplón veľký: 3') }), next: sameDay(2) }));
+    expect(fine.warnings).not.toContain('duvets_short');
+    const couple = computePackage(pkg({ listing: listing({ beds: { KING_BED: 1, SOFA_BED: 1 }, accommodates: 4, laundry: laundry('Paplón veľký: 1') }), next: sameDay(2) }));
+    expect(couple.warnings).not.toContain('duvets_short');
   });
 
   it('settings-table duvets follow the made beds; the small-duvet conversion still applies per made bed', () => {

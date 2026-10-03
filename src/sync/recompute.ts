@@ -116,11 +116,15 @@ export function diffComputed(before: PackageComputed, after: PackageComputed): R
   for (const key of new Set([...Object.keys(a), ...Object.keys(b)])) {
     if ((a[key] ?? 0) !== (b[key] ?? 0)) changed.push(`${key} ${a[key] ?? 0}→${b[key] ?? 0}`);
   }
+  const bedsOf = (r: PackingResult) => `${r.beds.usedGroups.filter((g) => g !== 'gauc').length} postelí + ${r.beds.sofasUsed} gauč`;
+  if (bedsOf(before.computed_items) !== bedsOf(after.computed_items)) changed.push(`postele ${bedsOf(before.computed_items)}→${bedsOf(after.computed_items)}`);
   const capsA = before.computed_items.capsules.map((c) => `${c.typeKey}:${c.n}`).join(',');
   const capsB = after.computed_items.capsules.map((c) => `${c.typeKey}:${c.n}`).join(',');
   if (capsA !== capsB) changed.push(`kapsule ${capsA || '-'}→${capsB || '-'}`);
   if (before.incoming_reservation_id !== after.incoming_reservation_id) changed.push('next reservation');
   if (JSON.stringify(before.warnings) !== JSON.stringify(after.warnings)) changed.push('warnings');
+  // the hash covers more than the lines above (texts, bed types, duvet source): never log an empty diff
+  if (!changed.length && before.computed_hash !== after.computed_hash) changed.push('iné (texty / plán postelí)');
   return { changed, from_hash: before.computed_hash, to_hash: after.computed_hash };
 }
 

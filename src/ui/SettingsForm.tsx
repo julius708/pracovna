@@ -157,7 +157,7 @@ export function SettingsForm({ view, meId }: { view: SettingsView; meId: string 
       </div>
 
       <h3>Paplóny podľa bytu</h3>
-      <p>Veľké = 1 veľký paplón na manželskú posteľ / gauč. Malé = 2 malé. Jednolôžko má vždy 1 malý paplón, 1 vankúš a malú plachtu. Ak je typ alebo presný počet zapísaný v Guesty, platí Guesty.</p>
+      <p>Veľké = 1 veľký paplón na manželskú posteľ / gauč. Malé = 2 malé. Jednolôžko má vždy 1 malý paplón, 1 vankúš a malú plachtu. Ak je v Guesty zapísaný typ, platí Guesty. Ak je v Guesty zapísaný počet, je to plná sada bytu: každý hosť dostane 1 paplón (najprv veľké), nikdy viac, než má byt.</p>
       <div className="dvlist">
         {view.listings
           .filter((l) => l.inScope)
@@ -165,7 +165,7 @@ export function SettingsForm({ view, meId }: { view: SettingsView; meId: string 
             <label className="dvrow" key={l.id}>
               <span>
                 {l.name}
-                {l.guestyDuvets && <small> (Guesty: {l.guestyDuvets === 'exact' ? 'presný počet' : l.guestyDuvets === 'male' ? 'malé' : 'veľké'})</small>}
+                {l.guestyDuvets && <small> (Guesty: {l.guestyDuvets === 'exact' ? 'plná sada' : l.guestyDuvets === 'male' ? 'malé' : 'veľké'})</small>}
               </span>
               <select value={duvets[l.id] ?? ''} onChange={(e) => setDuvets((d) => ({ ...d, [l.id]: e.target.value }))} aria-label={`Paplóny – ${l.name}`}>
                 <option value="">—</option>
