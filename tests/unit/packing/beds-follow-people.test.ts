@@ -134,8 +134,14 @@ describe('beds follow the people', () => {
     expect(mestska.duvetInventory).toEqual({ large: 4, small: 0, capacity: 2 });
     expect(warningLine('duvets_exceed_capacity', mestska)).toBe('❗ Treba ujasniť: v Guesty je 4 veľké paplóny, ale kapacita bytu je 2 osoby');
     expect(count(mestska, 'paplonV')).toBe(2);
+    // one spare duvet is normal (a fold-out bed): Tomášikova packs 5 for 5 guests, no warning
     const tomasikova = computePackage(pkg({ listing: listing({ beds: { KING_BED: 1, SOFA_BED: 1, SINGLE_BED: 2 }, accommodates: 5, laundry: laundry('Paplón malý: 6') }), next: sameDay(5) }));
-    expect(warningLine('duvets_exceed_capacity', tomasikova)).toBe('❗ Treba ujasniť: v Guesty je 6 malých paplónov, ale kapacita bytu je 5 osôb');
+    expect(tomasikova.warnings).not.toContain('duvets_exceed_capacity');
+    expect(tomasikova.duvetInventory).toBeUndefined();
+    expect(count(tomasikova, 'paplonM')).toBe(5);
+    // two or more spare duvets are flagged, with the plural forms
+    const seven = computePackage(pkg({ listing: listing({ beds: { KING_BED: 1, SOFA_BED: 1, SINGLE_BED: 2 }, accommodates: 5, laundry: laundry('Paplón malý: 7') }), next: sameDay(5) }));
+    expect(warningLine('duvets_exceed_capacity', seven)).toBe('❗ Treba ujasniť: v Guesty je 7 malých paplónov, ale kapacita bytu je 5 osôb');
     const fine = computePackage(pkg({ listing: listing({ beds: { KING_BED: 3 }, accommodates: 6, laundry: laundry('Paplón veľký: 3') }), next: sameDay(2) }));
     expect(fine.warnings).not.toContain('duvets_exceed_capacity');
     expect(fine.duvetInventory).toBeUndefined();
