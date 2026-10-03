@@ -16,7 +16,7 @@ function deps(repo: MemoryRepo, client: ReturnType<typeof createSeedClient>['cli
 }
 
 describe('seed mode end to end', () => {
-  it('a first reconcile creates a package for every confirmed in-scope check-out of the three days', async () => {
+  it('a first reconcile creates a package for every confirmed in-scope check-out of the board days', async () => {
     const repo = new MemoryRepo();
     repo.now = at(`${TODAY}T06:00:00+02:00`);
     const { client, counts } = createSeedClient(TODAY);

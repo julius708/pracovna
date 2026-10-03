@@ -21,6 +21,7 @@ import { reconcile } from '@/sync/reconcile';
 const D0 = '2026-10-05';
 const [, D1, D2] = windowDates(D0);
 const D3 = addDays(D0, 3);
+const AFTER = addDays(D0, 7); // first day after the 7-day board window
 // 06:00 Bratislava, written in UTC because stored instants are always toISOString() output
 const NOW_ISO = `${D0}T04:00:00.000Z`;
 const H = 3_600_000;
@@ -145,13 +146,13 @@ const ids = (n: number, prefix = 'L') => Array.from({ length: n }, (_, i) => `${
 
 // =====================================================================
 describe('recomputeWindow – package creation and the next arrival', () => {
-  it('creates one todo package per confirmed in-scope check-out in D0..D2 and nothing for the rest', async () => {
+  it('creates one todo package per confirmed in-scope check-out in the board window and nothing for the rest', async () => {
     const repo = newRepo();
     await repo.upsertListings([listingRow('L1'), listingRow('L2'), listingRow('L3', { in_scope: false, exclusion_reason: 'city' })]);
     await repo.upsertReservations([
       resRow('R1', 'L1', addDays(D0, -3), D0),
       resRow('R2', 'L2', addDays(D0, -1), D2),
-      resRow('R3', 'L1', D2, D3), // check-out after the window
+      resRow('R3', 'L1', D2, AFTER), // check-out after the window
       resRow('R4', 'L3', addDays(D0, -2), D1), // listing out of scope
       resRow('R5', 'L2', addDays(D0, -4), D1, 2, { status: 'canceled' }), // not confirmed
       resRow('R6', 'L1', addDays(D0, -9), addDays(D0, -1)), // yesterday
@@ -419,7 +420,7 @@ describe('recomputeWindow – settings, calendar, moves, scope, cancellation', (
   it('recompute never overwrites the staff columns', async () => {
     const repo = newRepo();
     await repo.upsertListings([listingRow('L1')]);
-    await repo.upsertReservations([resRow('R1', 'L1', addDays(D0, -2), D0, 4), resRow('A1', 'L1', D0, D3, 3)]); // A1 checks out after the window
+    await repo.upsertReservations([resRow('R1', 'L1', addDays(D0, -2), D0, 4), resRow('A1', 'L1', D0, AFTER, 3)]); // A1 checks out after the window
     await recomputeWindow(rdeps(repo), 'cron');
     expect(repo.packages.size).toBe(1);
     const row = repo.packages.get(pkgOf(repo, 'R1').id)!;
@@ -655,7 +656,7 @@ describe('reconcile – partial vs failed runs, counters, listings', () => {
   function smallData() {
     return fakeData(
       [fakeListing('L1'), fakeListing('L2')],
-      [fakeRes('R1', 'L1', addDays(D0, -3), D0, 4), fakeRes('A1', 'L1', D1, D3, 2), fakeRes('R2', 'L2', addDays(D0, -3), D1, 4)],
+      [fakeRes('R1', 'L1', addDays(D0, -3), D0, 4), fakeRes('A1', 'L1', D1, AFTER, 2), fakeRes('R2', 'L2', addDays(D0, -3), D1, 4)],
       { L1: [{ date: D0, minNights: 2, status: 'available', cta: false }] },
     );
   }

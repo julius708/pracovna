@@ -1,4 +1,4 @@
-import { addDays, type Ymd } from '@/core/packing';
+import { addDays, windowDates, type Ymd } from '@/core/packing';
 import type { FakeGuestyData } from '@/guesty/fake-client';
 import type { ParsedCalendarDay, ParsedListing, ParsedReservation } from '@/guesty/schemas';
 
@@ -85,7 +85,7 @@ export function generateSeedData(listings: ParsedListing[], opts: SeedOptions): 
     minNightsFor.set(listingId, m);
   };
 
-  const days = [opts.today, addDays(opts.today, 1), addDays(opts.today, 2)];
+  const days = windowDates(opts.today);
   const used = new Set<string>();
   /** One check-out for listing `l` on `day` plus a next-reservation scenario chosen by `roll` (0..1). */
   const scenario = (l: ParsedListing, day: Ymd, i: number, roll: number) => {
@@ -135,7 +135,7 @@ export function generateSeedData(listings: ParsedListing[], opts: SeedOptions): 
   // give each of them a check-out in the window so every rule is visible on the board
   const FORCED_ROLLS = [0.1, 0.5, 0.95, 0.7, 0.1, 0.5, 0.85, 0.3];
   for (let i = 0; i < Math.min(8, inScope.length); i++) {
-    scenario(inScope[i], days[i % 3], 100 + i, FORCED_ROLLS[i]);
+    scenario(inScope[i], days[i % days.length], 100 + i, FORCED_ROLLS[i]);
   }
   for (const day of days) {
     const pool = inScope.filter((l) => !used.has(`${l._id}|${day}`));

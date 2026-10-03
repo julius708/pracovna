@@ -71,8 +71,8 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
     const cutoff = Date.now() - OWN_CHANGE_MS;
     for (const [id, at] of ownChanges.current) if (at < cutoff) ownChanges.current.delete(id);
     const texts = [
-      ...(prev === data.packages ? [] : boardNotices(prev, data.packages, viewer.name, new Set(ownChanges.current.keys()), (d) => dayLabel(dates.indexOf(d as (typeof dates)[number]), d))),
-      ...(prevN === data.notes ? [] : noteNotices(prevN, data.notes, viewer.name, (d) => `${dayLabel(dates.indexOf(d as (typeof dates)[number]), d)} ${formatDM(d)}`)),
+      ...(prev === data.packages ? [] : boardNotices(prev, data.packages, viewer.name, new Set(ownChanges.current.keys()), (d) => dayWord(dates.indexOf(d as (typeof dates)[number]), d))),
+      ...(prevN === data.notes ? [] : noteNotices(prevN, data.notes, viewer.name, (d) => `${dayWord(dates.indexOf(d as (typeof dates)[number]), d)} ${formatDM(d)}`)),
     ];
     if (texts.length === 0) return;
     const items = texts.map((text) => ({ id: ++noticeSeq.current, text }));
@@ -291,6 +291,11 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
     }
   };
 
+  // seven day tabs: keep the chosen one in view on narrow screens (the row scrolls sideways)
+  useEffect(() => {
+    document.querySelector('.day[aria-pressed="true"]')?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+  }, [sel]);
+
   const selectDay = (i: number) => {
     setSel(i);
     setKeep(new Set());
@@ -334,7 +339,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
 
       <NoticeBoard
         notes={data.notes.filter((n) => n.date === date)}
-        dayTitle={`${dayLabel(sel, date)} ${formatDM(date)}`}
+        dayTitle={`${dayWord(sel, date)} ${formatDM(date)}`}
         viewer={viewer}
         now={now}
         busy={noteBusy}

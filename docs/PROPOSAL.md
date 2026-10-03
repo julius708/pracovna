@@ -32,7 +32,7 @@ Staff tap Zabaliť ──► RPC pack_package() ─► audit row + broadcast ─
 
 **Where numbers come from.** `computePackage(input)` is deterministic: listing snapshot (beds, capacity, bathrooms, parsed laundry field) + outgoing reservation + next reservation + min-nights for the gap days + settings → people, badges, items, warnings. The result is stored in `packages.computed_items`. Screens only render and sum; they never calculate.
 
-**One convergence function.** `recomputeWindow()` recomputes all packages of the 3-day window from database state (about 70 rows, milliseconds). Webhooks, the cron, a settings save and the nightly job all call it. Writes are change-only, so nothing flickers on the tablets when nothing changed.
+**One convergence function.** `recomputeWindow()` recomputes all packages of the 3-day window from database state (about 70 rows, milliseconds). *Revised 2026-10-03: the board shows 7 days (today..today+6, about 150 rows); migration 0010 widens the staff window to match.* Webhooks, the cron, a settings save and the nightly job all call it. Writes are change-only, so nothing flickers on the tablets when nothing changed.
 
 **Package identity.** One package per outgoing Guesty reservation id. It follows the reservation if the check-out date moves. Two check-outs of one flat on one day give two cards plus a warning „2 check-outy v ten istý deň“.
 

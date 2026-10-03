@@ -114,17 +114,24 @@ export class SupabaseRepo implements SyncRepo {
     for (const part of chunks(fresh, 200)) must(await this.db.from('reservations').upsert(part, { onConflict: 'guesty_id' }), 'reservations.upsert');
   }
   async getReservations(f: ReservationFilter) {
-    let q = this.db.from('reservations').select('*');
-    if (f.checkOutGte) q = q.gte('check_out_date', f.checkOutGte);
-    if (f.checkOutLte) q = q.lte('check_out_date', f.checkOutLte);
-    if (f.checkInGte) q = q.gte('check_in_date', f.checkInGte);
-    if (f.status) q = q.eq('status', f.status);
-    if (f.listingIds) {
-      if (!f.listingIds.length) return [];
-      const list = f.listingIds.map((id) => `"${id.replace(/"/g, '')}"`).join(',');
-      q = q.or(`listing_id.in.(${list}),arrival_listing_id.in.(${list})`);
+    const base = () => {
+      let q = this.db.from('reservations').select('*');
+      if (f.checkOutGte) q = q.gte('check_out_date', f.checkOutGte);
+      if (f.checkOutLte) q = q.lte('check_out_date', f.checkOutLte);
+      if (f.checkInGte) q = q.gte('check_in_date', f.checkInGte);
+      if (f.status) q = q.eq('status', f.status);
+      return q;
+    };
+    if (!f.listingIds) return must(await base(), 'reservations.filter') as ReservationRow[];
+    if (!f.listingIds.length) return [];
+    // the ids travel in the request URL, twice; a week of check-outs names nearly every flat,
+    // so query in chunks to stay far below the 8 KB request line (review of the week view)
+    const out: ReservationRow[] = [];
+    for (const part of chunks(f.listingIds, 50)) {
+      const list = part.map((id) => `"${id.replace(/"/g, '')}"`).join(',');
+      out.push(...(must(await base().or(`listing_id.in.(${list}),arrival_listing_id.in.(${list})`), 'reservations.filter') as ReservationRow[]));
     }
-    return must(await q, 'reservations.filter') as ReservationRow[];
+    return dedupe(out, (r) => r.guesty_id);
   }
   async getReservationsByIds(ids: string[]) {
     const out: ReservationRow[] = [];

@@ -142,7 +142,7 @@ export interface StatusView {
     multiStay: string[];
   };
   token: { expiresAt: string | null; mints24h: number };
-  /** Active packages of today..today+2 (what the board shows). */
+  /** Active packages of the board window (what the board shows). */
   packagesInWindow: number;
   /** ISO instant the data was read on the server; the client renders relative times from it first. */
   loadedAt: string;

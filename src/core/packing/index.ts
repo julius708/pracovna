@@ -10,5 +10,5 @@ export { computeLinen, decideDuvets, duvetsFor, bathroomCount } from './linen';
 export { capsuleRows, capsulePhoto } from './capsules';
 export { computePackage, packageHash } from './calculator';
 export { DEFAULT_SETTINGS, DEFAULT_ITEMS, mergeSettings } from './settings';
-export { addDays, diffDays, datesBetween, todayInTz, windowDates, weekdayShort, formatDM, formatHM, ymdToDate, isYmd, zonedMidnight } from './dates';
+export { addDays, diffDays, datesBetween, todayInTz, windowDates, WINDOW_DAYS, weekdayShort, formatDM, formatHM, ymdToDate, isYmd, zonedMidnight } from './dates';
 export { stableStringify, hashOf, fnv1a64 } from './hash';

@@ -1,5 +1,5 @@
 import 'server-only';
-import { addDays, isYmd, NOTE_MAX_LENGTH, todayInTz } from '@/core/packing';
+import { addDays, isYmd, NOTE_MAX_LENGTH, todayInTz, WINDOW_DAYS } from '@/core/packing';
 import type { MemoryRepo } from '@/db/memory-repo';
 import type { PackageEventInsert, PackageRow } from '@/db/types';
 import { randomUUID } from 'node:crypto';
@@ -32,13 +32,13 @@ function replayed(repo: MemoryRepo, actionId: string | null): boolean {
 
 /**
  * Staff may change only what the board shows them: visible rows from yesterday
- * to the day after tomorrow (Bratislava). Admins may touch any row. Mirrors the
+ * to the last board day (Bratislava). Admins may touch any row. Mirrors the
  * check inside the Postgres RPCs.
  */
 export function outOfWindow(repo: MemoryRepo, viewer: Viewer, p: PackageRow): boolean {
   if (viewer.role === 'admin') return false;
   const today = todayInTz(repo.now());
-  return p.hidden || p.date < addDays(today, -1) || p.date > addDays(today, 2);
+  return p.hidden || p.date < addDays(today, -1) || p.date > addDays(today, WINDOW_DAYS - 1);
 }
 
 export async function memoryPack(repo: MemoryRepo, viewer: Viewer, id: string, actionId: string | null): Promise<StaffResult> {

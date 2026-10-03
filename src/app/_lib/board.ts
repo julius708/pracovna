@@ -51,7 +51,8 @@ export const BOARD_COLUMNS =
 
 export interface BoardData {
   today: Ymd;
-  dates: [Ymd, Ymd, Ymd];
+  /** The board days, today first (WINDOW_DAYS of them). */
+  dates: Ymd[];
   packages: BoardPackage[];
   /** "Dôležité info pre Angeliku a Maxa" for the three days, newest first. */
   notes: BoardNote[];

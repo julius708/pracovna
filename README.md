@@ -22,7 +22,7 @@ The full design is in [docs/PROPOSAL.md](docs/PROPOSAL.md).
 src/core/packing/   pure packing domain: parser, scope, people, beds, linen, consumables, capsules, calculator
 src/core/i18n/      every Slovak string of the app
 src/guesty/         Open API client: token cache, HTTP backoff, endpoints, zod schemas, mappers, fake client, fixtures
-src/sync/           reconcile (every 3 min), recompute of the 3-day window, listings, min-nights, webhooks, nightly, alerts, seed
+src/sync/           reconcile (every 3 min), recompute of the 7-day board window, listings, min-nights, webhooks, nightly, alerts, seed
 src/db/             repo interface, memory repo (tests/seed), Supabase repo (service role), server client (auth)
 src/app/            pages: / (board), /login, /nastavenia, /historia (+export.csv), /stav; _lib (viewer, board data, server actions)
 src/app/api/        route handlers: guesty/webhook, cron/reconcile, cron/nightly, admin/sync-now, admin/webhooks/register
@@ -114,7 +114,7 @@ The response contains the signing secret once. Put it into Vercel as `GUESTY_WEB
 
 | Path | Schedule | Does |
 |---|---|---|
-| `/api/cron/reconcile` | every 3 minutes | listings (hourly), check-outs of the 3 days, next check-ins, absence check, min-nights, recompute, webhook retries |
+| `/api/cron/reconcile` | every 3 minutes | listings (hourly), check-outs of the 7 board days, next check-ins, absence check, min-nights, recompute, webhook retries |
 | `/api/cron/nightly` | 02:00 UTC | retention, full listing refresh, webhook health, recompute |
 
 Vercel sends `Authorization: Bearer <CRON_SECRET>`; set `CRON_SECRET` (random, 32+ characters) in the Vercel environment. Vercel Hobby cannot run a 3-minute cron; the project needs Vercel Pro.
@@ -124,7 +124,7 @@ Vercel sends `Authorization: Bearer <CRON_SECRET>`; set `CRON_SECRET` (random, 3
 Migrations are plain SQL in `supabase/migrations/`, applied with the Supabase CLI (`supabase db push`) or pasted into the SQL editor; `supabase/seed.sql` loads the default linen table. Rules that the schema enforces:
 
 - staff can only change packages through the RPCs `pack_package`, `unpack_package`, `set_note`, `toggle_check`; the sync writes only the computed columns through `sync_upsert_package`; a guard trigger refuses any other update;
-- the staff RPCs act only on the rows the board shows to staff (visible, yesterday to the day after tomorrow); admins may touch any row;
+- the staff RPCs act only on the rows the board shows to staff (visible, yesterday to today+6, see `WINDOW_DAYS`); admins may touch any row;
 - `package_events` is append-only and kept forever;
 - row visibility follows Bratislava's calendar date (`today_ba()`);
 - a deactivated user can still read their own profile row (so the app can say "Účet je deaktivovaný"), nothing else; an admin cannot deactivate or demote their own account.
@@ -149,6 +149,10 @@ The app also raises its own alerts (sync failed twice in a row, Guesty token quo
 - `ALERT_WEBHOOK_URL`: any endpoint that accepts a JSON `{text}` POST (Slack/Teams incoming webhook, Zapier, …).
 
 `POST /api/admin/webhooks/register`'s sibling `POST /api/admin/alerts/test` (cron secret or admin session) sends a test message through every configured sink and reports what was delivered.
+
+## Board window
+
+The board shows a week: today and the next six days (`WINDOW_DAYS` in `src/core/packing/dates.ts`; owner's request of 2026-10-03, three days before). The day tabs scroll sideways on a phone. The sync pulls check-outs for the same seven days, and the database shows staff visible packages from yesterday to today+6 (migration 0010); admins see everything.
 
 ## Notice board
 

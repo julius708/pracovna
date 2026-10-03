@@ -170,7 +170,7 @@ describe('checked OK', () => {
   it('dates: DST nights, year boundary, negative diff, malformed strings throw', () => {
     expect(addDays('2026-10-25', 1)).toBe('2026-10-26');
     expect(addDays('2027-03-28', 1)).toBe('2027-03-29');
-    expect(windowDates('2026-12-30')).toEqual(['2026-12-30', '2026-12-31', '2027-01-01']);
+    expect(windowDates('2026-12-30')).toEqual(['2026-12-30', '2026-12-31', '2027-01-01', '2027-01-02', '2027-01-03', '2027-01-04', '2027-01-05']);
     expect(diffDays('2026-10-06', '2026-10-05')).toBe(-1);
     expect(diffDays('2026-12-31', '2027-01-01')).toBe(1);
     expect(() => ymdToDate('2026-10-5')).toThrow();

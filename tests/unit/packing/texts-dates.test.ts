@@ -95,8 +95,8 @@ describe('Slovak texts', () => {
 
 describe('dates in Europe/Bratislava', () => {
   it('window dates across the DST-end night (25.10.2026) have no duplicate day', () => {
-    expect(windowDates('2026-10-24')).toEqual(['2026-10-24', '2026-10-25', '2026-10-26']);
-    expect(windowDates('2027-03-27')).toEqual(['2027-03-27', '2027-03-28', '2027-03-29']);
+    expect(windowDates('2026-10-24')).toEqual(['2026-10-24', '2026-10-25', '2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30']);
+    expect(windowDates('2027-03-27')).toEqual(['2027-03-27', '2027-03-28', '2027-03-29', '2027-03-30', '2027-03-31', '2027-04-01', '2027-04-02']);
   });
   it('today in Bratislava rolls over at local midnight, not UTC', () => {
     expect(todayInTz(new Date('2026-09-29T22:30:00Z'))).toBe('2026-09-30');

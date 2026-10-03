@@ -58,7 +58,7 @@ class StageError extends Error {
 async function stageCheckouts(deps: ReconcileDeps, dates: Ymd[], fetchedAt: string): Promise<{ seen: Set<string>; rows: ReservationRow[] }> {
   const search = await deps.client.searchReservations({
     checkOutGte: dates[0],
-    checkOutLte: dates[2],
+    checkOutLte: dates[dates.length - 1],
     status: 'confirmed',
     sort: 'checkOut',
   });
@@ -81,7 +81,7 @@ async function stageArrivals(deps: ReconcileDeps, dates: Ymd[], listingIds: stri
     const done = new Set<string>();
     for (const r of all) {
       const m = mapReservation(r, fetchedAt);
-      if (m && m.check_in_date > dates[2]) done.add(m.arrival_listing_id);
+      if (m && m.check_in_date > dates[dates.length - 1]) done.add(m.arrival_listing_id);
     }
     return ids.every((id) => done.has(id));
   };
@@ -114,7 +114,7 @@ async function stageArrivals(deps: ReconcileDeps, dates: Ymd[], listingIds: stri
       const mapped = search.results.map((r) => mapReservation(r, fetchedAt)).filter((r): r is ReservationRow => !!r);
       rows.push(...mapped);
       if (search.truncated && !beyond(search.results, chunk)) {
-        const done = new Set(mapped.filter((m) => m.check_in_date > dates[2]).map((m) => m.arrival_listing_id));
+        const done = new Set(mapped.filter((m) => m.check_in_date > dates[dates.length - 1]).map((m) => m.arrival_listing_id));
         unresolved.push(...chunk.filter((id) => !done.has(id)));
       }
     }
@@ -142,7 +142,7 @@ async function stageArrivalsUnfiltered(deps: ReconcileDeps, dates: Ymd[], listin
       const done = new Set<string>();
       for (const r of all) {
         const m = mapReservation(r, fetchedAt);
-        if (m && m.check_in_date > dates[2]) done.add(m.arrival_listing_id);
+        if (m && m.check_in_date > dates[dates.length - 1]) done.add(m.arrival_listing_id);
       }
       return [...wanted].every((id) => done.has(id));
     },
@@ -168,9 +168,9 @@ async function stageAbsence(
   listingIds: string[],
   fetchedAt: string,
 ): Promise<{ checked: number; cancelled: number; deleted: number; pending: number }> {
-  const held = await deps.repo.getReservations({ checkOutGte: dates[0], checkOutLte: dates[2], status: 'confirmed' });
+  const held = await deps.repo.getReservations({ checkOutGte: dates[0], checkOutLte: dates[dates.length - 1], status: 'confirmed' });
   const listingSet = new Set(listingIds);
-  const horizon = addDays(dates[2], GAP_MAX_NIGHTS);
+  const horizon = addDays(dates[dates.length - 1], GAP_MAX_NIGHTS);
   const heldArrivals = listingIds.length ? await deps.repo.getReservations({ checkInGte: dates[0], status: 'confirmed', listingIds }) : [];
   const candidates = new Map<string, ReservationRow>();
   for (const r of held) if (!seen.has(r.guesty_id)) candidates.set(r.guesty_id, r);
@@ -290,7 +290,7 @@ export async function reconcile(deps: ReconcileDeps, trigger: string): Promise<R
 
     // 5. min-nights for the gaps
     try {
-      const held = await repo.getReservations({ checkOutGte: dates[0], checkOutLte: dates[2], status: 'confirmed' });
+      const held = await repo.getReservations({ checkOutGte: dates[0], checkOutLte: dates[dates.length - 1], status: 'confirmed' });
       const allArrivals = [...arrivals, ...(await repo.getReservations({ checkInGte: dates[0], status: 'confirmed', listingIds }))];
       const needs = gapsNeedingCalendar(held.filter((r) => inScope.has(r.listing_id)), allArrivals);
       stats.min_nights = await syncMinNights({ repo, client, log, now }, needs);

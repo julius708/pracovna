@@ -129,7 +129,7 @@ export function diffComputed(before: PackageComputed, after: PackageComputed): R
 }
 
 /**
- * Recomputes every package of the 3-day window from database state only:
+ * Recomputes every package of the board window (WINDOW_DAYS) from database state only:
  * creates, updates (change-only), moves, cancels and restores packages, and
  * writes one audit event per change. Staff columns are never touched.
  */
@@ -159,7 +159,8 @@ export async function recomputeWindow(deps: RecomputeDeps, trigger: string, toda
 
   // Outgoing reservations: every reservation with a check-out in the window (any status),
   // plus the reservations of packages that currently sit in the window (they may have moved).
-  const outgoing = await repo.getReservations({ checkOutGte: dates[0], checkOutLte: dates[2] });
+  const last = dates[dates.length - 1];
+  const outgoing = await repo.getReservations({ checkOutGte: dates[0], checkOutLte: last });
   const byId = new Map(outgoing.map((r) => [r.guesty_id, r]));
   const windowPackages = await repo.getPackagesInWindow(dates);
   const missingIds = windowPackages.map((p) => p.outgoing_reservation_id).filter((id) => !byId.has(id));
@@ -169,7 +170,7 @@ export async function recomputeWindow(deps: RecomputeDeps, trigger: string, toda
 
   const listingIds = [...new Set([...byId.values()].map((r) => r.listing_id))];
   const arrivals = await repo.getReservations({ checkInGte: dates[0], status: 'confirmed', listingIds });
-  const calendarRows = await repo.getCalendar(listingIds, dates[0], addDays(dates[2], GAP_MAX_NIGHTS));
+  const calendarRows = await repo.getCalendar(listingIds, dates[0], addDays(last, GAP_MAX_NIGHTS));
   const calendar = new Map<string, CalendarRow>();
   for (const c of calendarRows) calendar.set(`${c.listing_id}|${c.date}`, c);
 

@@ -72,9 +72,16 @@ export function todayInTz(now: Date = new Date(), tz: string = TZ): Ymd {
   }).format(now);
 }
 
-/** The three board days: today, tomorrow, the day after. */
-export function windowDates(today: Ymd): [Ymd, Ymd, Ymd] {
-  return [today, addDays(today, 1), addDays(today, 2)];
+/**
+ * Days the board shows: today and the following WINDOW_DAYS - 1 days (the
+ * owner's week view of 2026-10-03; 3 days before). The database mirrors the
+ * window for staff (migration 0010: yesterday .. today + WINDOW_DAYS - 1).
+ */
+export const WINDOW_DAYS = 7;
+
+/** The board days, today first. */
+export function windowDates(today: Ymd): Ymd[] {
+  return Array.from({ length: WINDOW_DAYS }, (_, i) => addDays(today, i));
 }
 
 /** Every date from `from` (inclusive) to `to` (exclusive). */
