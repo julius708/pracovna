@@ -1,5 +1,5 @@
 import 'server-only';
-import { addDays, NOTE_MAX_LENGTH, todayInTz } from '@/core/packing';
+import { addDays, isYmd, NOTE_MAX_LENGTH, todayInTz } from '@/core/packing';
 import type { MemoryRepo } from '@/db/memory-repo';
 import type { PackageEventInsert, PackageRow } from '@/db/types';
 import { randomUUID } from 'node:crypto';
@@ -96,14 +96,17 @@ export async function memoryCheck(repo: MemoryRepo, viewer: Viewer, id: string, 
 }
 
 /** add_board_note: a note on the shared notice board, replay-safe on the action id. */
-export async function memoryAddBoardNote(repo: MemoryRepo, viewer: Viewer, text: string, actionId: string | null): Promise<StaffResult> {
+export async function memoryAddBoardNote(repo: MemoryRepo, viewer: Viewer, text: string, date: string, actionId: string | null): Promise<StaffResult> {
   const existing = actionId ? repo.boardNotes.find((n) => n.client_action_id === actionId) : undefined;
   if (existing) return { ok: true, replayed: true, id: existing.id };
   const clean = text.trim().slice(0, 500);
   if (!clean) return { ok: false, status: 'empty' };
+  const today = todayInTz(repo.now());
+  if (!isYmd(date) || date < addDays(today, -1) || date > addDays(today, 30)) return { ok: false, status: 'bad_date' };
   const row = {
     id: randomUUID(),
     text: clean,
+    date,
     author: viewer.id,
     author_name: viewer.name,
     created_at: repo.now().toISOString(),

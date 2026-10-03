@@ -232,6 +232,7 @@ td input.lbl{width:190px;text-align:left}
 /* "Dôležité info pre Angeliku a Maxa": the shared notice board above the list */
 .notice-board{margin:14px 0 2px;padding:12px 14px;border:3px solid #E8590C;border-radius:16px;background:#FFF1E6;box-shadow:0 6px 18px rgba(232,89,12,.15)}
 .notice-title{margin:0 0 8px;font-family:var(--display);font-weight:800;font-size:18px;line-height:1.2;color:#9C3B00;display:flex;align-items:center;gap:8px}
+.notice-day{margin-left:auto;font-size:13px;font-weight:700;padding:3px 10px;border-radius:999px;background:#E8590C;color:#fff;white-space:nowrap}
 .notice-empty{margin:0 0 10px;color:var(--muted);font-size:14px}
 .notice-list{list-style:none;margin:0 0 10px;padding:0;display:flex;flex-direction:column;gap:8px}
 .notice-item{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px}

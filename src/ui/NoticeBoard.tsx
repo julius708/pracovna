@@ -6,7 +6,10 @@ import type { Viewer } from '@/app/_lib/viewer';
 import { noteTime, sk } from '@/core/i18n/sk';
 
 export interface NoticeBoardProps {
+  /** Notes of the selected day only. */
   notes: BoardNote[];
+  /** "Dnes 3.10." / "Zajtra 4.10." / "Po 5.10.": the day the box belongs to. */
+  dayTitle: string;
   viewer: Viewer;
   /** The board's clock (seeded from the server so SSR and client agree). */
   now: Date;
@@ -17,11 +20,11 @@ export interface NoticeBoardProps {
 
 /**
  * "Dôležité info pre Angeliku a Maxa": the shared notice board above the
- * apartment list. Always visible, even when empty, so anyone can write what
- * the laundry team must know; every note shows its author and time. A note is
- * removed by its author or an admin.
+ * apartment list, one box per board day (a note written under "Po 5.10." shows
+ * only there). Always visible, even when empty; every note shows its author
+ * and time. A note is removed by its author or an admin.
  */
-export function NoticeBoard({ notes, viewer, now, busy, onAdd, onRemove }: NoticeBoardProps) {
+export function NoticeBoard({ notes, dayTitle, viewer, now, busy, onAdd, onRemove }: NoticeBoardProps) {
   const [text, setText] = useState('');
 
   const submit = (e: FormEvent<HTMLFormElement>) => {
@@ -36,6 +39,7 @@ export function NoticeBoard({ notes, viewer, now, busy, onAdd, onRemove }: Notic
     <section className="notice-board" aria-labelledby="notice-title">
       <h2 id="notice-title" className="notice-title">
         <span aria-hidden="true">📌</span> {sk.noticeBoard.title}
+        <span className="notice-day">{dayTitle}</span>
       </h2>
       {notes.length === 0 ? (
         <p className="notice-empty">{sk.noticeBoard.empty}</p>
@@ -58,7 +62,7 @@ export function NoticeBoard({ notes, viewer, now, busy, onAdd, onRemove }: Notic
       )}
       <form className="notice-form" onSubmit={submit}>
         <textarea
-          aria-label={sk.noticeBoard.placeholder}
+          aria-label={`${sk.noticeBoard.placeholder} (${dayTitle})`}
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={sk.noticeBoard.placeholder}

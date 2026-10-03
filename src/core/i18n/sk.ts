@@ -129,8 +129,8 @@ export const sk = {
   },
   noticeBoard: {
     title: 'Dôležité info pre Angeliku a Maxa',
-    empty: 'Zatiaľ nič. Sem napíš, čo majú Angelika a Max vedieť – uvidia to všetci.',
-    placeholder: 'Napíš dôležitú informáciu…',
+    empty: 'Pre tento deň zatiaľ nič. Sem napíš, čo majú Angelika a Max v tento deň vedieť – uvidia to všetci.',
+    placeholder: 'Napíš dôležitú informáciu na tento deň…',
     add: 'Pridať',
     remove: 'Odstrániť',
     by: (name: string, time: string) => `${name} · ${time}`,
@@ -139,7 +139,7 @@ export const sk = {
     notAuthor: 'Odstrániť môže len autor alebo admin.',
   },
   notices: {
-    newNote: (who: string) => `📌 Nové dôležité info od ${who}`,
+    newNote: (who: string, day: string) => `📌 Nové dôležité info od ${who} · ${day}`,
     newPackage: (name: string, day: string) => `Nový balíček z Guesty: ${name} (${day})`,
     packedBy: (who: string, name: string) => `${who} zabalil(a) ${name}`,
     unpacked: (name: string) => `${name} je späť na balenie`,

@@ -213,6 +213,7 @@ export type AppStateKey =
 export interface BoardNoteRow {
   id: string;
   text: string;
+  date: Ymd;
   author: string | null;
   author_name: string;
   created_at: Instant;

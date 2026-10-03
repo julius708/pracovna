@@ -35,12 +35,14 @@ export interface BoardPackage {
 export interface BoardNote {
   id: string;
   text: string;
+  /** The board day the note belongs to (shown only under that tab). */
+  date: Ymd;
   author: string | null;
   author_name: string;
   created_at: string;
 }
 
-export const NOTE_COLUMNS = 'id, text, author, author_name, created_at';
+export const NOTE_COLUMNS = 'id, text, date, author, author_name, created_at';
 
 export const BOARD_COLUMNS =
   'id, listing_id, listing_name, date, status, hidden, cancel_reason, same_day, target_people, incoming_reservation_id, computed_items, computed_hash, warnings, note, note_by_name, note_at, checklist, packed_by_name, packed_at, packed_hash';
@@ -49,7 +51,7 @@ export interface BoardData {
   today: Ymd;
   dates: [Ymd, Ymd, Ymd];
   packages: BoardPackage[];
-  /** "Dôležité info pre Angeliku a Maxa", newest first. */
+  /** "Dôležité info pre Angeliku a Maxa" for the three days, newest first. */
   notes: BoardNote[];
   /** listing id -> cleaning company (null when none). */
   cleaners: Record<string, string | null>;
@@ -74,7 +76,7 @@ export async function loadBoard(viewer: Viewer): Promise<BoardData> {
       db.from('packages').select(BOARD_COLUMNS).in('date', dates),
       db.from('listings').select('guesty_id, cleaner'),
       db.rpc('board_status'),
-      db.from('board_notes').select(NOTE_COLUMNS).is('removed_at', null).order('created_at', { ascending: false }),
+      db.from('board_notes').select(NOTE_COLUMNS).in('date', dates).is('removed_at', null).order('created_at', { ascending: false }),
     ]);
     if (pk.error) throw new Error(`packages: ${pk.error.message}`);
     if (nt.error) throw new Error(`board_notes: ${nt.error.message}`);
@@ -126,9 +128,9 @@ export async function loadBoard(viewer: Viewer): Promise<BoardData> {
       packed_hash: p.packed_hash,
     })),
     notes: ((repo as MemoryRepo).boardNotes ?? [])
-      .filter((n) => !n.removed_at)
+      .filter((n) => !n.removed_at && (dates as readonly string[]).includes(n.date))
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
-      .map((n) => ({ id: n.id, text: n.text, author: n.author, author_name: n.author_name, created_at: n.created_at })),
+      .map((n) => ({ id: n.id, text: n.text, date: n.date, author: n.author, author_name: n.author_name, created_at: n.created_at })),
     cleaners,
     status: { lastOkSyncAt: lastOk, consecutiveFailures: failures ?? 0 },
     loadedAt,

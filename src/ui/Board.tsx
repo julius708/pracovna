@@ -72,7 +72,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
     for (const [id, at] of ownChanges.current) if (at < cutoff) ownChanges.current.delete(id);
     const texts = [
       ...(prev === data.packages ? [] : boardNotices(prev, data.packages, viewer.name, new Set(ownChanges.current.keys()), (d) => dayLabel(dates.indexOf(d as (typeof dates)[number]), d))),
-      ...(prevN === data.notes ? [] : noteNotices(prevN, data.notes, viewer.name)),
+      ...(prevN === data.notes ? [] : noteNotices(prevN, data.notes, viewer.name, (d) => `${dayLabel(dates.indexOf(d as (typeof dates)[number]), d)} ${formatDM(d)}`)),
     ];
     if (texts.length === 0) return;
     const items = texts.map((text) => ({ id: ++noticeSeq.current, text }));
@@ -234,12 +234,12 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
   };
 
   const addNote = async (text: string) => {
-    const temp: BoardNote = { id: `temp-${newActionId()}`, text, author: viewer.id, author_name: viewer.name, created_at: new Date().toISOString() };
+    const temp: BoardNote = { id: `temp-${newActionId()}`, text, date, author: viewer.id, author_name: viewer.name, created_at: new Date().toISOString() };
     setNoteBusy(true);
     setData((d) => ({ ...d, notes: [temp, ...d.notes] }));
     let res: ActionResult;
     try {
-      res = await track(() => addBoardNoteAction(text, newActionId()));
+      res = await track(() => addBoardNoteAction(text, date, newActionId()));
     } catch {
       res = { ok: false, error: 'failed' };
     }
@@ -313,7 +313,15 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
         </nav>
       </header>
 
-      <NoticeBoard notes={data.notes} viewer={viewer} now={now} busy={noteBusy} onAdd={(t) => void addNote(t)} onRemove={(n) => void removeNote(n)} />
+      <NoticeBoard
+        notes={data.notes.filter((n) => n.date === date)}
+        dayTitle={`${dayLabel(sel, date)} ${formatDM(date)}`}
+        viewer={viewer}
+        now={now}
+        busy={noteBusy}
+        onAdd={(t) => void addNote(t)}
+        onRemove={(n) => void removeNote(n)}
+      />
 
       <Summary dayWord={dayWord(sel, date)} hasData={hasData} numbers={numbers} lines={lines} hasJobs={jobs.length > 0} />
 

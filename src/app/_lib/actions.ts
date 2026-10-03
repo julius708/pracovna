@@ -68,11 +68,11 @@ export async function checkAction(packageId: string, item: string, checked: bool
 }
 
 /** Fresh board data for the live-update refetch. */
-/** "Dôležité info pre Angeliku a Maxa": adds a note under the viewer's name. */
-export async function addBoardNoteAction(text: string, actionId: string): Promise<ActionResult> {
+/** "Dôležité info pre Angeliku a Maxa": adds a note for one board day under the viewer's name. */
+export async function addBoardNoteAction(text: string, date: string, actionId: string): Promise<ActionResult> {
   return withViewer(async (viewer) => {
-    if (supabaseConfigured()) return rpc('add_board_note', { p_text: text, p_action_id: actionId });
-    return memoryAddBoardNote(memoryRepo(), viewer, text, actionId);
+    if (supabaseConfigured()) return rpc('add_board_note', { p_text: text, p_date: date, p_action_id: actionId });
+    return memoryAddBoardNote(memoryRepo(), viewer, text, date, actionId);
   });
 }
 

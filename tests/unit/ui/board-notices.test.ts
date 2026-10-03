@@ -64,11 +64,12 @@ describe('boardNotices', () => {
 });
 
 describe('noteNotices', () => {
-  const n = (id: string, author_name: string) => ({ id, text: 'x', author: null, author_name, created_at: '2026-10-03T10:00:00Z' });
-  it('announces notes by others that are new since the last read, never own ones', () => {
-    expect(noteNotices([n('1', 'Eva')], [n('2', 'Max'), n('1', 'Eva')], 'Julius')).toEqual(['📌 Nové dôležité info od Max']);
-    expect(noteNotices([], [n('1', 'Julius')], 'Julius')).toEqual([]);
-    expect(noteNotices([n('1', 'Eva')], [n('1', 'Eva')], 'Julius')).toEqual([]);
-    expect(noteNotices([n('1', 'Eva')], [], 'Julius')).toEqual([]);
+  const n = (id: string, author_name: string) => ({ id, text: 'x', date: '2026-10-04', author: null, author_name, created_at: '2026-10-03T10:00:00Z' });
+  const dayOf = (d: string) => (d === '2026-10-04' ? 'Zajtra 4.10.' : d);
+  it('announces notes by others that are new since the last read, with their day, never own ones', () => {
+    expect(noteNotices([n('1', 'Eva')], [n('2', 'Max'), n('1', 'Eva')], 'Julius', dayOf)).toEqual(['📌 Nové dôležité info od Max · Zajtra 4.10.']);
+    expect(noteNotices([], [n('1', 'Julius')], 'Julius', dayOf)).toEqual([]);
+    expect(noteNotices([n('1', 'Eva')], [n('1', 'Eva')], 'Julius', dayOf)).toEqual([]);
+    expect(noteNotices([n('1', 'Eva')], [], 'Julius', dayOf)).toEqual([]);
   });
 });
