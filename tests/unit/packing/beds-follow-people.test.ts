@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { bedsToMake, computePackage, duvetsFor, madeBeds, planBeds } from '@/core/packing';
-import { bedSummary, duvetText } from '@/core/i18n/sk';
+import { bedSummary, duvetText, warningLine } from '@/core/i18n/sk';
 import { D0, count, laundry, listing, pkg, reservation } from './helpers';
 
 const sameDay = (guests: number) => reservation({ guestyId: 'R2', checkInDate: D0, guests });
@@ -126,6 +126,21 @@ describe('beds follow the people', () => {
     expect(fine.warnings).not.toContain('duvets_short');
     const couple = computePackage(pkg({ listing: listing({ beds: { KING_BED: 1, SOFA_BED: 1 }, accommodates: 4, laundry: laundry('Paplón veľký: 1') }), next: sameDay(2) }));
     expect(couple.warnings).not.toContain('duvets_short');
+  });
+
+  it('flags a Guesty duvet set larger than the flat capacity (Mestská: 4 large, capacity 2) with the numbers; never for private linen', () => {
+    const mestska = computePackage(pkg({ listing: listing({ beds: { KING_BED: 1, SOFA_BED: 1 }, accommodates: 2, laundry: laundry('Paplón veľký: 4\nPaplón malý: 0') }), next: sameDay(2) }));
+    expect(mestska.warnings).toContain('duvets_exceed_capacity');
+    expect(mestska.duvetInventory).toEqual({ large: 4, small: 0, capacity: 2 });
+    expect(warningLine('duvets_exceed_capacity', mestska)).toBe('❗ Treba ujasniť: v Guesty je 4 veľké paplóny, ale kapacita bytu je 2 osoby');
+    expect(count(mestska, 'paplonV')).toBe(2);
+    const tomasikova = computePackage(pkg({ listing: listing({ beds: { KING_BED: 1, SOFA_BED: 1, SINGLE_BED: 2 }, accommodates: 5, laundry: laundry('Paplón malý: 6') }), next: sameDay(5) }));
+    expect(warningLine('duvets_exceed_capacity', tomasikova)).toBe('❗ Treba ujasniť: v Guesty je 6 malých paplónov, ale kapacita bytu je 5 osôb');
+    const fine = computePackage(pkg({ listing: listing({ beds: { KING_BED: 3 }, accommodates: 6, laundry: laundry('Paplón veľký: 3') }), next: sameDay(2) }));
+    expect(fine.warnings).not.toContain('duvets_exceed_capacity');
+    expect(fine.duvetInventory).toBeUndefined();
+    const priv = computePackage(pkg({ listing: listing({ beds: { KING_BED: 1 }, accommodates: 2, laundry: laundry('Paplón malý: 4\nPrádlo: súkromné') }), next: sameDay(2) }));
+    expect(priv.warnings).not.toContain('duvets_exceed_capacity');
   });
 
   it('settings-table duvets follow the made beds; the small-duvet conversion still applies per made bed', () => {

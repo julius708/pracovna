@@ -37,6 +37,14 @@ export function computePackage(input: PackageInput): PackingResult {
   if (next?.multiStay || input.outgoing.multiStay) warnings.push('multi_stay');
   if (input.doubleCheckout) warnings.push('double_checkout');
 
+  // more duvets in Guesty than the flat sleeps (Mestská: 4 large for 2 guests): the entry needs clarifying;
+  // not for private linen, where the duvets are not packed at all
+  const inv = laundry?.duvetCounts;
+  const capacity = listing.accommodates ?? 0;
+  const duvetInventory =
+    inv && !laundry?.private && capacity > 0 && inv.large + inv.small > capacity ? { large: inv.large, small: inv.small, capacity } : undefined;
+  if (duvetInventory) warnings.push('duvets_exceed_capacity');
+
   const checklist = uniqueStrings([...(settings.checklist ?? []), ...(laundry?.extras ?? [])]);
   const guestyNote = laundry?.notes.length ? laundry.notes.join(' · ') : null;
 
@@ -62,6 +70,7 @@ export function computePackage(input: PackageInput): PackingResult {
     capsules: capsules.rows,
     duvetSource: linen.duvets.source,
     duvetType: linen.duvets.type,
+    ...(duvetInventory ? { duvetInventory } : {}),
     private: !!laundry?.private,
     coffee: laundry?.coffee ?? null,
     guestyNote,

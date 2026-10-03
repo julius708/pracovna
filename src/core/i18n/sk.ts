@@ -169,6 +169,7 @@ export const warningText: Record<WarningCode, string> = {
   bunk: 'Poschodová posteľ – over balenie',
   no_duvet_info: 'Typ paplónov nezadaný – over na byte',
   duvets_short: 'Paplónov v Guesty je menej ako postelí – over na byte',
+  duvets_exceed_capacity: 'Paplónov v Guesty je viac ako kapacita bytu – treba ujasniť',
   beds_insufficient: 'Postele v Guesty stačia len pre N osôb – over na byte',
   guests_missing: 'Počet hostí nezadaný v Guesty – balíme na max. kapacitu',
   capacity_missing: 'Kapacita nezadaná v Guesty – over na byte',
@@ -183,6 +184,11 @@ export const warningText: Record<WarningCode, string> = {
 
 /** Warning text for a card; fills in the numbers where the sentence needs them. */
 export function warningLine(code: WarningCode, r: PackingResult): string {
+  if (code === 'duvets_exceed_capacity' && r.duvetInventory) {
+    const { large, small, capacity } = r.duvetInventory;
+    const kinds = [large ? `${large} ${large === 1 ? 'veľký' : large <= 4 ? 'veľké' : 'veľkých'}` : '', small ? `${small} ${small === 1 ? 'malý' : small <= 4 ? 'malé' : 'malých'}` : ''].filter(Boolean).join(' + ');
+    return `❗ Treba ujasniť: v Guesty je ${kinds} ${large + small === 1 ? 'paplón' : large + small <= 4 ? 'paplóny' : 'paplónov'}, ale kapacita bytu je ${capacity} ${pluralOsob(capacity)}`;
+  }
   if (code === 'beds_insufficient') {
     const n = r.beds.capacityAll;
     return `Postele v Guesty stačia len pre ${n} ${pluralOsob(n)} – over na byte`;

@@ -132,6 +132,7 @@ export type WarningCode =
   | 'bunk'
   | 'no_duvet_info'
   | 'duvets_short'
+  | 'duvets_exceed_capacity'
   | 'beds_insufficient'
   | 'guests_missing'
   | 'capacity_missing'
@@ -209,6 +210,12 @@ export interface PackingResult {
   capsules: CapsuleLine[];
   duvetSource: DuvetSource;
   duvetType: 'male' | 'velke' | 'exact';
+  /**
+   * Present only when the Guesty duvet set is larger than the flat's capacity
+   * (warning duvets_exceed_capacity): the numbers for the card text. Optional so
+   * that results of every other flat keep their shape and hash.
+   */
+  duvetInventory?: { large: number; small: number; capacity: number };
   private: boolean;
   coffee: string | null;
   guestyNote: string | null;
