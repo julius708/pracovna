@@ -221,4 +221,5 @@ export interface BoardNoteRow {
   removed_by: string | null;
   removed_by_name: string | null;
   client_action_id: string | null;
+  edited_at: Instant | null;
 }

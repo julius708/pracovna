@@ -22,6 +22,7 @@ const MIG2 = readFileSync(new URL('../../supabase/migrations/0002_sync_helpers.s
 const MIG6 = readFileSync(new URL('../../supabase/migrations/0006_access_rules.sql', import.meta.url), 'utf8');
 const MIG7 = readFileSync(new URL('../../supabase/migrations/0007_board_notes.sql', import.meta.url), 'utf8');
 const MIG8 = readFileSync(new URL('../../supabase/migrations/0008_board_notes_per_day.sql', import.meta.url), 'utf8');
+const MIG9 = readFileSync(new URL('../../supabase/migrations/0009_board_notes_edit.sql', import.meta.url), 'utf8');
 
 const STUBS = `
 create role authenticated nologin;
@@ -70,8 +71,10 @@ describe('migrations', () => {
       expect(e7, `0007_board_notes.sql failed: ${e7?.code} ${e7?.message} (line ${lineOf(MIG7, e7?.position)})`).toBeNull();
       const e8 = await pgError(fresh.exec(MIG8));
       expect(e8, `0008_board_notes_per_day.sql failed: ${e8?.code} ${e8?.message} (line ${lineOf(MIG8, e8?.position)})`).toBeNull();
+      const e9 = await pgError(fresh.exec(MIG9));
+      expect(e9, `0009_board_notes_edit.sql failed: ${e9?.code} ${e9?.message} (line ${lineOf(MIG9, e9?.position)})`).toBeNull();
       const fns =(await fresh.query<Row>("select proname from pg_proc where pronamespace = 'public'::regnamespace order by 1")).rows.map((r) => r.proname);
-      expect(fns).toEqual(expect.arrayContaining(['today_ba', 'is_admin', 'is_active_user', 'handle_new_user', 'sync_upsert_package', 'sync_set_lifecycle', 'pack_package', 'unpack_package', 'set_note', 'toggle_check', 'save_settings', 'admin_set_profile', 'acquire_lock', 'run_retention', 'increment_not_found', 'add_board_note', 'remove_board_note']));
+      expect(fns).toEqual(expect.arrayContaining(['today_ba', 'is_admin', 'is_active_user', 'handle_new_user', 'sync_upsert_package', 'sync_set_lifecycle', 'pack_package', 'unpack_package', 'set_note', 'toggle_check', 'save_settings', 'admin_set_profile', 'acquire_lock', 'run_retention', 'increment_not_found', 'add_board_note', 'remove_board_note', 'edit_board_note']));
     } finally {
       await fresh.close();
     }
@@ -141,6 +144,7 @@ beforeAll(async () => {
   await db.exec(MIG6);
   await db.exec(MIG7);
   await db.exec(MIG8);
+  await db.exec(MIG9);
   await db.exec('set check_function_bodies = on');
   todayBa = (await one('select public.today_ba()::text as d')).d as string;
 });
@@ -767,6 +771,7 @@ describe('notify_board', () => {
       await rt.exec(MIG2);
       await rt.exec(MIG7);
       await rt.exec(MIG8);
+      await rt.exec(MIG9);
       await rt.exec(`
         create schema realtime;
         create table realtime.messages (id bigserial primary key, topic text, event text, payload jsonb, private boolean);
@@ -861,5 +866,33 @@ describe('board_notes: add_board_note / remove_board_note', () => {
     } finally {
       await db.exec('reset role');
     }
+  });
+});
+
+// ------------------------------------------------------------------ 12. notice board edits (0009)
+describe('board_notes: edit_board_note', () => {
+  it('the author edits their own note; nobody else does, not even an admin; empty, unchanged and removed are handled', async () => {
+    const eva = await newUser('Eva');
+    const max = await newUser('Max');
+    const admin = await newUser('Julius', { role: 'admin' });
+    await actAs(eva);
+    const { r } = await one('select public.add_board_note($1, $2::date, $3) as r', ['Pôvodný text', todayBa, randomUUID()]);
+    expect((await one('select public.edit_board_note($1, $2, $3) as r', [r.id, 'Pôvodný text', randomUUID()])).r).toEqual({ ok: true, unchanged: true });
+    expect((await one('select public.edit_board_note($1, $2, $3) as r', [r.id, '   ', randomUUID()])).r).toEqual({ ok: false, status: 'empty' });
+    expect((await one('select public.edit_board_note($1, $2, $3) as r', [r.id, '  Opravený text  ', randomUUID()])).r).toEqual({ ok: true });
+    const row = await one('select text, edited_at, author_name from public.board_notes where id = $1', [r.id]);
+    expect(row).toMatchObject({ text: 'Opravený text', author_name: 'Eva' });
+    expect(row.edited_at).not.toBeNull();
+    await actAs(max);
+    expect((await one('select public.edit_board_note($1, $2, $3) as r', [r.id, 'Cudzí zásah', randomUUID()])).r).toEqual({ ok: false, status: 'not_author' });
+    await actAs(admin);
+    expect((await one('select public.edit_board_note($1, $2, $3) as r', [r.id, 'Admin zásah', randomUUID()])).r).toEqual({ ok: false, status: 'not_author' });
+    await actAs(null);
+    expect((await pgError(q('select public.edit_board_note($1, $2, $3)', [r.id, 'x', randomUUID()])))?.code).toBe('42501');
+    await actAs(eva);
+    expect((await pgError(q('select public.edit_board_note($1, $2, $3)', [randomUUID(), 'x', randomUUID()])))?.code).toBe('P0002');
+    await q('select public.remove_board_note($1, $2)', [r.id, randomUUID()]);
+    expect((await one('select public.edit_board_note($1, $2, $3) as r', [r.id, 'Po odstránení', randomUUID()])).r).toEqual({ ok: false, status: 'removed' });
+    expect((await one('select text from public.board_notes where id = $1', [r.id])).text).toBe('Opravený text');
   });
 });

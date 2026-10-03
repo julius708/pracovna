@@ -152,7 +152,7 @@ The app also raises its own alerts (sync failed twice in a row, Guesty token quo
 
 ## Notice board
 
-"Dôležité info pre Angeliku a Maxa" sits above the apartment list, one box per day: a note belongs to the day whose tab was open when it was written and shows only there. Any active user can add a note (up to 500 characters); the author's name and time are shown with it, and every device gets a "Nové dôležité info od … · Zajtra 4.10." notice. A note is removed by its author or an admin; removed notes stay in `board_notes` for the record (admins can still read them). Writes go through the `add_board_note` / `remove_board_note` RPCs (migrations 0007 and 0008).
+"Dôležité info pre Angeliku a Maxa" sits above the apartment list, one box per day: a note belongs to the day whose tab was open when it was written and shows only there. Any active user can add a note (up to 500 characters); the author's name and time are shown with it, and every device gets a "Nové dôležité info od … · Zajtra 4.10." notice. The author can edit their own note (marked "upravené"); a note is removed by its author or an admin; removed notes stay in `board_notes` for the record (admins can still read them). Writes go through the `add_board_note` / `edit_board_note` / `remove_board_note` RPCs (migrations 0007 to 0009).
 
 ## Packing rules
 

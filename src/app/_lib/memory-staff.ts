@@ -114,9 +114,24 @@ export async function memoryAddBoardNote(repo: MemoryRepo, viewer: Viewer, text:
     removed_by: null,
     removed_by_name: null,
     client_action_id: actionId,
+    edited_at: null,
   };
   repo.boardNotes.push(row);
   return { ok: true, id: row.id };
+}
+
+/** edit_board_note: the author rewrites their own note; admins do not rewrite other people's words. */
+export async function memoryEditBoardNote(repo: MemoryRepo, viewer: Viewer, id: string, text: string): Promise<StaffResult> {
+  const n = repo.boardNotes.find((x) => x.id === id);
+  if (!n) throw new Error('note not found');
+  if (n.removed_at) return { ok: false, status: 'removed' };
+  if (n.author !== viewer.id) return { ok: false, status: 'not_author' };
+  const clean = text.trim().slice(0, 500);
+  if (!clean) return { ok: false, status: 'empty' };
+  if (clean === n.text) return { ok: true, replayed: true };
+  n.text = clean;
+  n.edited_at = repo.now().toISOString();
+  return { ok: true };
 }
 
 /** remove_board_note: by the author or an admin; removing twice is a no-op. */

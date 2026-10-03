@@ -240,6 +240,10 @@ td input.lbl{width:190px;text-align:left}
 .notice-meta{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;font-size:13px;color:var(--muted)}
 .notice-remove{background:none;border:0;color:var(--muted);text-decoration:underline;font:inherit;font-size:13px;cursor:pointer;min-height:32px;padding:0 4px}
 .notice-remove:disabled{opacity:.5;cursor:default}
+.notice-actions{display:flex;gap:10px}
+.notice-edit textarea{width:100%;box-sizing:border-box;min-height:64px;resize:vertical;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font:inherit;font-size:16px;background:var(--surface);color:var(--ink)}
+.notice-edit-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+.notice-edit-actions .btn{flex:0 0 auto;min-height:40px;font-size:15px;padding:0 14px}
 .notice-form{display:flex;gap:8px;align-items:flex-end}
 .notice-form .btn{flex:0 0 auto;min-width:96px;min-height:44px;font-size:15px}
 .notice-form textarea{flex:1 1 auto;min-width:0;min-height:44px;resize:vertical;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font:inherit;font-size:16px;background:var(--surface);color:var(--ink)}

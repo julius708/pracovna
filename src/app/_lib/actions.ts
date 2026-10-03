@@ -10,7 +10,7 @@ import { env } from '@/env';
 import { createLogger } from '@/guesty/log';
 import { createRepoFromEnv } from '@/sync/context';
 import { loadBoard, type BoardData } from './board';
-import { memoryAddBoardNote, memoryCheck, memoryNote, memoryPack, memoryRemoveBoardNote, memoryUnpack, type StaffResult } from './memory-staff';
+import { memoryAddBoardNote, memoryCheck, memoryEditBoardNote, memoryNote, memoryPack, memoryRemoveBoardNote, memoryUnpack, type StaffResult } from './memory-staff';
 import { DEV_ROLE_COOKIE, devLoginAllowed, getViewer, supabaseConfigured } from './viewer';
 
 export interface ActionResult extends StaffResult {
@@ -73,6 +73,14 @@ export async function addBoardNoteAction(text: string, date: string, actionId: s
   return withViewer(async (viewer) => {
     if (supabaseConfigured()) return rpc('add_board_note', { p_text: text, p_date: date, p_action_id: actionId });
     return memoryAddBoardNote(memoryRepo(), viewer, text, date, actionId);
+  });
+}
+
+/** Rewrites a notice-board note (author only). */
+export async function editBoardNoteAction(id: string, text: string, actionId: string): Promise<ActionResult> {
+  return withViewer(async (viewer) => {
+    if (supabaseConfigured()) return rpc('edit_board_note', { p_id: id, p_text: text, p_action_id: actionId });
+    return memoryEditBoardNote(memoryRepo(), viewer, id, text);
   });
 }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { addBoardNoteAction, checkAction, noteAction, packAction, removeBoardNoteAction, unpackAction, type ActionResult } from '@/app/_lib/actions';
+import { addBoardNoteAction, checkAction, editBoardNoteAction, noteAction, packAction, removeBoardNoteAction, unpackAction, type ActionResult } from '@/app/_lib/actions';
 import type { BoardData, BoardNote, BoardPackage } from '@/app/_lib/board';
 import type { Viewer } from '@/app/_lib/viewer';
 import { formatDM } from '@/core/packing';
@@ -234,7 +234,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
   };
 
   const addNote = async (text: string) => {
-    const temp: BoardNote = { id: `temp-${newActionId()}`, text, date, author: viewer.id, author_name: viewer.name, created_at: new Date().toISOString() };
+    const temp: BoardNote = { id: `temp-${newActionId()}`, text, date, author: viewer.id, author_name: viewer.name, created_at: new Date().toISOString(), edited_at: null };
     setNoteBusy(true);
     setData((d) => ({ ...d, notes: [temp, ...d.notes] }));
     let res: ActionResult;
@@ -250,6 +250,25 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
     } else {
       setData((d) => ({ ...d, notes: d.notes.filter((n) => n.id !== temp.id) }));
       showToast(res.error === 'unauthorized' ? sk.toasts.noPermission : sk.noticeBoard.notSaved);
+    }
+  };
+
+  const editNote = async (note: BoardNote, text: string) => {
+    const before = data.notes;
+    setNoteBusy(true);
+    setData((d) => ({ ...d, notes: d.notes.map((n) => (n.id === note.id ? { ...n, text, edited_at: new Date().toISOString() } : n)) }));
+    let res: ActionResult;
+    try {
+      res = await track(() => editBoardNoteAction(note.id, text, newActionId()));
+    } catch {
+      res = { ok: false, error: 'failed' };
+    }
+    setNoteBusy(false);
+    if (res.ok) {
+      void refresh();
+    } else {
+      setData((d) => ({ ...d, notes: before }));
+      showToast(res.status === 'not_author' ? sk.noticeBoard.notAuthorEdit : res.error === 'unauthorized' ? sk.toasts.noPermission : sk.noticeBoard.notEdited);
     }
   };
 
@@ -320,6 +339,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
         now={now}
         busy={noteBusy}
         onAdd={(t) => void addNote(t)}
+        onEdit={(n, t) => void editNote(n, t)}
         onRemove={(n) => void removeNote(n)}
       />
 

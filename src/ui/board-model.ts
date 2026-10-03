@@ -204,6 +204,13 @@ export function boardNotices(prev: BoardPackage[], next: BoardPackage[], myName:
 
 /** Notices for notice-board notes that appeared since the last read and were written by someone else, with their day. */
 export function noteNotices(prev: BoardNote[], next: BoardNote[], myName: string, dayLabelOf: (date: BoardNote['date']) => string): string[] {
-  const before = new Set(prev.map((n) => n.id));
-  return next.filter((n) => !before.has(n.id) && n.author_name !== myName).map((n) => sk.notices.newNote(n.author_name, dayLabelOf(n.date)));
+  const before = new Map(prev.map((n) => [n.id, n]));
+  const out: string[] = [];
+  for (const n of next) {
+    if (n.author_name === myName) continue;
+    const was = before.get(n.id);
+    if (!was) out.push(sk.notices.newNote(n.author_name, dayLabelOf(n.date)));
+    else if (was.text !== n.text) out.push(sk.notices.editedNote(n.author_name, dayLabelOf(n.date)));
+  }
+  return out;
 }

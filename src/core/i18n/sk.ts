@@ -132,14 +132,21 @@ export const sk = {
     empty: 'Pre tento deň zatiaľ nič. Sem napíš, čo majú Angelika a Max v tento deň vedieť – uvidia to všetci.',
     placeholder: 'Napíš dôležitú informáciu na tento deň…',
     add: 'Pridať',
+    edit: 'Upraviť',
+    save: 'Uložiť',
+    cancel: 'Zrušiť',
+    edited: 'upravené',
     remove: 'Odstrániť',
     by: (name: string, time: string) => `${name} · ${time}`,
     notSaved: 'Info sa neuložilo. Skús znova.',
     notRemoved: 'Info sa nepodarilo odstrániť.',
     notAuthor: 'Odstrániť môže len autor alebo admin.',
+    notEdited: 'Úpravu sa nepodarilo uložiť.',
+    notAuthorEdit: 'Upraviť môže len autor.',
   },
   notices: {
     newNote: (who: string, day: string) => `📌 Nové dôležité info od ${who} · ${day}`,
+    editedNote: (who: string, day: string) => `📌 Upravené dôležité info od ${who} · ${day}`,
     newPackage: (name: string, day: string) => `Nový balíček z Guesty: ${name} (${day})`,
     packedBy: (who: string, name: string) => `${who} zabalil(a) ${name}`,
     unpacked: (name: string) => `${name} je späť na balenie`,
@@ -169,7 +176,8 @@ export const warningText: Record<WarningCode, string> = {
   bunk: 'Poschodová posteľ – over balenie',
   no_duvet_info: 'Typ paplónov nezadaný – over na byte',
   duvets_short: 'Paplónov v Guesty je menej ako postelí – over na byte',
-  duvets_exceed_capacity: 'Paplónov v Guesty je viac ako kapacita bytu – treba ujasniť',
+  duvets_exceed_capacity: '❓ Otázka pre Angeliku: v Guesty je viac paplónov, ako je kapacita bytu – koľko baliť?',
+  duvets_mixed_couple: '❓ Otázka pre Angeliku: pár v tomto byte – stačí 1 veľký paplón, alebo 1 veľký + 1 malý? Zatiaľ balíme oboje.',
   beds_insufficient: 'Postele v Guesty stačia len pre N osôb – over na byte',
   guests_missing: 'Počet hostí nezadaný v Guesty – balíme na max. kapacitu',
   capacity_missing: 'Kapacita nezadaná v Guesty – over na byte',
@@ -187,7 +195,7 @@ export function warningLine(code: WarningCode, r: PackingResult): string {
   if (code === 'duvets_exceed_capacity' && r.duvetInventory) {
     const { large, small, capacity } = r.duvetInventory;
     const kinds = [large ? `${large} ${large === 1 ? 'veľký' : large <= 4 ? 'veľké' : 'veľkých'}` : '', small ? `${small} ${small === 1 ? 'malý' : small <= 4 ? 'malé' : 'malých'}` : ''].filter(Boolean).join(' + ');
-    return `❗ Treba ujasniť: v Guesty je ${kinds} ${large + small === 1 ? 'paplón' : large + small <= 4 ? 'paplóny' : 'paplónov'}, ale kapacita bytu je ${capacity} ${pluralOsob(capacity)}`;
+    return `❓ Otázka pre Angeliku: v Guesty je ${kinds} ${large + small === 1 ? 'paplón' : large + small <= 4 ? 'paplóny' : 'paplónov'}, ale kapacita bytu je ${capacity} ${pluralOsob(capacity)} – koľko baliť?`;
   }
   if (code === 'beds_insufficient') {
     const n = r.beds.capacityAll;

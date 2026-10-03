@@ -40,9 +40,11 @@ export interface BoardNote {
   author: string | null;
   author_name: string;
   created_at: string;
+  /** Set when the author changed the text. */
+  edited_at: string | null;
 }
 
-export const NOTE_COLUMNS = 'id, text, date, author, author_name, created_at';
+export const NOTE_COLUMNS = 'id, text, date, author, author_name, created_at, edited_at';
 
 export const BOARD_COLUMNS =
   'id, listing_id, listing_name, date, status, hidden, cancel_reason, same_day, target_people, incoming_reservation_id, computed_items, computed_hash, warnings, note, note_by_name, note_at, checklist, packed_by_name, packed_at, packed_hash';
@@ -130,7 +132,7 @@ export async function loadBoard(viewer: Viewer): Promise<BoardData> {
     notes: ((repo as MemoryRepo).boardNotes ?? [])
       .filter((n) => !n.removed_at && (dates as readonly string[]).includes(n.date))
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
-      .map((n) => ({ id: n.id, text: n.text, date: n.date, author: n.author, author_name: n.author_name, created_at: n.created_at })),
+      .map((n) => ({ id: n.id, text: n.text, date: n.date, author: n.author, author_name: n.author_name, created_at: n.created_at, edited_at: n.edited_at })),
     cleaners,
     status: { lastOkSyncAt: lastOk, consecutiveFailures: failures ?? 0 },
     loadedAt,

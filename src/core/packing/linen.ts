@@ -99,6 +99,9 @@ export function computeLinen(args: {
     counts.paplonM = d.small;
     // the Guesty set is smaller than the beds that get linen: a bed would go without a duvet
     if (d.large + d.small < plan.usedGroups.length) warnings.push('duvets_short');
+    // the large duvet(s) alone would cover everyone (a couple on the king), yet the one-per-guest rule adds a
+    // small one from the flat's mixed set: the owner cannot say which is right, so the card asks Angelika
+    if (!laundry.private && d.small > 0 && people <= 2 * d.large) warnings.push('duvets_mixed_couple');
     overridden.add('paplonV');
     overridden.add('paplonM');
   }
