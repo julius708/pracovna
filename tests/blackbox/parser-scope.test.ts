@@ -347,6 +347,9 @@ describe('textSaysOwnerCleans / ParsedLaundry.ownerCleans', () => {
       'poznamka: byt je mimo pracovne',
       'Nezaradit do pracovne',
       'MAJITELIA SI UPRATUJU SAMI',
+      // Šustekova, Sky (owner 2026-10-03)
+      'NEPATRÍ DO NAŠEJ PRÁČOVNE.\nKapsule: Tchibo Cafissimo',
+      'Byt nepatrí do práčovne',
     ];
     for (const s of sentences) {
       expect(textSaysOwnerCleans(s), s).toBe(true);

@@ -39,6 +39,9 @@ export const OWNER_CLEANS_PHRASES: readonly string[] = [
   'mimo pracovne',
   'nie do pracovne',
   'pracovna: nie',
+  // Šustekova, Sky (owner's instruction 2026-10-03): "NEPATRÍ DO NAŠEJ PRÁČOVNE."
+  'nepatri do nasej pracovne',
+  'nepatri do pracovne',
 ];
 
 /** Guesty tag (normalised) that marks owner-cleaned listings. */
