@@ -192,6 +192,7 @@ export const warningText: Record<WarningCode, string> = {
   capsules_multi: 'viac druhov kapsúl – over počet',
   multi_stay: 'Rezervácia s viacerými bytmi – over',
   double_checkout: '2 check-outy v ten istý deň',
+  sheet_size_check: '❓ Veľkosť plachty preveriť s Angelikou (jednolôžko / prístelok – balíme veľkú)',
   separate_beds: 'ℹ️ Interné pravidlo: každý hosť má svoju posteľ, pripravujeme všetky postele',
 };
 

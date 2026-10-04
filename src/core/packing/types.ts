@@ -144,7 +144,9 @@ export type WarningCode =
   | 'multi_stay'
   | 'double_checkout'
   /** Info, not a problem: more beds are made than the guests need if they pair up (2 guests, 2 beds). */
-  | 'separate_beds';
+  | 'separate_beds'
+  /** A single bed or fold-out is made: the sheet size is to be checked with Angelika (small sheets are never packed automatically). */
+  | 'sheet_size_check';
 
 export interface GapInfo {
   nights: number;

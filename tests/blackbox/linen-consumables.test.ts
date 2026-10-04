@@ -107,9 +107,10 @@ describe('linen table per bed group (spec §4, proposal Q4)', () => {
     );
     expect(count(r, 'paplonM')).toBe(2);
     expect(count(r, 'vankus')).toBe(2);
-    expect(count(r, 'plachtaM')).toBe(2);
+    expect(count(r, 'plachtaM')).toBe(0); // small sheets are never packed automatically
     expect(count(r, 'paplonV')).toBe(0);
-    expect(count(r, 'plachta')).toBe(0);
+    expect(count(r, 'plachta')).toBe(2);
+    expect(r.warnings).toContain('sheet_size_check');
   });
 
   it('beds follow people (owner rule 2026-10-03, replacing Q4): 1 guest in a 2-king flat gets one made bed; towels follow people', () => {
@@ -141,15 +142,15 @@ describe('linen table per bed group (spec §4, proposal Q4)', () => {
 /* ============================================================== SMALL DUVETS */
 
 describe('small-duvet flats (spec §4 table row 2)', () => {
-  it('double bed in a small-duvet flat: 2 Paplón malý instead of 1 Paplón veľký; 2 pillows and 2 small sheets go with them', () => {
+  it('double bed in a small-duvet flat: 2 Paplón malý instead of 1 Paplón veľký; 2 pillows go with them, the sheet with the bed', () => {
     const r = computePackage(pkg({ listing: listing({ laundry: pl({ duvetType: 'male' }) }), next: sameDay(2) }));
     expect(r.duvetSource).toBe('guesty_type');
     expect(r.duvetType).toBe('male');
     expect(count(r, 'paplonM')).toBe(2);
     expect(count(r, 'paplonV')).toBe(0);
     expect(count(r, 'vankus')).toBe(2);
-    expect(count(r, 'plachta')).toBe(0);
-    expect(count(r, 'plachtaM')).toBe(2);
+    expect(count(r, 'plachta')).toBe(1); // the sheet goes with the bed
+    expect(count(r, 'plachtaM')).toBe(0);
     expect(r.warnings).not.toContain('no_duvet_info');
   });
 
@@ -169,8 +170,8 @@ describe('small-duvet flats (spec §4 table row 2)', () => {
     );
     expect(count(r, 'paplonM')).toBe(3);
     expect(count(r, 'paplonV')).toBe(0);
-    expect(count(r, 'plachta')).toBe(0);
-    expect(count(r, 'plachtaM')).toBe(3); // one small sheet per small duvet
+    expect(count(r, 'plachta')).toBe(2); // sheets by bed: the queen and the single, both large
+    expect(count(r, 'plachtaM')).toBe(0);
   });
 
   it('"Paplóny: veľké" is explicit: large duvets, no "Typ paplónov nezadaný" warning', () => {
@@ -256,7 +257,7 @@ describe('exact duvet counts and precedence (spec §3 table, proposal §6 "Duvet
     expect(count(r, 'paplonV')).toBe(1);
     expect(count(r, 'paplonM')).toBe(0);
     expect(count(r, 'vankus')).toBe(2);
-    expect(count(r, 'plachta')).toBe(1); // sheets follow the duvets as well
+    expect(count(r, 'plachta')).toBe(2); // sheets by bed: king + sofa
     expect(r.warnings).toContain('duvets_short');
   });
 
@@ -693,14 +694,14 @@ describe('custom Settings flow into the result (spec §5 Settings, §4 "editable
     expect(row(r, 'vankus')?.label).toBe('Vankúš');
   });
 
-  it('changed per-bed counts: 4 pillows per double, 2 small sheets per single', () => {
+  it('changed per-bed counts: 4 pillows per double, 2 sheets per single (small sheets become large ones)', () => {
     const settings = mergeSettings({ beds: { dvoj: { vankus: 4 }, jedno: { plachtaM: 2 }, gauc: {} } as PackingSettings['beds'] });
     const r = computePackage(
       pkg({ settings, listing: listing({ beds: { KING_BED: 1, SINGLE_BED: 1 }, accommodates: 3, laundry: pl({ duvetType: 'velke' }) }), next: sameDay(3) }),
     );
     expect(count(r, 'vankus')).toBe(4 + 1);
-    expect(count(r, 'plachtaM')).toBe(2);
-    expect(count(r, 'plachta')).toBe(1);
+    expect(count(r, 'plachtaM')).toBe(0);
+    expect(count(r, 'plachta')).toBe(1 + 2);
   });
 
   it('changed per-guest and per-bathroom counts', () => {

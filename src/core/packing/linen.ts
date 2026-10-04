@@ -26,6 +26,9 @@ export function decideDuvets(laundry: ParsedLaundry | null, setting: 'male' | 'v
 
 const BED_ORDER: Record<BedGroup, number> = { dvoj: 0, gauc: 1, jedno: 2 };
 
+/** Table keys that stay per made bed (the duvets decide the rest): the duvets themselves and the sheets. */
+const PER_BED_KEYS: ReadonlySet<string> = new Set(['paplonV', 'paplonM', 'plachta', 'plachtaM']);
+
 /**
  * Duvets per made bed from the Guesty counts, which describe the flat's full
  * set. Beds are made complete even for one guest (owner's rules 2026-10-03/04):
@@ -72,22 +75,22 @@ export function duvetsForBeds(full: { large: number; small: number }, plan: BedP
 }
 
 /**
- * Bed linen per duvet, read off the linen table: what a double bed gets per its
- * large duvet (2 pillows, 1 sheet) and what a single bed gets per its small
- * duvet (1 pillow, 1 small sheet). Duvet rows themselves are left out. Falls
- * back to those defaults when a table row has no duvet.
+ * Linen that goes with the duvets, read off the linen table: what a double bed
+ * gets per its large duvet (2 pillows) and what a single bed gets per its small
+ * duvet (1 pillow). Duvets and sheets are left out: sheets go by the beds
+ * (owner, 2026-10-04). Falls back to the defaults when a table row has no duvet.
  */
 export function linenPerDuvet(settings: PackingSettings): { large: Counts; small: Counts } {
   const scale = (row: Counts | undefined, duvetKey: string, fallback: Counts): Counts => {
     const n = row?.[duvetKey];
     if (!row || !n) return fallback;
     const out: Counts = {};
-    for (const [k, v] of Object.entries(row)) if (k !== 'paplonV' && k !== 'paplonM') out[k] = (Number(v) || 0) / n;
+    for (const [k, v] of Object.entries(row)) if (!PER_BED_KEYS.has(k)) out[k] = (Number(v) || 0) / n;
     return out;
   };
   return {
-    large: scale(settings.beds.dvoj, 'paplonV', { vankus: 2, plachta: 1 }),
-    small: scale(settings.beds.jedno, 'paplonM', { vankus: 1, plachtaM: 1 }),
+    large: scale(settings.beds.dvoj, 'paplonV', { vankus: 2 }),
+    small: scale(settings.beds.jedno, 'paplonM', { vankus: 1 }),
   };
 }
 
@@ -121,8 +124,9 @@ export interface LinenResult {
  * - toilet paper max(2, people)
  * - Guesty duvet counts are the flat's full set, handed out per made bed (see
  *   duvetsForBeds): beds are made complete even for one guest;
- * - pillows and sheets always follow the duvets: 2 pillows + 1 sheet per large,
- *   1 pillow + 1 small sheet per small (so a small-duvet double bed gets 2 small sheets)
+ * - pillows always follow the duvets: 2 per large, 1 per small; sheets follow the
+ *   made beds, one large sheet each; small sheets are never packed automatically,
+ *   a made single bed adds the card question "veľkosť plachty preveriť s Angelikou"
  * - per-item overrides from Guesty replace the calculated numbers
  * - private linen: no linen rows at all, consumables are still packed
  */
@@ -150,8 +154,15 @@ export function computeLinen(args: {
       table.paplonM = (table.paplonM ?? 0) + 2 * table.paplonV;
       delete table.paplonV;
     }
+    // small sheets are never packed automatically (owner, 2026-10-04): a single bed or fold-out gets a large
+    // sheet and the card asks Angelika about the size
+    if (table.plachtaM) {
+      table.plachta = (table.plachta ?? 0) + table.plachtaM;
+      delete table.plachtaM;
+    }
     add(counts, table);
   }
+  if (plan.usedGroups.includes('jedno')) warnings.push('sheet_size_check');
   add(counts, settings.perGuest, people);
   add(counts, settings.perBathroom, bath.n);
   add(counts, settings.perApartment);
@@ -167,9 +178,9 @@ export function computeLinen(args: {
     overridden.add('paplonV');
     overridden.add('paplonM');
   }
-  // bed linen ALWAYS goes with the duvets, whatever decided them (owner's rule 2026-10-04): per large duvet
-  // 2 pillows and 1 sheet, per small duvet 1 pillow and 1 small sheet (the table's ratios). A small-duvet
-  // double bed therefore gets 2 small sheets, not one large.
+  // pillows ALWAYS go with the duvets, whatever decided them (owner's rule 2026-10-04): 2 per large duvet,
+  // 1 per small (the table's ratios). Sheets stay per made bed as Guesty lists the beds: a double bed or
+  // sofa one large sheet, a single bed one small sheet (owner, 2026-10-04, second correction).
   const per = linenPerDuvet(settings);
   for (const key of new Set([...Object.keys(per.large), ...Object.keys(per.small)])) {
     counts[key] = Math.round((counts.paplonV ?? 0) * (per.large[key] ?? 0) + (counts.paplonM ?? 0) * (per.small[key] ?? 0));

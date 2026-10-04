@@ -49,20 +49,22 @@ describe('test 5: the sofa bed is used only when needed', () => {
 });
 
 describe('bed types', () => {
-  it('single bed = 1 person with small linen', () => {
+  it('single bed = 1 person: small duvet, 1 pillow, a large sheet (small sheets are never packed; the card asks Angelika about the size)', () => {
     const r = computePackage(pkg({ listing: listing({ beds: { KING_BED: 1, SINGLE_BED: 2 }, accommodates: 4 }) }));
     expect(count(r, 'paplonV')).toBe(1);
     expect(count(r, 'paplonM')).toBe(2);
     expect(count(r, 'vankus')).toBe(4);
-    expect(count(r, 'plachta')).toBe(1);
-    expect(count(r, 'plachtaM')).toBe(2);
+    expect(count(r, 'plachta')).toBe(3);
+    expect(count(r, 'plachtaM')).toBe(0);
+    expect(r.warnings).toContain('sheet_size_check');
     expect(bedSummary(r)).toBe('1× king, 2× jednolôžko');
   });
 
   it('bunk bed = 2 single beds + warning', () => {
     const r = computePackage(pkg({ listing: listing({ beds: { KING_BED: 1, BUNK_BED: 1 }, accommodates: 4 }) }));
     expect(count(r, 'paplonM')).toBe(2);
-    expect(count(r, 'plachtaM')).toBe(2);
+    expect(count(r, 'plachtaM')).toBe(0);
+    expect(count(r, 'plachta')).toBe(3);
     expect(r.beds.bunk).toBe(true);
     expect(r.warnings).toContain('bunk');
     expect(bedSummary(r)).toBe('1× king, 2× poschodová (lôžko)');

@@ -541,7 +541,8 @@ describe('beds through computePackage', () => {
     expect(r.beds.bunk).toBe(true);
     expect(r.warnings).toContain('bunk');
     expect(count(r, 'paplonM')).toBe(2);
-    expect(count(r, 'plachtaM')).toBe(2);
+    expect(count(r, 'plachtaM')).toBe(0);
+    expect(count(r, 'plachta')).toBe(2);
     expect(count(r, 'vankus')).toBe(2);
     expect(count(r, 'paplonV')).toBe(0);
   });
@@ -551,7 +552,8 @@ describe('beds through computePackage', () => {
     expect(r.people).toBe(1);
     expect(r.beds.usedGroups).toEqual(['jedno']);
     expect(count(r, 'paplonM')).toBe(1);
-    expect(count(r, 'plachtaM')).toBe(1);
+    expect(count(r, 'plachtaM')).toBe(0);
+    expect(count(r, 'plachta')).toBe(1);
     expect(count(r, 'osuskaV')).toBe(1);
     const two = computePackage(pkg({ listing: listing({ beds: { BUNK_BED: 1 }, accommodates: 2 }), next: nextIn(0, 2) }));
     expect(two.beds.usedGroups).toEqual(['jedno', 'jedno']);

@@ -149,13 +149,13 @@ describe('§4 beds', () => {
 
 /* ------------------------------------------------------------------ */
 describe('§4 linen table', () => {
-  it('double bed and used sofa: 1 Paplón veľký, 2 Vankúš, 1 Plachta; single: 1 Paplón malý, 1 Vankúš, 1 Plachta malá', () => {
+  it('double bed and used sofa: 1 Paplón veľký, 2 Vankúš, 1 Plachta; single: 1 Paplón malý, 1 Vankúš, 1 Plachta (small sheets are never packed)', () => {
     const r = computePackage(pkg({ listing: listing({ beds: { DOUBLE_BED: 1, SINGLE_BED: 1, SOFA_BED: 1 }, accommodates: 5, laundry: parseLaundry('Paplóny: veľké') }), next: sameDay(5) }));
     expect(n(r, 'paplonV')).toBe(2);
     expect(n(r, 'paplonM')).toBe(1);
     expect(n(r, 'vankus')).toBe(5);
-    expect(n(r, 'plachta')).toBe(2);
-    expect(n(r, 'plachtaM')).toBe(1);
+    expect(n(r, 'plachta')).toBe(3);
+    expect(n(r, 'plachtaM')).toBe(0);
   });
 
   it('small duvets: 2 Paplón malý instead of 1 Paplón veľký per double/used sofa; single bed unchanged', () => {

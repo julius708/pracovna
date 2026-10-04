@@ -157,7 +157,7 @@ export function SettingsForm({ view, meId }: { view: SettingsView; meId: string 
       </div>
 
       <h3>Paplóny podľa bytu</h3>
-      <p>Veľké = 1 veľký paplón na manželskú posteľ / gauč. Malé = 2 malé. Jednolôžko má vždy 1 malý paplón. Ak je v Guesty zapísaný typ, platí Guesty. Ak je v Guesty zapísaný počet, je to plná sada bytu a rozdeľuje sa na postele: manželská posteľ dostane svoj veľký paplón (alebo 2 malé), jednolôžko 1 malý. Posteľ sa chystá vždy celá, aj pre 1 hosťa; len uteráky idú presne podľa počtu hostí. Vankúše a plachty idú vždy k paplónom: k veľkému 2 vankúše a 1 plachta, k malému 1 vankúš a 1 malá plachta.</p>
+      <p>Veľké = 1 veľký paplón na manželskú posteľ / gauč. Malé = 2 malé. Jednolôžko má vždy 1 malý paplón. Ak je v Guesty zapísaný typ, platí Guesty. Ak je v Guesty zapísaný počet, je to plná sada bytu a rozdeľuje sa na postele: manželská posteľ dostane svoj veľký paplón (alebo 2 malé), jednolôžko 1 malý. Posteľ sa chystá vždy celá, aj pre 1 hosťa; len uteráky idú presne podľa počtu hostí. Vankúše idú vždy k paplónom: k veľkému 2, k malému 1. Plachty idú podľa postelí z Guesty, vždy veľké: 1 na každú pripravenú posteľ. Malé plachty nebalíme automaticky; pri jednolôžku karta upozorní „veľkosť plachty preveriť s Angelikou“.</p>
       <div className="dvlist">
         {view.listings
           .filter((l) => l.inScope)
