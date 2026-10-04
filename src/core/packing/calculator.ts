@@ -40,7 +40,8 @@ export function computePackage(input: PackageInput): PackingResult {
 
   // info for Angelika (owner, 2026-10-04): guests may want separate beds, so every one of them gets a bed;
   // when they share, fewer beds would do - the card says so
-  if (people.people >= 2 && beds.plan.usedGroups.length > Math.ceil(people.people / 2)) warnings.push('separate_beds');
+  const made = beds.plan.usedGroups.length;
+  if (people.people >= 2 && made >= people.people && made > Math.ceil(people.people / 2)) warnings.push('separate_beds');
 
   // clearly more duvets in Guesty than the flat sleeps (Mestská: 4 large for 2 guests): the entry needs
   // clarifying. One spare duvet is normal (a fold-out bed, Tomášikova: 6 for 5), so only a surplus of two or
