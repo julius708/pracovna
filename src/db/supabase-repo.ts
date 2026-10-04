@@ -33,6 +33,21 @@ function dedupe<T>(rows: T[], key: (r: T) => string): T[] {
   return [...map.values()];
 }
 
+/** PostgREST answers at most 1000 rows per request (Supabase default): larger reads are paged. */
+const PAGE = 1000;
+
+type Pageable<T> = { range(from: number, to: number): PromiseLike<{ data: T[] | null; error: { message: string } | null }> };
+
+/** Reads every row of a query, page by page, until a page comes back short. `make` builds a fresh query each time. */
+async function selectAll<T>(make: () => Pageable<T>, what: string): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const rows = must(await make().range(from, from + PAGE - 1), what) as T[];
+    out.push(...rows);
+    if (rows.length < PAGE) return out;
+  }
+}
+
 function chunks<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
@@ -90,7 +105,7 @@ export class SupabaseRepo implements SyncRepo {
     for (const part of chunks(unique, 200)) must(await this.db.from('listings').upsert(part, { onConflict: 'guesty_id' }), 'listings.upsert');
   }
   async getListings() {
-    return must(await this.db.from('listings').select('*'), 'listings.select') as ListingRow[];
+    return selectAll<ListingRow>(() => this.db.from('listings').select('*'), 'listings.select');
   }
   async getListing(id: string) {
     return (must(await this.db.from('listings').select('*').eq('guesty_id', id).maybeSingle(), 'listings.get') as ListingRow | null) ?? null;
@@ -122,14 +137,14 @@ export class SupabaseRepo implements SyncRepo {
       if (f.status) q = q.eq('status', f.status);
       return q;
     };
-    if (!f.listingIds) return must(await base(), 'reservations.filter') as ReservationRow[];
+    if (!f.listingIds) return selectAll<ReservationRow>(base, 'reservations.filter');
     if (!f.listingIds.length) return [];
     // the ids travel in the request URL, twice; a week of check-outs names nearly every flat,
     // so query in chunks to stay far below the 8 KB request line (review of the week view)
     const out: ReservationRow[] = [];
     for (const part of chunks(f.listingIds, 50)) {
       const list = part.map((id) => `"${id.replace(/"/g, '')}"`).join(',');
-      out.push(...(must(await base().or(`listing_id.in.(${list}),arrival_listing_id.in.(${list})`), 'reservations.filter') as ReservationRow[]));
+      out.push(...(await selectAll<ReservationRow>(() => base().or(`listing_id.in.(${list}),arrival_listing_id.in.(${list})`), 'reservations.filter')));
     }
     return dedupe(out, (r) => r.guesty_id);
   }
@@ -151,14 +166,16 @@ export class SupabaseRepo implements SyncRepo {
   }
   async getCalendar(listingIds: string[], from: Ymd, to: Ymd) {
     if (!listingIds.length) return [];
-    return must(
-      await this.db.from('calendar_min_nights').select('*').in('listing_id', listingIds).gte('date', from).lte('date', to),
-      'calendar.select',
-    ) as CalendarRow[];
+    // a week of check-outs x 21 gap days is well over 1000 rows: paged, and the ids chunked to keep the URL short
+    const out: CalendarRow[] = [];
+    for (const part of chunks(listingIds, 50)) {
+      out.push(...(await selectAll<CalendarRow>(() => this.db.from('calendar_min_nights').select('*').in('listing_id', part).gte('date', from).lte('date', to), 'calendar.select')));
+    }
+    return out;
   }
 
   async getPackagesInWindow(dates: Ymd[]) {
-    return must(await this.db.from('packages').select('*').in('date', dates), 'packages.window') as PackageRow[];
+    return selectAll<PackageRow>(() => this.db.from('packages').select('*').in('date', dates), 'packages.window');
   }
   async getPackagesByReservationIds(ids: string[]) {
     const out: PackageRow[] = [];
