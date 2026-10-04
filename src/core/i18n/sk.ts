@@ -193,7 +193,7 @@ export const warningText: Record<WarningCode, string> = {
   multi_stay: 'Rezervácia s viacerými bytmi – over',
   double_checkout: '2 check-outy v ten istý deň',
   sheet_size_check: '❓ Veľkosť plachty preveriť s Angelikou (jednolôžko / prístelok – balíme veľkú)',
-  separate_beds: 'ℹ️ Interné pravidlo: každý hosť má svoju posteľ, pripravujeme všetky postele',
+  separate_beds: 'ℹ️ Odporúčanie: môžeme pripraviť všetky postele, aby mal každý hosť svoju (aplikácia to ráta takto)',
 };
 
 /** Warning text for a card; fills in the numbers where the sentence needs them. */
@@ -209,7 +209,7 @@ function pluralPostele(n: number): string {
 export function warningLine(code: WarningCode, r: PackingResult): string {
   if (code === 'separate_beds') {
     const made = r.beds.usedGroups.length;
-    return `ℹ️ Interné pravidlo: pre ${preHosti(r.people)} pripravujeme ${made === 2 ? 'obidve postele' : `všetky ${made} ${pluralPostele(made)}`} (každý má svoju).`;
+    return `ℹ️ Odporúčanie: pre ${preHosti(r.people)} môžeme pripraviť ${made === 2 ? 'obidve postele' : `všetky ${made} ${pluralPostele(made)}`}, aby mal každý svoju (aplikácia to ráta takto).`;
   }
   if (code === 'duvets_exceed_capacity' && r.duvetInventory) {
     const { large, small, capacity } = r.duvetInventory;

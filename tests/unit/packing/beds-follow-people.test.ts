@@ -226,9 +226,9 @@ describe('beds follow the people', () => {
     const two = computePackage(pkg({ listing: listing({ beds: { KING_BED: 2, SOFA_BED: 1 }, accommodates: 6, laundry: laundry('Paplón malý: 6') }), next: sameDay(2) }));
     expect(two.beds.usedGroups).toEqual(['dvoj', 'dvoj']);
     expect(two.warnings).toContain('separate_beds');
-    expect(warningLine('separate_beds', two)).toBe('ℹ️ Interné pravidlo: pre 2 hostí pripravujeme obidve postele (každý má svoju).');
+    expect(warningLine('separate_beds', two)).toBe('ℹ️ Odporúčanie: pre 2 hostí môžeme pripraviť obidve postele, aby mal každý svoju (aplikácia to ráta takto).');
     const three = computePackage(pkg({ listing: listing({ beds: { KING_BED: 3 }, accommodates: 6, laundry: laundry('Paplón veľký: 3') }), next: sameDay(3) }));
-    expect(warningLine('separate_beds', three)).toBe('ℹ️ Interné pravidlo: pre 3 hostí pripravujeme všetky 3 postele (každý má svoju).');
+    expect(warningLine('separate_beds', three)).toBe('ℹ️ Odporúčanie: pre 3 hostí môžeme pripraviť všetky 3 postele, aby mal každý svoju (aplikácia to ráta takto).');
     // more guests than beds (4 guests in king + 2 singles): the beds are simply full, no rule line
     expect(computePackage(pkg({ listing: listing({ beds: { KING_BED: 1, SINGLE_BED: 2 }, accommodates: 4, laundry: laundry('Paplón malý: 4') }), next: sameDay(4) })).warnings).not.toContain('separate_beds');
     // one bed only, a couple on it, a full flat, one guest: nothing to say
