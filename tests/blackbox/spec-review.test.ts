@@ -184,7 +184,7 @@ describe('§4 linen table', () => {
     expect(n(r, 'paplonV')).toBe(3);
     expect(n(r, 'paplonM')).toBe(0);
     expect(n(r, 'osuskaV')).toBe(7);
-    expect(n(r, 'vankus')).toBe(4); // still from the beds
+    expect(n(r, 'vankus')).toBe(6); // pillows follow the duvets: 2 per large (owner rule 2026-10-04)
   });
 
   it('no duvet info at all: large duvets + "Typ paplónov nezadaný – over na byte"', () => {

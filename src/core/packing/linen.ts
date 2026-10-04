@@ -36,6 +36,19 @@ export function duvetsFor(full: { large: number; small: number }, people: number
   return { large, small };
 }
 
+/**
+ * Pillows per duvet as the linen table has them per bed: a double bed's pillows
+ * per its large duvet (2 per 1), a single bed's per its small duvet (1 per 1).
+ * Falls back to 2 and 1 when the table has no duvet in that row.
+ */
+export function pillowsPerDuvet(settings: PackingSettings): { large: number; small: number } {
+  const dvoj = settings.beds.dvoj ?? {};
+  const jedno = settings.beds.jedno ?? {};
+  const large = dvoj.paplonV ? (dvoj.vankus ?? 0) / dvoj.paplonV : 2;
+  const small = jedno.paplonM ? (jedno.vankus ?? 0) / jedno.paplonM : 1;
+  return { large, small };
+}
+
 /** Whole bathrooms only: 1.5 means bathroom + separate WC = 1. Unknown = 1 + warning. */
 export function bathroomCount(bathrooms: number | null | undefined): { n: number; warnings: WarningCode[] } {
   if (bathrooms === null || bathrooms === undefined || Number.isNaN(Number(bathrooms))) {
@@ -59,7 +72,8 @@ export interface LinenResult {
  * - per person: towels; per bathroom: foot towel; per apartment: consumables
  * - toilet paper max(2, people)
  * - Guesty duvet counts are the flat's full set: one duvet per person is taken
- *   from it, large ones first, never more than the flat has (see duvetsFor)
+ *   from it, large ones first, never more than the flat has (see duvetsFor);
+ *   pillows then follow the duvets, 2 per large and 1 per small
  * - per-item overrides from Guesty replace the calculated numbers
  * - private linen: no linen rows at all, consumables are still packed
  */
@@ -104,6 +118,9 @@ export function computeLinen(args: {
     if (!laundry.private && d.small > 0 && people <= 2 * d.large) warnings.push('duvets_mixed_couple');
     overridden.add('paplonV');
     overridden.add('paplonM');
+    // pillows go with the duvets (owner's rule 2026-10-04): 2 per large, 1 per small
+    const per = pillowsPerDuvet(settings);
+    counts.vankus = Math.round(d.large * per.large + d.small * per.small);
   }
   for (const [key, n] of Object.entries(laundry?.overrides ?? {})) {
     if (typeof n === 'number') {

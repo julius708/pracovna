@@ -191,7 +191,7 @@ describe('exact duvet counts and precedence (spec §3 table, proposal §6 "Duvet
     expect(r.duvetType).toBe('exact');
     expect(count(r, 'paplonV')).toBe(2);
     expect(count(r, 'paplonM')).toBe(0);
-    expect(count(r, 'vankus')).toBe(2);
+    expect(count(r, 'vankus')).toBe(4); // pillows follow the duvets: 2 per large
     expect(count(r, 'plachta')).toBe(1);
     expect(duvetText(r)).toBe('podľa Guesty');
     const full = computePackage(pkg({ listing: listing({ laundry: parseLaundry('Paplón veľký: 3') }), next: sameDay(4) }));
@@ -249,13 +249,14 @@ describe('exact duvet counts and precedence (spec §3 table, proposal §6 "Duvet
     expect(duvetText(r)).toBeNull();
   });
 
-  it('exact counts are absolute: a used sofa does not add a duvet, but still adds pillows and a sheet', () => {
+  it('Guesty set smaller than the beds: a used sofa adds a sheet but no duvet; pillows follow the duvets; the card warns', () => {
     const r = computePackage(pkg({ listing: listing({ laundry: parseLaundry('Paplón veľký: 1') }), next: sameDay(4) }));
     expect(r.beds.sofasUsed).toBe(1);
     expect(count(r, 'paplonV')).toBe(1);
     expect(count(r, 'paplonM')).toBe(0);
-    expect(count(r, 'vankus')).toBe(4);
+    expect(count(r, 'vankus')).toBe(2);
     expect(count(r, 'plachta')).toBe(2);
+    expect(r.warnings).toContain('duvets_short');
   });
 
   it('both exact lines present: one duvet per guest, large first, small for the rest; the full set with enough guests', () => {
