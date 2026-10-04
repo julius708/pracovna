@@ -1,5 +1,6 @@
 import { CONSUMABLE_KEYS, toiletPaperCount } from './constants';
-import type { BedPlan, Counts, DuvetSource, LineItem, PackingSettings, ParsedLaundry, WarningCode } from './types';
+import { bedGroup, SLEEPS } from './beds';
+import type { BedGroup, BedPlan, Counts, DuvetSource, LineItem, PackingSettings, ParsedLaundry, WarningCode } from './types';
 
 /** Adds `obj` counts times `k` into `acc`. */
 function add(acc: Counts, obj: Counts | undefined, k = 1): void {
@@ -23,16 +24,50 @@ export function decideDuvets(laundry: ParsedLaundry | null, setting: 'male' | 'v
   return { source: 'default', type: 'velke', warnings: ['no_duvet_info'] };
 }
 
+const BED_ORDER: Record<BedGroup, number> = { dvoj: 0, gauc: 1, jedno: 2 };
+
 /**
- * Duvets to pack from the Guesty counts, which describe the flat's full set
- * (what a full flat gets). Fewer guests get one duvet each: large duvets
- * first, small ones for the rest, never more than the flat has. With people
- * >= large + small the full set is packed, as before (owner's rule 2026-10-03).
+ * Duvets per made bed from the Guesty counts, which describe the flat's full
+ * set. Beds are made complete even for one guest (owner's rules 2026-10-03/04):
+ *  - double-type beds (regular doubles first, then sofas) each get the flat's
+ *    large duvets per double bed: the set divided over all double-type beds,
+ *    at least one while any are left (Gross. 23 keeps its 2 per bed);
+ *  - a bed without a large duvet gets one small duvet per sleeper (2 for a
+ *    double, 1 for a single), or a leftover large one when the flat has no
+ *    small ones (Moyzesova's single bed);
+ *  - a full flat (people >= accommodates) gets the whole set as written.
  */
-export function duvetsFor(full: { large: number; small: number }, people: number): { large: number; small: number } {
-  const n = Math.max(0, Math.floor(people) || 0);
-  const large = Math.min(Math.max(0, full.large), n);
-  const small = Math.min(Math.max(0, full.small), Math.max(0, n - large));
+export function duvetsForBeds(full: { large: number; small: number }, plan: BedPlan, people: number, accommodates: number | null | undefined): { large: number; small: number } {
+  const L = Math.max(0, Math.floor(full.large) || 0);
+  const S = Math.max(0, Math.floor(full.small) || 0);
+  if (accommodates && accommodates > 0 && people >= accommodates) return { large: L, small: S };
+  const beds = [...plan.usedGroups].sort((a, b) => BED_ORDER[a] - BED_ORDER[b]);
+  const doublesTotal = plan.regular.reduce((n, b) => n + (bedGroup(b.type) === 'jedno' ? 0 : b.qty), 0) + plan.sofasTotal;
+  const perDouble = Math.max(1, doublesTotal > 0 ? Math.floor(L / doublesTotal) : 1);
+  let large = 0;
+  let small = 0;
+  let l = L;
+  let s = S;
+  const uncovered: BedGroup[] = [];
+  for (const g of beds) {
+    if (g !== 'jedno' && l > 0) {
+      const take = Math.min(l, perDouble);
+      large += take;
+      l -= take;
+    } else {
+      uncovered.push(g);
+    }
+  }
+  for (const g of uncovered) {
+    if (s > 0) {
+      const take = Math.min(s, SLEEPS[g]);
+      small += take;
+      s -= take;
+    } else if (l > 0) {
+      large += 1;
+      l -= 1;
+    }
+  }
   return { large, small };
 }
 
@@ -84,10 +119,10 @@ export interface LinenResult {
  * - per made bed from the table (small-duvet flats get 2 small instead of 1 large per double/sofa)
  * - per person: towels; per bathroom: foot towel; per apartment: consumables
  * - toilet paper max(2, people)
- * - Guesty duvet counts are the flat's full set: one duvet per person is taken
- *   from it, large ones first, never more than the flat has (see duvetsFor);
- *   pillows and sheets then follow the duvets: 2 pillows + 1 sheet per large,
- *   1 pillow + 1 small sheet per small
+ * - Guesty duvet counts are the flat's full set, handed out per made bed (see
+ *   duvetsForBeds): beds are made complete even for one guest;
+ * - pillows and sheets always follow the duvets: 2 pillows + 1 sheet per large,
+ *   1 pillow + 1 small sheet per small (so a small-duvet double bed gets 2 small sheets)
  * - per-item overrides from Guesty replace the calculated numbers
  * - private linen: no linen rows at all, consumables are still packed
  */
@@ -98,6 +133,8 @@ export function computeLinen(args: {
   bathrooms: number | null | undefined;
   laundry: ParsedLaundry | null;
   duvetTypeSetting?: 'male' | 'velke' | null;
+  /** Guesty accommodates; a full flat gets the whole Guesty duvet set. */
+  accommodates?: number | null;
 }): LinenResult {
   const { settings, plan, people, laundry } = args;
   const warnings: WarningCode[] = [];
@@ -122,22 +159,20 @@ export function computeLinen(args: {
 
   const overridden = new Set<string>();
   if (laundry?.duvetCounts) {
-    const d = duvetsFor(laundry.duvetCounts, people);
+    const d = duvetsForBeds(laundry.duvetCounts, plan, people, args.accommodates);
     counts.paplonV = d.large;
     counts.paplonM = d.small;
     // the Guesty set is smaller than the beds that get linen: a bed would go without a duvet
     if (d.large + d.small < plan.usedGroups.length) warnings.push('duvets_short');
-    // the large duvet(s) alone would cover everyone (a couple on the king), yet the one-per-guest rule adds a
-    // small one from the flat's mixed set: the owner cannot say which is right, so the card asks Angelika
-    if (!laundry.private && d.small > 0 && people <= 2 * d.large) warnings.push('duvets_mixed_couple');
     overridden.add('paplonV');
     overridden.add('paplonM');
-    // bed linen goes with the duvets (owner's rule 2026-10-04): per large duvet 2 pillows and 1 sheet,
-    // per small duvet 1 pillow and 1 small sheet (the table's ratios), replacing the per-bed amounts
-    const per = linenPerDuvet(settings);
-    for (const key of new Set([...Object.keys(per.large), ...Object.keys(per.small)])) {
-      counts[key] = Math.round(d.large * (per.large[key] ?? 0) + d.small * (per.small[key] ?? 0));
-    }
+  }
+  // bed linen ALWAYS goes with the duvets, whatever decided them (owner's rule 2026-10-04): per large duvet
+  // 2 pillows and 1 sheet, per small duvet 1 pillow and 1 small sheet (the table's ratios). A small-duvet
+  // double bed therefore gets 2 small sheets, not one large.
+  const per = linenPerDuvet(settings);
+  for (const key of new Set([...Object.keys(per.large), ...Object.keys(per.small)])) {
+    counts[key] = Math.round((counts.paplonV ?? 0) * (per.large[key] ?? 0) + (counts.paplonM ?? 0) * (per.small[key] ?? 0));
   }
   for (const [key, n] of Object.entries(laundry?.overrides ?? {})) {
     if (typeof n === 'number') {

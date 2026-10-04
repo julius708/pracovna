@@ -233,7 +233,12 @@ td input.lbl{width:190px;text-align:left}
 .stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-top:12px}
 
 /* "Dôležité info pre Angeliku a Maxa": the shared notice board above the list */
-.notice-board{margin:14px 0 2px;padding:12px 14px;border:3px solid #E8590C;border-radius:16px;background:#FFF1E6;box-shadow:0 6px 18px rgba(232,89,12,.15)}
+/* fixed laundry contact above the notice board, every day */
+.contact{margin:14px 0 0;padding:10px 14px;border:1px solid var(--line);border-radius:14px;background:var(--surface);display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px}
+.contact-title{font-weight:700;font-size:15px;display:inline-flex;align-items:center;gap:6px}
+.contact-phone{font-variant-numeric:tabular-nums;font-weight:700;font-size:17px;color:var(--ink);text-decoration:none;padding:4px 0;min-height:32px;display:inline-flex;align-items:center}
+.contact-phone:hover{text-decoration:underline}
+.notice-board{margin:10px 0 2px;padding:12px 14px;border:3px solid #E8590C;border-radius:16px;background:#FFF1E6;box-shadow:0 6px 18px rgba(232,89,12,.15)}
 .notice-title{margin:0 0 8px;font-family:var(--display);font-weight:800;font-size:18px;line-height:1.2;color:#9C3B00;display:flex;align-items:center;gap:8px}
 .notice-day{margin-left:auto;font-size:13px;font-weight:700;padding:3px 10px;border-radius:999px;background:#E8590C;color:#fff;white-space:nowrap}
 .notice-empty{margin:0 0 10px;color:var(--muted);font-size:14px}

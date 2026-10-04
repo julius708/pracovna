@@ -133,7 +133,6 @@ export type WarningCode =
   | 'no_duvet_info'
   | 'duvets_short'
   | 'duvets_exceed_capacity'
-  | 'duvets_mixed_couple'
   | 'beds_insufficient'
   | 'guests_missing'
   | 'capacity_missing'

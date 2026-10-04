@@ -28,6 +28,7 @@ export function computePackage(input: PackageInput): PackingResult {
     bathrooms: listing.bathrooms,
     laundry,
     duvetTypeSetting: input.duvetTypeSetting ?? null,
+    accommodates: listing.accommodates,
   });
   warnings.push(...linen.warnings);
 

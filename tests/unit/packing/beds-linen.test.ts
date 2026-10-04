@@ -106,12 +106,13 @@ describe('test 6: exact duvet counts override the beds', () => {
     expect(r.warnings).not.toContain('no_duvet_info');
   });
 
-  it('only Paplón veľký: 2 -> small is 0; 1 guest gets 1 of the 2 large, 2 guests both', () => {
+  it('only Paplón veľký: 2 -> small is 0; king + sofa share the 2 large one each, so 1 or 2 guests on the king get 1, 3 guests (sofa unfolded) 2', () => {
     const r = computePackage(pkg({ listing: listing({ laundry: laundry('Paplón veľký: 2') }), next: sameDay(1) }));
     expect(count(r, 'paplonV')).toBe(1);
     expect(count(r, 'paplonM')).toBe(0);
     expect(count(r, 'vankus')).toBe(2);
-    expect(count(computePackage(pkg({ listing: listing({ laundry: laundry('Paplón veľký: 2') }), next: sameDay(2) })), 'paplonV')).toBe(2);
+    expect(count(computePackage(pkg({ listing: listing({ laundry: laundry('Paplón veľký: 2') }), next: sameDay(2) })), 'paplonV')).toBe(1);
+    expect(count(computePackage(pkg({ listing: listing({ laundry: laundry('Paplón veľký: 2') }), next: sameDay(3) })), 'paplonV')).toBe(2);
   });
 
   it('exact counts win over the Paplóny: line and the Settings choice', () => {

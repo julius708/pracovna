@@ -127,6 +127,11 @@ export const sk = {
     emailRequired: 'Zadaj e-mail.',
     back: 'Späť na prihlásenie',
   },
+  /** Fixed contact line above the notice board, on every day (owner, 2026-10-04). */
+  contact: {
+    title: 'Kontakt – práčovňa Pionierska',
+    phones: ['0905 323 799', '0903 821 508'],
+  },
   noticeBoard: {
     title: 'Dôležité info pre Angeliku a Maxa',
     empty: 'Pre tento deň zatiaľ nič. Sem napíš, čo majú Angelika a Max v tento deň vedieť – uvidia to všetci.',
@@ -177,7 +182,6 @@ export const warningText: Record<WarningCode, string> = {
   no_duvet_info: 'Typ paplónov nezadaný – over na byte',
   duvets_short: 'Paplónov v Guesty je menej ako postelí – over na byte',
   duvets_exceed_capacity: '❓ Otázka pre Angeliku: v Guesty je viac paplónov, ako je kapacita bytu – koľko baliť?',
-  duvets_mixed_couple: '❓ Otázka pre Angeliku: pár v tomto byte – stačí 1 veľký paplón, alebo 1 veľký + 1 malý? Zatiaľ balíme oboje.',
   beds_insufficient: 'Postele v Guesty stačia len pre N osôb – over na byte',
   guests_missing: 'Počet hostí nezadaný v Guesty – balíme na max. kapacitu',
   capacity_missing: 'Kapacita nezadaná v Guesty – over na byte',

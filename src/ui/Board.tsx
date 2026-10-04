@@ -337,6 +337,17 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
         </nav>
       </header>
 
+      <section className="contact" aria-label={sk.contact.title}>
+        <span className="contact-title">
+          <span aria-hidden="true">📞</span> {sk.contact.title}
+        </span>
+        {sk.contact.phones.map((p) => (
+          <a key={p} className="contact-phone" href={`tel:${p.replace(/\s+/g, '')}`}>
+            {p}
+          </a>
+        ))}
+      </section>
+
       <NoticeBoard
         notes={data.notes.filter((n) => n.date === date)}
         dayTitle={`${dayWord(sel, date)} ${formatDM(date)}`}

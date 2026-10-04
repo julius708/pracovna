@@ -141,14 +141,15 @@ describe('linen table per bed group (spec §4, proposal Q4)', () => {
 /* ============================================================== SMALL DUVETS */
 
 describe('small-duvet flats (spec §4 table row 2)', () => {
-  it('double bed in a small-duvet flat: 2 Paplón malý instead of 1 Paplón veľký; pillows/sheets unchanged', () => {
+  it('double bed in a small-duvet flat: 2 Paplón malý instead of 1 Paplón veľký; 2 pillows and 2 small sheets go with them', () => {
     const r = computePackage(pkg({ listing: listing({ laundry: pl({ duvetType: 'male' }) }), next: sameDay(2) }));
     expect(r.duvetSource).toBe('guesty_type');
     expect(r.duvetType).toBe('male');
     expect(count(r, 'paplonM')).toBe(2);
     expect(count(r, 'paplonV')).toBe(0);
     expect(count(r, 'vankus')).toBe(2);
-    expect(count(r, 'plachta')).toBe(1);
+    expect(count(r, 'plachta')).toBe(0);
+    expect(count(r, 'plachtaM')).toBe(2);
     expect(r.warnings).not.toContain('no_duvet_info');
   });
 
@@ -168,8 +169,8 @@ describe('small-duvet flats (spec §4 table row 2)', () => {
     );
     expect(count(r, 'paplonM')).toBe(3);
     expect(count(r, 'paplonV')).toBe(0);
-    expect(count(r, 'plachta')).toBe(1);
-    expect(count(r, 'plachtaM')).toBe(1);
+    expect(count(r, 'plachta')).toBe(0);
+    expect(count(r, 'plachtaM')).toBe(3); // one small sheet per small duvet
   });
 
   it('"Paplóny: veľké" is explicit: large duvets, no "Typ paplónov nezadaný" warning', () => {
@@ -185,14 +186,14 @@ describe('small-duvet flats (spec §4 table row 2)', () => {
 /* ====================================================== DUVET PRECEDENCE */
 
 describe('exact duvet counts and precedence (spec §3 table, proposal §6 "Duvet precedence")', () => {
-  it('only "Paplón veľký: 3": the flat has 3 large, 0 small (missing line = 0); 2 guests get one each, 4 guests the full set', () => {
+  it('only "Paplón veľký: 3": the flat has 3 large, 0 small (missing line = 0); a couple on the king gets its large duvet, 4 guests the full set', () => {
     const r = computePackage(pkg({ listing: listing({ laundry: parseLaundry('Paplón veľký: 3') }), next: sameDay(2) }));
     expect(r.duvetSource).toBe('guesty_exact');
     expect(r.duvetType).toBe('exact');
-    expect(count(r, 'paplonV')).toBe(2);
+    expect(count(r, 'paplonV')).toBe(1); // 3 large over king + sofa = 1 per bed; only the king is made
     expect(count(r, 'paplonM')).toBe(0);
-    expect(count(r, 'vankus')).toBe(4); // pillows follow the duvets: 2 per large
-    expect(count(r, 'plachta')).toBe(2); // and so do the sheets: 1 per large
+    expect(count(r, 'vankus')).toBe(2); // pillows follow the duvets: 2 per large
+    expect(count(r, 'plachta')).toBe(1); // and so do the sheets: 1 per large
     expect(duvetText(r)).toBe('podľa Guesty');
     const full = computePackage(pkg({ listing: listing({ laundry: parseLaundry('Paplón veľký: 3') }), next: sameDay(4) }));
     expect(count(full, 'paplonV')).toBe(3);
@@ -214,7 +215,7 @@ describe('exact duvet counts and precedence (spec §3 table, proposal §6 "Duvet
       }),
     );
     expect(r.duvetSource).toBe('guesty_exact');
-    expect(count(r, 'paplonV')).toBe(2);
+    expect(count(r, 'paplonV')).toBe(1); // 2 large over king + sofa: 1 for the king the couple sleeps in
     expect(count(r, 'paplonM')).toBe(0);
   });
 
@@ -259,10 +260,10 @@ describe('exact duvet counts and precedence (spec §3 table, proposal §6 "Duvet
     expect(r.warnings).toContain('duvets_short');
   });
 
-  it('both exact lines present: one duvet per guest, large first, small for the rest; the full set with enough guests', () => {
+  it('both exact lines present: the king takes the large duvet, the sofa its two small ones once it is needed; the full set with enough guests', () => {
     const two = computePackage(pkg({ listing: listing({ laundry: parseLaundry('Paplón veľký: 1\nPaplón malý: 2') }), next: sameDay(2) }));
     expect(count(two, 'paplonV')).toBe(1);
-    expect(count(two, 'paplonM')).toBe(1);
+    expect(count(two, 'paplonM')).toBe(0);
     const three = computePackage(pkg({ listing: listing({ laundry: parseLaundry('Paplón veľký: 1\nPaplón malý: 2') }), next: sameDay(3) }));
     expect(count(three, 'paplonV')).toBe(1);
     expect(count(three, 'paplonM')).toBe(2);
