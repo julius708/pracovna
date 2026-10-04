@@ -9,6 +9,8 @@ import { bedSummary, capsuleLabel, cheerDone, childrenBannerParts, duvetText, ne
 const AV = '/assets/angelika.jpg';
 /** Warnings already shown inline (beds line, badge line), so they are not repeated in the red list. */
 const INLINE: WarningCode[] = ['bunk', 'no_duvet_info', 'min_nights_unknown'];
+/** Information for the packer, shown calmly instead of in red. */
+const INFO: WarningCode[] = ['separate_beds'];
 
 function Parts({ parts }: { parts: TextPart[] }) {
   return <>{parts.map((x, i) => (x.bold ? <b key={i}>{x.text}</b> : <span key={i}>{x.text}</span>))}</>;
@@ -99,7 +101,9 @@ export function PackageCard({
       {otherWarnings.length > 0 && (
         <div className="warn-list">
           {otherWarnings.map((w) => (
-            <span key={w}>{warningLine(w, r)}</span>
+            <span key={w} className={INFO.includes(w) ? 'info' : undefined}>
+              {warningLine(w, r)}
+            </span>
           ))}
         </div>
       )}

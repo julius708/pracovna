@@ -192,10 +192,24 @@ export const warningText: Record<WarningCode, string> = {
   capsules_multi: 'viac druhov kapsúl – over počet',
   multi_stay: 'Rezervácia s viacerými bytmi – over',
   double_checkout: '2 check-outy v ten istý deň',
+  separate_beds: 'ℹ️ Interné pravidlo: každý hosť má svoju posteľ, pripravujeme všetky postele',
 };
 
 /** Warning text for a card; fills in the numbers where the sentence needs them. */
+/** "pre 2 hostí" / "pre 1 hosťa" (genitive after "pre") */
+function preHosti(n: number): string {
+  return n === 1 ? '1 hosťa' : `${n} hostí`;
+}
+/** "2 postele" / "5 postelí" */
+function pluralPostele(n: number): string {
+  return n === 1 ? 'posteľ' : n >= 2 && n <= 4 ? 'postele' : 'postelí';
+}
+
 export function warningLine(code: WarningCode, r: PackingResult): string {
+  if (code === 'separate_beds') {
+    const made = r.beds.usedGroups.length;
+    return `ℹ️ Interné pravidlo: pre ${preHosti(r.people)} pripravujeme ${made === 2 ? 'obidve postele' : `všetky ${made} ${pluralPostele(made)}`} (každý má svoju).`;
+  }
   if (code === 'duvets_exceed_capacity' && r.duvetInventory) {
     const { large, small, capacity } = r.duvetInventory;
     const kinds = [large ? `${large} ${large === 1 ? 'veľký' : large <= 4 ? 'veľké' : 'veľkých'}` : '', small ? `${small} ${small === 1 ? 'malý' : small <= 4 ? 'malé' : 'malých'}` : ''].filter(Boolean).join(' + ');

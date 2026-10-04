@@ -142,7 +142,9 @@ export type WarningCode =
   | 'unknown_bed_type'
   | 'capsules_multi'
   | 'multi_stay'
-  | 'double_checkout';
+  | 'double_checkout'
+  /** Info, not a problem: more beds are made than the guests need if they pair up (2 guests, 2 beds). */
+  | 'separate_beds';
 
 export interface GapInfo {
   nights: number;

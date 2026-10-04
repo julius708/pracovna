@@ -38,6 +38,10 @@ export function computePackage(input: PackageInput): PackingResult {
   if (next?.multiStay || input.outgoing.multiStay) warnings.push('multi_stay');
   if (input.doubleCheckout) warnings.push('double_checkout');
 
+  // info for Angelika (owner, 2026-10-04): guests may want separate beds, so every one of them gets a bed;
+  // when they share, fewer beds would do - the card says so
+  if (people.people >= 2 && beds.plan.usedGroups.length > Math.ceil(people.people / 2)) warnings.push('separate_beds');
+
   // clearly more duvets in Guesty than the flat sleeps (Mestská: 4 large for 2 guests): the entry needs
   // clarifying. One spare duvet is normal (a fold-out bed, Tomášikova: 6 for 5), so only a surplus of two or
   // more is flagged; not for private linen, where the duvets are not packed at all

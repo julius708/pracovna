@@ -259,3 +259,6 @@ td input.lbl{width:190px;text-align:left}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .notice-board{background:#3A2314;border-color:#FF9B5C;box-shadow:none}:root:not([data-theme="light"]) .notice-title{color:#FFB380}}
 :root[data-theme="dark"] .notice-board{background:#3A2314;border-color:#FF9B5C;box-shadow:none}
 :root[data-theme="dark"] .notice-title{color:#FFB380}
+
+/* calm information lines in the card (house rules), not red warnings */
+.warn-list span.info{color:var(--muted);font-weight:600}

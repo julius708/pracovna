@@ -217,6 +217,19 @@ describe('beds follow the people', () => {
     expect(count(computePackage(pkg({ listing: listing({ beds: { KING_BED: 2 }, accommodates: 4, laundry: null }), next: sameDay(1) })), 'vankus')).toBe(2);
   });
 
+  it('tells Angelika when more beds are made than the guests need if they pair up (2 guests, 2 beds), not otherwise', () => {
+    const two = computePackage(pkg({ listing: listing({ beds: { KING_BED: 2, SOFA_BED: 1 }, accommodates: 6, laundry: laundry('Paplón malý: 6') }), next: sameDay(2) }));
+    expect(two.beds.usedGroups).toEqual(['dvoj', 'dvoj']);
+    expect(two.warnings).toContain('separate_beds');
+    expect(warningLine('separate_beds', two)).toBe('ℹ️ Interné pravidlo: pre 2 hostí pripravujeme obidve postele (každý má svoju).');
+    const three = computePackage(pkg({ listing: listing({ beds: { KING_BED: 3 }, accommodates: 6, laundry: laundry('Paplón veľký: 3') }), next: sameDay(3) }));
+    expect(warningLine('separate_beds', three)).toBe('ℹ️ Interné pravidlo: pre 3 hostí pripravujeme všetky 3 postele (každý má svoju).');
+    // one bed only, a couple on it, a full flat, one guest: nothing to say
+    expect(computePackage(pkg({ listing: listing({ beds: { KING_BED: 1, SOFA_BED: 1 }, accommodates: 4, laundry: laundry('Paplón veľký: 2') }), next: sameDay(2) })).warnings).not.toContain('separate_beds');
+    expect(computePackage(pkg({ listing: listing({ beds: { KING_BED: 3 }, accommodates: 6, laundry: laundry('Paplón veľký: 3') }), next: sameDay(6) })).warnings).not.toContain('separate_beds');
+    expect(computePackage(pkg({ listing: listing({ beds: { KING_BED: 2 }, accommodates: 4, laundry: laundry('Paplón veľký: 2') }), next: sameDay(1) })).warnings).not.toContain('separate_beds');
+  });
+
   it('settings-table duvets follow the made beds; the small-duvet conversion still applies per made bed', () => {
     const r = computePackage(pkg({ listing: listing({ beds: { KING_BED: 2 }, accommodates: 4, laundry: laundry('Paplóny: malé') }), next: sameDay(1) }));
     expect(count(r, 'paplonM')).toBe(2);
