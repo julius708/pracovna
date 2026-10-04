@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bedsToMake, computePackage, DEFAULT_SETTINGS, duvetsFor, madeBeds, pillowsPerDuvet, planBeds } from '@/core/packing';
+import { bedsToMake, computePackage, DEFAULT_SETTINGS, duvetsFor, linenPerDuvet, madeBeds, pillowsPerDuvet, planBeds } from '@/core/packing';
 import { bedSummary, duvetText, warningLine } from '@/core/i18n/sk';
 import { D0, count, laundry, listing, pkg, reservation } from './helpers';
 
@@ -55,7 +55,8 @@ describe('beds follow the people', () => {
       pkg({ listing: listing({ beds: { KING_BED: 1, QUEEN_BED: 2, SINGLE_BED: 1 }, accommodates: 7, laundry: laundry('Paplón veľký: 4') }), next: sameDay(7) }),
     );
     expect(count(full, 'paplonV')).toBe(4);
-    expect(count(full, 'plachtaM')).toBe(1);
+    expect(count(full, 'plachta')).toBe(4); // sheets follow the duvets
+    expect(count(full, 'plachtaM')).toBe(0);
     expect(bedSummary(full)).toBe('1× king, 2× queen, 1× jednolôžko');
   });
 
@@ -163,12 +164,26 @@ describe('beds follow the people', () => {
     expect(computePackage(pkg({ listing: listing({ ...shape, laundry: laundry('Paplón veľký: 1\nPaplón malý: 2\nPrádlo: súkromné') }), next: sameDay(2) })).warnings).not.toContain('duvets_mixed_couple');
   });
 
+  it('sheets follow the duvets too: 1 sheet per large, 1 small sheet per small; nothing else in the bed rows changes', () => {
+    const r = computePackage(pkg({ listing: listing({ beds: { KING_BED: 1, SOFA_BED: 1 }, accommodates: 4, laundry: laundry('Paplón veľký: 1\nPaplón malý: 2') }), next: sameDay(3) }));
+    expect(count(r, 'paplonV')).toBe(1);
+    expect(count(r, 'paplonM')).toBe(2);
+    expect(count(r, 'plachta')).toBe(1);
+    expect(count(r, 'plachtaM')).toBe(2);
+    expect(count(r, 'vankus')).toBe(4);
+    expect(linenPerDuvet(DEFAULT_SETTINGS)).toEqual({ large: { vankus: 2, plachta: 1 }, small: { vankus: 1, plachtaM: 1 } });
+    // towels, bathroom and consumables are untouched
+    expect(count(r, 'osuskaV')).toBe(3);
+    expect(count(r, 'toaletak')).toBe(3);
+  });
+
   it('pillows follow the duvets when Guesty counts apply: 2 per large, 1 per small (owner rule 2026-10-04)', () => {
     // "malý" flat: 2 kings + sofa, 6 small duvets, 2 guests -> 2 beds, 2 small duvets, 2 pillows (not 4)
     const small = computePackage(pkg({ listing: listing({ beds: { KING_BED: 2, SOFA_BED: 1 }, accommodates: 6, laundry: laundry('Paplón veľký: 0\nPaplón malý: 6') }), next: sameDay(2) }));
     expect(count(small, 'paplonM')).toBe(2);
     expect(count(small, 'vankus')).toBe(2);
-    expect(count(small, 'plachta')).toBe(2);
+    expect(count(small, 'plachta')).toBe(0);
+    expect(count(small, 'plachtaM')).toBe(2); // one small sheet per small duvet
     // full flat: 6 small -> 6 pillows
     expect(count(computePackage(pkg({ listing: listing({ beds: { KING_BED: 2, SOFA_BED: 1 }, accommodates: 6, laundry: laundry('Paplón malý: 6') }), next: sameDay(6) })), 'vankus')).toBe(6);
     // two large duvets on one queen (Gross. 23): 4 pillows for 2 guests
