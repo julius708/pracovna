@@ -202,10 +202,11 @@ describe('§4 linen table', () => {
     expect(computePackage(pkg()).duvetSource).toBe('default');
   });
 
-  it('Q5 private linen: no linen rows at all, consumables + capsules still packed, banner text', () => {
+  it('Q5 revised (owner 2026-10-05): private linen is a banner only; linen, consumables and capsules are packed like everywhere else', () => {
     const r = computePackage(pkg({ listing: listing({ laundry: parseLaundry('Prádlo: súkromné\nKapsule: Tchibo Cafissimo') }) }));
     expect(r.private).toBe(true);
-    expect(r.linen).toEqual([]);
+    expect(r.linen.length).toBeGreaterThan(0);
+    expect(n(r, 'paplonV')).toBe(2); // king + sofa for 4 guests, default table
     expect(r.consumables.map((l) => l.key)).toEqual(['toaletak', 'utierky', 'spongia', 'myckaKaps', 'vreckoV', 'vreckoM']);
     expect(r.capsules[0].n).toBe(4);
     expect(sk.privateBanner).toBe('Súkromné prádlo – nebaliť z našej bielizne');

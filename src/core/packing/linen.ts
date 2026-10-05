@@ -128,7 +128,8 @@ export interface LinenResult {
  *   made beds, one large sheet each; small sheets are never packed automatically,
  *   a made single bed adds the card question "veľkosť plachty preveriť s Angelikou"
  * - per-item overrides from Guesty replace the calculated numbers
- * - private linen: no linen rows at all, consumables are still packed
+ * - private linen ("Prádlo: súkromné") changes nothing in the counts: it is a note
+ *   for the packer (take the flat's own set), shown as a banner (owner, 2026-10-05)
  */
 export function computeLinen(args: {
   settings: PackingSettings;
@@ -205,7 +206,7 @@ export function computeLinen(args: {
       source: overridden.has(item.key) ? 'guesty' : 'calc',
     };
     if (CONSUMABLE_KEYS.has(item.key)) consumables.push(line);
-    else if (!laundry?.private) linen.push(line);
+    else linen.push(line);
   }
 
   return { counts, linen, consumables, bathrooms: bath.n, duvets, warnings };

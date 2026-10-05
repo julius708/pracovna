@@ -180,8 +180,9 @@ describe('beds follow the people', () => {
     const fine = computePackage(pkg({ listing: listing({ beds: { KING_BED: 3 }, accommodates: 6, laundry: laundry('Paplón veľký: 3') }), next: sameDay(2) }));
     expect(fine.warnings).not.toContain('duvets_exceed_capacity');
     expect(fine.duvetInventory).toBeUndefined();
+    // private linen is no exception: Jégého A (4 small for 2 guests) gets the question too
     const priv = computePackage(pkg({ listing: listing({ beds: { KING_BED: 1 }, accommodates: 2, laundry: laundry('Paplón malý: 4\nPrádlo: súkromné') }), next: sameDay(2) }));
-    expect(priv.warnings).not.toContain('duvets_exceed_capacity');
+    expect(priv.warnings).toContain('duvets_exceed_capacity');
   });
 
   it('sheets follow the beds as Guesty lists them, one large sheet each (never a small one); pillows follow the duvets', () => {
@@ -245,11 +246,12 @@ describe('beds follow the people', () => {
     expect(count(r, 'plachtaM')).toBe(0);
   });
 
-  it('per-item overrides stay absolute and private linen still omits every linen row', () => {
+  it('per-item overrides stay absolute; private linen changes nothing in the counts (owner 2026-10-05)', () => {
     const r = computePackage(pkg({ listing: listing({ beds: { KING_BED: 3 }, accommodates: 6, laundry: laundry('Paplón veľký: 3\nOsušky: 5') }), next: sameDay(2) }));
     expect(count(r, 'osuskaV')).toBe(5);
     const priv = computePackage(pkg({ listing: listing({ beds: { KING_BED: 3 }, accommodates: 6, laundry: laundry('Paplón veľký: 3\nPrádlo: súkromné') }), next: sameDay(2) }));
-    expect(priv.linen).toEqual([]);
+    expect(priv.private).toBe(true);
+    expect([count(priv, 'paplonV'), count(priv, 'vankus'), count(priv, 'plachta')]).toEqual([2, 4, 2]);
     expect(priv.consumables.length).toBeGreaterThan(0);
   });
 });

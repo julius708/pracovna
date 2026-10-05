@@ -390,10 +390,16 @@ describe('private linen "Prádlo: súkromné" (spec §3/§4, proposal Q5)', () =
     ['Prádlo: súkromné', 'Paplón veľký: 2', 'Paplón malý: 1', 'Osušky veľké: 4', 'Kapsule: Tchibo Cafissimo', 'Navyše: sviečky'].join('\n'),
   );
 
-  it('omits ALL linen rows, including exact duvets and overrides', () => {
+  it('is only a note (owner 2026-10-05): the linen rows are computed like everywhere else, exact duvets and overrides included', () => {
     const r = computePackage(pkg({ listing: listing({ laundry: privateWithEverything }), next: sameDay(3) }));
     expect(r.private).toBe(true);
-    expect(r.linen).toEqual([]);
+    // king + sofa for 3 guests: 2 large over 2 double beds, one each; the sofa is covered by a large one, so no small
+    expect(count(r, 'paplonV')).toBe(2);
+    expect(count(r, 'paplonM')).toBe(0);
+    expect(count(r, 'vankus')).toBe(4);
+    expect(count(r, 'plachta')).toBe(2);
+    expect(count(r, 'osuskaV')).toBe(4); // the override still applies
+    expect(count(r, 'uterakM')).toBe(3);
   });
 
   it('still packs every consumable, the capsules and the checklist', () => {

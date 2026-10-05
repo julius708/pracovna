@@ -182,10 +182,10 @@ describe('per-item overrides and private linen', () => {
     expect(r.linen.filter((l) => l.source === 'guesty').map((l) => l.key).sort()).toEqual(['osuskaV', 'predlozka', 'uterakM']);
   });
 
-  it('private linen: no linen rows, consumables still packed, banner flag set', () => {
+  it('private linen: banner flag set, linen computed like everywhere else (owner 2026-10-05), consumables packed', () => {
     const r = computePackage(pkg({ listing: listing({ laundry: laundry('Prádlo: súkromné\nPaplón veľký: 2') }) }));
     expect(r.private).toBe(true);
-    expect(r.linen).toEqual([]);
+    expect(count(r, 'paplonV')).toBe(2); // king + sofa for 4 guests, the full set
     expect(r.consumables.length).toBeGreaterThan(0);
     expect(count(r, 'toaletak')).toBe(4);
     expect(r.capsules.length).toBe(1);
