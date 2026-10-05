@@ -55,7 +55,7 @@ describe('test 9: coffee capsules', () => {
     expect(a.capsules[0]).toMatchObject({ type: 'Tchibo Cafissimo', n: 3, fixed: false, state: 'ok', photo: 'kapsula-tchibo-cafissimo.png' });
     expect(capsuleLabel(a.capsules[0])).toEqual({ label: 'Kapsule Tchibo Cafissimo', note: null });
     const b = computePackage(pkg({ listing: listing({ laundry: laundry('Kapsule: L’OR Nespresso (veľké) 10 ks') }), next: sameDay(3) }));
-    expect(b.capsules[0]).toMatchObject({ type: "L'OR Tassimo", typeKey: "l'or tassimo", n: 10, fixed: true, photo: null }); // canonical name, no photo yet
+    expect(b.capsules[0]).toMatchObject({ type: "L'OR Tassimo", typeKey: "l'or tassimo", n: 10, fixed: true, photo: 'kapsula-lor-tassimo.png' }); // canonical name and photo
   });
 
   it('several types without counts each get people and raise a warning', () => {
@@ -69,8 +69,8 @@ describe('test 9: coffee capsules', () => {
 
   it('photos match by substring of the normalised type, longest key first', () => {
     expect(capsulePhoto('Nespresso Original (malé)')).toBe('kapsula-nespresso-original.png');
-    expect(capsulePhoto("L'OR Nespresso (veľké)")).toBeNull(); // L'OR Tassimo: no photo yet
-    expect(capsulePhoto('L’OR')).toBeNull();
+    expect(capsulePhoto("L'OR Nespresso (veľké)")).toBe('kapsula-lor-tassimo.png');
+    expect(capsulePhoto('L’OR')).toBe('kapsula-lor-tassimo.png');
     expect(capsulePhoto('TCHIBO CAFISSIMO')).toBe('kapsula-tchibo-cafissimo.png');
     expect(capsulePhoto('Dolce Gusto')).toBeNull();
     expect(capsulePhoto('')).toBeNull();

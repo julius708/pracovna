@@ -15,14 +15,11 @@ export function canonicalCapsuleType(type: string): string {
   return hit ? hit[1] : type;
 }
 
-/**
- * Photo per capsule type; the key is a substring of the normalised type name.
- * Longest first. L'OR Tassimo has no photo yet (the old one showed Nespresso
- * capsules).
- */
+/** Photo per capsule type; the key is a substring of the normalised type name. Longest first. */
 const PHOTOS: readonly [key: string, file: string][] = [
   ['nespresso original', 'kapsula-nespresso-original.png'],
   ['cafissimo', 'kapsula-tchibo-cafissimo.png'],
+  ["l'or", 'kapsula-lor-tassimo.png'],
 ];
 
 export function capsulePhoto(type: string | null | undefined): string | null {

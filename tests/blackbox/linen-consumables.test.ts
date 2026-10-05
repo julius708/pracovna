@@ -484,7 +484,7 @@ describe('coffee capsules (spec §3/§4, proposal §6 "Capsules", §9)', () => {
     );
     expect(r.capsules).toHaveLength(2);
     expect(r.capsules.map((c) => c.n)).toEqual([2, 2]);
-    expect(r.capsules.map((c) => c.photo)).toEqual(['kapsula-tchibo-cafissimo.png', null]); // no L'OR Tassimo photo yet
+    expect(r.capsules.map((c) => c.photo)).toEqual(['kapsula-tchibo-cafissimo.png', 'kapsula-lor-tassimo.png']);
     expect(r.capsules.map((c) => c.type)).toEqual(['Tchibo Cafissimo', "L'OR Tassimo"]);
     expect(r.warnings).toContain('capsules_multi');
     expect(warningText.capsules_multi).toBe('viac druhov kapsúl – over počet');
@@ -515,7 +515,7 @@ describe('coffee capsules (spec §3/§4, proposal §6 "Capsules", §9)', () => {
     expect(r.capsules[0].type).toBe("L'OR Tassimo");
     expect(r.capsules[0].typeKey).toBe("l'or tassimo");
     expect(r.capsules[0].typeKey).toBe(typeKey(r.capsules[0].type));
-    expect(r.capsules[0].photo).toBeNull();
+    expect(r.capsules[0].photo).toBe('kapsula-lor-tassimo.png');
     // other types keep their text as written
     const t = computePackage(pkg({ listing: listing({ laundry: parseLaundry('Kapsule: Tchibo Cafissimo classic') }), next: sameDay(2) }));
     expect(t.capsules[0].type).toBe('Tchibo Cafissimo classic');
@@ -533,8 +533,8 @@ describe('coffee capsules (spec §3/§4, proposal §6 "Capsules", §9)', () => {
   it.each([
     ['Tchibo Cafissimo', 'kapsula-tchibo-cafissimo.png'],
     ['tchibo CAFISSIMO classic', 'kapsula-tchibo-cafissimo.png'],
-    ["L'OR Nespresso (veľké)", null],
-    ['L’OR', null],
+    ["L'OR Nespresso (veľké)", 'kapsula-lor-tassimo.png'],
+    ['L’OR', 'kapsula-lor-tassimo.png'],
     ['Nespresso original (malé)', 'kapsula-nespresso-original.png'],
     ['NESPRESSO ORIGINÁL', 'kapsula-nespresso-original.png'],
     ['Dolce Gusto', null],

@@ -235,7 +235,7 @@ describe('§4 consumables', () => {
 
   it('capsules: count = people unless "N ks"; missing type -> "druh nezadaný v Guesty"; upresniť -> "druh treba upresniť"; nedávať/žiadne -> no row', () => {
     const typed = computePackage(pkg({ listing: listing({ laundry: parseLaundry("Kapsule: L'OR Nespresso (veľké)") }) }));
-    expect(typed.capsules).toMatchObject([{ type: "L'OR Tassimo", n: 4, fixed: false, photo: null }]); // every L'OR entry is shown as L'OR Tassimo (owner 2026-10-05)
+    expect(typed.capsules).toMatchObject([{ type: "L'OR Tassimo", n: 4, fixed: false, photo: 'kapsula-lor-tassimo.png' }]); // every L'OR entry is shown as L'OR Tassimo (owner 2026-10-05)
     const fixed = computePackage(pkg({ listing: listing({ laundry: parseLaundry('Kapsule: Nespresso original (malé) 10 ks') }) }));
     expect(fixed.capsules).toMatchObject([{ type: 'Nespresso original (malé)', n: 10, fixed: true, photo: 'kapsula-nespresso-original.png' }]);
     const missing = computePackage(pkg());
@@ -248,7 +248,7 @@ describe('§4 consumables', () => {
 
   it('photo keys: cafissimo, l\'or, nespresso original', () => {
     expect(capsulePhoto('Tchibo Cafissimo')).toBe('kapsula-tchibo-cafissimo.png');
-    expect(capsulePhoto("L'OR Nespresso (veľké)")).toBeNull(); // L'OR Tassimo has no photo yet
+    expect(capsulePhoto("L'OR Nespresso (veľké)")).toBe('kapsula-lor-tassimo.png');
     expect(capsulePhoto('Nespresso original (malé)')).toBe('kapsula-nespresso-original.png');
   });
 
