@@ -1,15 +1,32 @@
 import { typeKey } from './normalize';
 import type { CapsuleLine, ParsedLaundry, WarningCode } from './types';
 
-/** Photo per capsule type; the key is a substring of the normalised type name. Longest first. */
+/**
+ * Display names that replace what the Guesty field says (owner, 2026-10-05):
+ * every L'OR entry is in fact L'OR Tassimo, whatever the field calls it. The
+ * key is a substring of the normalised type name.
+ */
+const CANONICAL: readonly [key: string, display: string][] = [["l'or", "L'OR Tassimo"]];
+
+/** The capsule type as the card shows it. */
+export function canonicalCapsuleType(type: string): string {
+  const k = typeKey(type);
+  const hit = CANONICAL.find(([key]) => k.includes(key));
+  return hit ? hit[1] : type;
+}
+
+/**
+ * Photo per capsule type; the key is a substring of the normalised type name.
+ * Longest first. L'OR Tassimo has no photo yet (the old one showed Nespresso
+ * capsules).
+ */
 const PHOTOS: readonly [key: string, file: string][] = [
   ['nespresso original', 'kapsula-nespresso-original.png'],
   ['cafissimo', 'kapsula-tchibo-cafissimo.png'],
-  ["l'or", 'kapsula-lor-nespresso.png'],
 ];
 
 export function capsulePhoto(type: string | null | undefined): string | null {
-  const k = typeKey(type);
+  const k = typeKey(canonicalCapsuleType(String(type ?? '')));
   if (!k) return null;
   const hit = PHOTOS.find(([key]) => k.includes(key));
   return hit ? hit[1] : null;
@@ -29,6 +46,7 @@ function genericRow(state: 'missing' | 'unsure', n: number, fixed = false): Caps
  * No "Kapsule:" line -> a row with the red note "druh nezadaný v Guesty";
  * a count without a type -> the same red row with the fixed count;
  * "upresniť" -> a row with "druh treba upresniť"; "nedávať"/"žiadne" -> no row.
+ * Types are shown under their canonical name (see CANONICAL).
  */
 export function capsuleRows(laundry: ParsedLaundry | null, people: number): CapsuleRowsResult {
   const warnings: WarningCode[] = [];
@@ -50,7 +68,8 @@ export function capsuleRows(laundry: ParsedLaundry | null, people: number): Caps
   for (const s of typed) {
     const n = s.n !== null ? s.n : people;
     if (n <= 0) continue;
-    rows.push({ type: s.type, typeKey: typeKey(s.type), n, fixed: s.n !== null, state: 'ok', photo: capsulePhoto(s.type) });
+    const type = canonicalCapsuleType(s.type);
+    rows.push({ type, typeKey: typeKey(type), n, fixed: s.n !== null, state: 'ok', photo: capsulePhoto(type) });
   }
   return { rows, warnings };
 }

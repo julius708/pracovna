@@ -484,7 +484,8 @@ describe('coffee capsules (spec §3/§4, proposal §6 "Capsules", §9)', () => {
     );
     expect(r.capsules).toHaveLength(2);
     expect(r.capsules.map((c) => c.n)).toEqual([2, 2]);
-    expect(r.capsules.map((c) => c.photo)).toEqual(['kapsula-tchibo-cafissimo.png', 'kapsula-lor-nespresso.png']);
+    expect(r.capsules.map((c) => c.photo)).toEqual(['kapsula-tchibo-cafissimo.png', null]); // no L'OR Tassimo photo yet
+    expect(r.capsules.map((c) => c.type)).toEqual(['Tchibo Cafissimo', "L'OR Tassimo"]);
     expect(r.warnings).toContain('capsules_multi');
     expect(warningText.capsules_multi).toBe('viac druhov kapsúl – over počet');
   });
@@ -509,12 +510,15 @@ describe('coffee capsules (spec §3/§4, proposal §6 "Capsules", §9)', () => {
     expect(typeKey('Nespresso Originál (malé)')).toBe('nespresso original (male)');
   });
 
-  it('a capsule row keeps the type as written and exposes the normalised typeKey', () => {
+  it('a capsule row shows the canonical type (every L’OR entry is L’OR Tassimo, owner 2026-10-05) and exposes the normalised typeKey', () => {
     const r = computePackage(pkg({ listing: listing({ laundry: parseLaundry('Kapsule: L’OR Nespresso (veľké)') }), next: sameDay(2) }));
-    expect(r.capsules[0].type).toBe('L’OR Nespresso (veľké)');
-    expect(r.capsules[0].typeKey).toBe("l'or nespresso (velke)");
+    expect(r.capsules[0].type).toBe("L'OR Tassimo");
+    expect(r.capsules[0].typeKey).toBe("l'or tassimo");
     expect(r.capsules[0].typeKey).toBe(typeKey(r.capsules[0].type));
-    expect(r.capsules[0].photo).toBe('kapsula-lor-nespresso.png');
+    expect(r.capsules[0].photo).toBeNull();
+    // other types keep their text as written
+    const t = computePackage(pkg({ listing: listing({ laundry: parseLaundry('Kapsule: Tchibo Cafissimo classic') }), next: sameDay(2) }));
+    expect(t.capsules[0].type).toBe('Tchibo Cafissimo classic');
   });
 
   it('two entries of the same type in different spellings share one typeKey (summary totals per type)', () => {
@@ -529,8 +533,8 @@ describe('coffee capsules (spec §3/§4, proposal §6 "Capsules", §9)', () => {
   it.each([
     ['Tchibo Cafissimo', 'kapsula-tchibo-cafissimo.png'],
     ['tchibo CAFISSIMO classic', 'kapsula-tchibo-cafissimo.png'],
-    ["L'OR Nespresso (veľké)", 'kapsula-lor-nespresso.png'],
-    ['L’OR', 'kapsula-lor-nespresso.png'],
+    ["L'OR Nespresso (veľké)", null],
+    ['L’OR', null],
     ['Nespresso original (malé)', 'kapsula-nespresso-original.png'],
     ['NESPRESSO ORIGINÁL', 'kapsula-nespresso-original.png'],
     ['Dolce Gusto', null],
