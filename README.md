@@ -150,7 +150,7 @@ The app also raises its own alerts (sync failed twice in a row, Guesty token quo
 
 `POST /api/admin/webhooks/register`'s sibling `POST /api/admin/alerts/test` (cron secret or admin session) sends a test message through every configured sink and reports what was delivered.
 
-"Prádlo: súkromné" in the Guesty field is a note for the packers (purple banner on the card: take the flat's own linen); the counts are computed and shown exactly like for every other flat (owner's decision of 2026-10-05, replacing proposal Q5).
+"Prádlo: súkromné" in the Guesty field is a note for the packers (purple banner on the card: take the flat's own linen); the counts are computed and shown exactly like for every other flat, but the linen of these flats stays out of the day totals (their consumables and capsules count); owner's decision of 2026-10-05, replacing proposal Q5.
 
 ## Board window
 
