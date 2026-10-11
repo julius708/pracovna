@@ -7,6 +7,7 @@ import type { Viewer } from '@/app/_lib/viewer';
 import { formatDM, formatHM, todayInTz } from '@/core/packing';
 import { sk } from '@/core/i18n/sk';
 import { syncState } from './board-model';
+import { PushToggle } from './PushToggle';
 
 export function LogoMark() {
   return (
@@ -76,6 +77,7 @@ export function Header({
               {n.label}
             </Link>
           ))}
+        <PushToggle />
         <form action={logoutAction} style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
           <span style={{ color: 'var(--muted)' }}>{viewer.name}</span>
           <button type="submit" style={{ background: 'none', border: 0, padding: '0 6px', fontSize: 13, fontWeight: 600, color: 'var(--accent)', minHeight: 44 }}>

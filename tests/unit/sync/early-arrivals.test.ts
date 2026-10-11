@@ -138,15 +138,15 @@ describe('syncEarlyArrivals on the memory repo', () => {
     repo.now = () => new Date('2026-10-11T07:00:00Z');
     await repo.upsertListings([listing('L1', 'Poštová, Heart'), listing('L2', 'Mestská, Modern')]);
     await repo.upsertReservations([reservation('R1', 'L1', '2026-10-12', '13:00'), reservation('R2', 'L2', '2026-10-13', '16:00')]);
-    expect(await syncEarlyArrivals(repo, DATES)).toEqual({ added: 1, removed: 0, kept: 0 });
+    expect(await syncEarlyArrivals(repo, DATES)).toMatchObject({ added: 1, removed: 0, kept: 0 });
     let rows = await repo.getEarlyArrivals(DATES);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ listing_id: 'L1', listing_name: 'Poštová, Heart', date: '2026-10-12', arrival: '13:00', author_name: GUESTY_AUTHOR, source: 'guesty', reservation_id: 'R1', removed_at: null });
     // a second run changes nothing
-    expect(await syncEarlyArrivals(repo, DATES)).toEqual({ added: 0, removed: 0, kept: 1 });
+    expect(await syncEarlyArrivals(repo, DATES)).toMatchObject({ added: 0, removed: 0, kept: 1 });
     // Guesty moves the arrival to 12:00 and the Mestská guest buys an early check-in
     await repo.upsertReservations([reservation('R1', 'L1', '2026-10-12', '12:00', { fetched_at: '2026-10-11T08:00:00Z' }), reservation('R2', 'L2', '2026-10-13', '14:00', { fetched_at: '2026-10-11T08:00:00Z' })]);
-    expect(await syncEarlyArrivals(repo, DATES)).toEqual({ added: 2, removed: 1, kept: 0 });
+    expect(await syncEarlyArrivals(repo, DATES)).toMatchObject({ added: 2, removed: 1, kept: 0 });
     rows = await repo.getEarlyArrivals(DATES);
     expect(rows.map((r) => [r.listing_id, r.arrival])).toEqual([
       ['L1', '12:00'],
@@ -156,7 +156,7 @@ describe('syncEarlyArrivals on the memory repo', () => {
     expect(removed).toMatchObject({ arrival: '13:00', removed_by_name: GUESTY_AUTHOR });
     // the reservation is cancelled: the row goes
     await repo.upsertReservations([reservation('R1', 'L1', '2026-10-12', '12:00', { status: 'canceled', fetched_at: '2026-10-11T09:00:00Z' })]);
-    expect(await syncEarlyArrivals(repo, DATES)).toEqual({ added: 0, removed: 1, kept: 1 });
+    expect(await syncEarlyArrivals(repo, DATES)).toMatchObject({ added: 0, removed: 1, kept: 1 });
     expect((await repo.getEarlyArrivals(DATES)).map((r) => r.listing_id)).toEqual(['L2']);
   });
 });

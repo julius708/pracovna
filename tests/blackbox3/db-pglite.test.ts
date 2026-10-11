@@ -27,6 +27,7 @@ const MIG10 = readFileSync(new URL('../../supabase/migrations/0010_week_window.s
 const MIG11 = readFileSync(new URL('../../supabase/migrations/0011_pack_snapshot.sql', import.meta.url), 'utf8');
 const MIG12 = readFileSync(new URL('../../supabase/migrations/0012_early_arrivals.sql', import.meta.url), 'utf8');
 const MIG13 = readFileSync(new URL('../../supabase/migrations/0013_guesty_early_arrivals.sql', import.meta.url), 'utf8');
+const MIG14 = readFileSync(new URL('../../supabase/migrations/0014_push_subscriptions.sql', import.meta.url), 'utf8');
 
 const STUBS = `
 create role authenticated nologin;
@@ -91,6 +92,11 @@ describe('migrations', () => {
       const cols = (await fresh.query<Row>("select column_name from information_schema.columns where table_schema = 'public' and table_name = 'early_arrivals' and column_name in ('source', 'reservation_id')")).rows.map((r) => r.column_name).sort();
       expect(cols).toEqual(['reservation_id', 'source']);
       expect((await fresh.query<Row>("select column_name from information_schema.columns where table_schema = 'public' and table_name = 'reservations' and column_name = 'arrival_time'")).rows).toHaveLength(1);
+      const e14 = await pgError(fresh.exec(MIG14));
+      expect(e14, `0014_push_subscriptions.sql failed: ${e14?.code} ${e14?.message} (line ${lineOf(MIG14, e14?.position)})`).toBeNull();
+      // users see and manage only their own subscriptions: four policies, all on auth.uid()
+      const policies = (await fresh.query<Row>("select policyname, cmd from pg_policies where schemaname = 'public' and tablename = 'push_subscriptions' order by policyname")).rows;
+      expect(policies.map((p) => p.cmd).sort()).toEqual(['DELETE', 'INSERT', 'SELECT', 'UPDATE']);
       const fns =(await fresh.query<Row>("select proname from pg_proc where pronamespace = 'public'::regnamespace order by 1")).rows.map((r) => r.proname);
       expect(fns).toEqual(expect.arrayContaining(['today_ba', 'is_admin', 'is_active_user', 'handle_new_user', 'sync_upsert_package', 'sync_set_lifecycle', 'pack_package', 'unpack_package', 'set_note', 'toggle_check', 'save_settings', 'admin_set_profile', 'acquire_lock', 'run_retention', 'increment_not_found', 'add_board_note', 'remove_board_note', 'edit_board_note']));
     } finally {
@@ -167,6 +173,7 @@ beforeAll(async () => {
   await db.exec(MIG11);
   await db.exec(MIG12);
   await db.exec(MIG13);
+  await db.exec(MIG14);
   await db.exec('set check_function_bodies = on');
   todayBa = (await one('select public.today_ba()::text as d')).d as string;
 });

@@ -67,8 +67,13 @@ export interface EarlyArrivalsSyncResult {
   kept: number;
 }
 
+export interface EarlyArrivalsSyncOutcome extends EarlyArrivalsSyncResult {
+  /** The rows just written: what the push notifications announce. */
+  addedRows: EarlyArrivalInsert[];
+}
+
 /** Brings the early_arrivals table in line with the reservations for the board days (see planEarlyArrivals). */
-export async function syncEarlyArrivals(repo: SyncRepo, dates: readonly Ymd[], log: Logger = silentLogger): Promise<EarlyArrivalsSyncResult> {
+export async function syncEarlyArrivals(repo: SyncRepo, dates: readonly Ymd[], log: Logger = silentLogger): Promise<EarlyArrivalsSyncOutcome> {
   const last = dates[dates.length - 1];
   const [reservations, listingRows, existing] = await Promise.all([repo.getReservations({ checkInGte: dates[0], status: 'confirmed' }), repo.getListings(), repo.getEarlyArrivals(dates)]);
   const listings = new Map(listingRows.map((l) => [l.guesty_id, l]));
@@ -82,5 +87,5 @@ export async function syncEarlyArrivals(repo: SyncRepo, dates: readonly Ymd[], l
   if (plan.add.length) await repo.insertEarlyArrivals(plan.add);
   const res = { added: plan.add.length, removed: plan.remove.length, kept: plan.kept };
   if (res.added || res.removed) log.info('early_arrivals.synced', res);
-  return res;
+  return { ...res, addedRows: plan.add };
 }

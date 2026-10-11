@@ -12,6 +12,7 @@ import type {
   ReservationRow,
   EarlyArrivalInsert,
   EarlyArrivalRow,
+  PushSubscriptionRow,
   SyncJob,
   SyncRunRow,
   WebhookEventRow,
@@ -173,6 +174,20 @@ export class SupabaseRepo implements SyncRepo {
   async removeEarlyArrivals(ids: string[], by: string) {
     const at = new Date().toISOString();
     for (const part of chunks(ids, 200)) must(await this.db.from('early_arrivals').update({ removed_at: at, removed_by_name: by }).in('id', part).is('removed_at', null), 'early_arrivals.remove');
+  }
+
+  async getPushSubscriptions() {
+    const rows = must(await this.db.from('push_subscriptions').select('*, profiles!inner(active)').order('created_at'), 'push_subscriptions.select') as (PushSubscriptionRow & { profiles: { active: boolean } | null })[];
+    return rows
+      .filter((r) => r.profiles?.active !== false)
+      .map((r) => {
+        const copy: Partial<typeof r> = { ...r };
+        delete copy.profiles;
+        return copy as PushSubscriptionRow;
+      });
+  }
+  async deletePushSubscriptions(endpoints: string[]) {
+    for (const part of chunks(endpoints, 200)) must(await this.db.from('push_subscriptions').delete().in('endpoint', part), 'push_subscriptions.delete');
   }
 
   async upsertCalendar(rows: CalendarRow[]) {

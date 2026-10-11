@@ -159,6 +159,19 @@ export const sk = {
     line: (time: string) => `⏰ Skorý príchod o ${time}`,
     cardLine: (time: string) => `⏰ Skorý príchod o ${time} – hosť môže byť v byte skôr`,
   },
+  /** "🔔 Upozornenia": push notifications for early arrivals, per device (owner, 2026-10-11). */
+  push: {
+    off: 'Zapnúť upozornenia',
+    on: 'Upozornenia zapnuté',
+    offHint: 'Toto zariadenie dostane upozornenie, keď Guesty nahlási skorý príchod.',
+    onHint: 'Toto zariadenie dostáva upozornenia na skoré príchody. Klepnutím ich vypneš.',
+    enabledHint: 'Hotovo – skoré príchody prídu ako upozornenie.',
+    blocked: 'Upozornenia zablokované',
+    blockedHint: 'Upozornenia sú v prehliadači zablokované. Povoľ ich v nastaveniach stránky a skús znova.',
+    iosShort: 'Upozornenia: pridaj appku na plochu',
+    iosHint: 'Na iPhone fungujú upozornenia len z appky na ploche: v Safari klepni na Zdieľať → Pridať na plochu, otvor appku z plochy a zapni upozornenia.',
+    failed: 'Upozornenia sa nepodarilo zapnúť. Skús znova.',
+  },
   notices: {
     newArrival: (name: string, time: string, day: string) => `⏰ Skorý príchod: ${name} o ${time} · ${day}`,
     removedArrival: (name: string, day: string) => `Skorý príchod zrušený: ${name} · ${day}`,

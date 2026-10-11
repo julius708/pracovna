@@ -8,7 +8,10 @@ const body = Figtree({ subsets: ['latin', 'latin-ext'], weight: ['400', '500', '
 export const metadata: Metadata = {
   title: 'LIVE-IN Práčovňa',
   description: 'Balenie bielizne pre byty LIVE-IN v Bratislave',
-  icons: { icon: '/assets/live-in-logo.png' },
+  icons: { icon: '/icons/icon-192.png', apple: '/icons/apple-touch-icon.png' },
+  manifest: '/manifest.webmanifest',
+  // on an iPhone push notifications work only from the app added to the home screen
+  appleWebApp: { capable: true, title: 'Práčovňa', statusBarStyle: 'default' },
 };
 
 export const viewport: Viewport = {

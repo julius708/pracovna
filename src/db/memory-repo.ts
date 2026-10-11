@@ -4,6 +4,7 @@ import type {
   BoardNoteRow,
   EarlyArrivalInsert,
   EarlyArrivalRow,
+  PushSubscriptionRow,
   AppStateKey,
   CalendarRow,
   ListingRow,
@@ -39,6 +40,7 @@ export class MemoryRepo implements SyncRepo {
   webhookEvents: WebhookEventRow[] = [];
   boardNotes: BoardNoteRow[] = [];
   earlyArrivals: EarlyArrivalRow[] = [];
+  pushSubscriptions: PushSubscriptionRow[] = [];
   readonly tokenStore: TokenStore = createMemoryTokenStore();
   now: () => Date = () => new Date();
 
@@ -108,6 +110,13 @@ export class MemoryRepo implements SyncRepo {
         a.removed_by_name = by;
       }
     }
+  }
+
+  async getPushSubscriptions() {
+    return (this.pushSubscriptions ?? []).map((s) => ({ ...s }));
+  }
+  async deletePushSubscriptions(endpoints: string[]) {
+    this.pushSubscriptions = (this.pushSubscriptions ?? []).filter((s) => !endpoints.includes(s.endpoint));
   }
 
   async upsertCalendar(rows: CalendarRow[]) {

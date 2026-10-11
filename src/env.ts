@@ -31,6 +31,10 @@ const schema = z.object({
   ALERT_TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
   ALERT_TELEGRAM_CHAT_ID: z.string().min(1).optional(),
   APP_VERSION: z.string().optional(),
+  /** Web Push (VAPID): all three or push stays off. The public key is also inlined into the browser bundle. */
+  NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY: z.string().min(1).optional(),
+  WEB_PUSH_PRIVATE_KEY: z.string().min(1).optional(),
+  WEB_PUSH_SUBJECT: z.string().regex(/^(mailto:|https:\/\/)/, 'mailto: or https:// URL').optional(),
 });
 
 export type Env = z.infer<typeof schema>;
@@ -54,6 +58,11 @@ export function loadEnv(source: Record<string, string | undefined> = process.env
     throw new EnvError(`Supabase is only partly configured, missing: ${supabaseMissing.join(', ')}`);
   }
   return env;
+}
+
+/** True when push notifications can be sent (all three VAPID settings present). */
+export function pushConfigured(env: Env): boolean {
+  return !!(env.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY && env.WEB_PUSH_PRIVATE_KEY && env.WEB_PUSH_SUBJECT);
 }
 
 /** Names of the variables a live Guesty connection needs; empty when all are set. */

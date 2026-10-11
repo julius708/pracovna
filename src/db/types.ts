@@ -234,6 +234,20 @@ export interface EarlyArrivalRow {
   reservation_id: string | null;
 }
 
+/** A device's Web Push subscription (migration 0014), stored under the signed-in user. */
+export interface PushSubscriptionRow {
+  id: string;
+  user_id: string;
+  user_name: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  user_agent: string;
+  created_at: Instant;
+  last_ok_at: Instant | null;
+  failed_at: Instant | null;
+}
+
 /** What the sync writes when a reservation turns out to arrive early. */
 export type EarlyArrivalInsert = Pick<EarlyArrivalRow, 'listing_id' | 'listing_name' | 'date' | 'arrival' | 'note' | 'author_name' | 'source' | 'reservation_id'>;
 

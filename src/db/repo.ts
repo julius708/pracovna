@@ -13,7 +13,7 @@ import type {
   SyncRunRow,
   WebhookEventRow,
   WebhookEventStatus,
-  Ymd, EarlyArrivalInsert, EarlyArrivalRow } from './types';
+  Ymd, EarlyArrivalInsert, EarlyArrivalRow, PushSubscriptionRow } from './types';
 
 export interface ReservationFilter {
   checkOutGte?: Ymd;
@@ -73,6 +73,12 @@ export interface SyncRepo {
   insertEarlyArrivals(rows: EarlyArrivalInsert[]): Promise<void>;
   /** Marks rows removed (they stay for the record), naming who removed them. */
   removeEarlyArrivals(ids: string[], by: string): Promise<void>;
+
+  // push notifications (src/sync/push.ts)
+  /** Subscriptions of active users. */
+  getPushSubscriptions(): Promise<PushSubscriptionRow[]>;
+  /** Drops subscriptions the push service no longer knows. */
+  deletePushSubscriptions(endpoints: string[]): Promise<void>;
 
   // calendar
   upsertCalendar(rows: CalendarRow[]): Promise<void>;
