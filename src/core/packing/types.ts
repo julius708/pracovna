@@ -1,6 +1,7 @@
 /**
  * Types of the pure packing domain. Nothing here imports Next, Supabase or Guesty.
  */
+import type { FlatFacts } from './flats';
 
 /** Bed groups used by the linen table. */
 export type BedGroup = 'dvoj' | 'jedno' | 'gauc';
@@ -124,6 +125,11 @@ export interface PackageInput {
   duvetTypeSetting?: 'male' | 'velke' | null;
   /** True when another package of the same listing has the same date. */
   doubleCheckout?: boolean;
+  /**
+   * Angelika's facts about the flat (src/core/packing/flats.ts). Left out = looked
+   * up by the listing id; null = none (tests).
+   */
+  facts?: FlatFacts | null;
 }
 
 export type PeopleSource = 'same_day' | 'gap' | 'capacity' | 'capacity_from_beds';
@@ -192,7 +198,8 @@ export interface CapsuleLine {
   photo: string | null;
 }
 
-export type DuvetSource = 'guesty_exact' | 'guesty_type' | 'setting' | 'default';
+/** facts = the flat's full set as Angelika counts it (flats.ts), shown as "podľa Angeliky". */
+export type DuvetSource = 'guesty_exact' | 'guesty_type' | 'setting' | 'default' | 'facts';
 
 export interface PackingResult {
   v: 1;

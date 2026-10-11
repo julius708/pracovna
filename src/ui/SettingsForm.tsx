@@ -3,7 +3,7 @@
 import { useRef, useState, useTransition } from 'react';
 import type { SettingsView } from '@/app/_lib/admin';
 import { saveSettingsAction, setProfileAction } from '@/app/_lib/admin-actions';
-import type { BedGroup, Counts, ItemDef, PackingSettings } from '@/core/packing';
+import { DERIVED_KEYS, LARGE_FLAT_CAPACITY, RULE_KEYS, type BedGroup, type Counts, type ItemDef, type PackingSettings } from '@/core/packing';
 import { pluralBalicek, sk } from '@/core/i18n/sk';
 
 const GROUPS: { key: BedGroup; label: string }[] = [
@@ -110,7 +110,7 @@ export function SettingsForm({ view, meId }: { view: SettingsView; meId: string 
     <section className="sheet">
       <h2>Nastavenie balíčkov</h2>
       <p>
-        Koľko kusov patrí na jednu posteľ, osobu a kúpeľňu. Manželská posteľ aj rozkladací gauč sú pre 2 osoby, jednolôžko pre 1. Byt s malými paplónmi dostane namiesto 1 veľkého 2 malé na každú manželskú posteľ a gauč. Keď je v deň check-outu aj check-in, balí sa presne na počet hostí z rezervácie. Keď sa voľné noci do ďalšieho príchodu nedajú predať (minimálny pobyt), balí sa na hostí ďalšej rezervácie. Inak sa byt pripraví na maximálnu kapacitu z Guesty (vrátane rozkladacieho gauča, ak ho kapacita vyžaduje). Toaletný papier má pevné pravidlo: 1 osoba = 2 kusy, inak 1 na osobu.
+        Koľko kusov patrí na jednu posteľ, osobu a kúpeľňu. Manželská posteľ aj rozkladací gauč sú pre 2 osoby, jednolôžko pre 1. Byt s malými paplónmi dostane namiesto 1 veľkého 2 malé na každú manželskú posteľ a gauč. Keď je v deň check-outu aj check-in, balí sa presne na počet hostí z rezervácie. Keď sa voľné noci do ďalšieho príchodu nedajú predať (minimálny pobyt), balí sa na hostí ďalšej rezervácie. Inak sa byt pripraví na maximálnu kapacitu z Guesty (vrátane rozkladacieho gauča, ak ho kapacita vyžaduje). Pevné pravidlá: toaletný papier vždy o 1 viac, ako je hostí; vrecká do koša 2 veľké + 2 malé pri malom byte a 3 + 3 pri byte pre {LARGE_FLAT_CAPACITY} a viac osôb.
       </p>
       <div className="tablewrap">
         <table>
@@ -131,9 +131,19 @@ export function SettingsForm({ view, meId }: { view: SettingsView; meId: string 
                 </td>
                 {COLS.map((c) => (
                   <td key={c.key}>
-                    {it.key === 'toaletak' ? (
+                    {DERIVED_KEYS.has(it.key) ? (
+                      c.key === 'bed:jedno' ? (
+                        <span title="1 na každú pripravenú posteľ 140 cm (Vajnorská); veľkosť plachty určuje posteľ">podľa postele</span>
+                      ) : (
+                        '–'
+                      )
+                    ) : RULE_KEYS.has(it.key) ? (
                       c.key === 'perApartment' ? (
-                        <span title="max(2, osoby)">max(2, osôb)</span>
+                        it.key === 'toaletak' ? (
+                          <span title="počet hostí + 1">hostia + 1</span>
+                        ) : (
+                          <span title={`2, pri byte pre ${LARGE_FLAT_CAPACITY}+ osôb 3`}>2 / 3</span>
+                        )
                       ) : (
                         '–'
                       )
@@ -157,7 +167,7 @@ export function SettingsForm({ view, meId }: { view: SettingsView; meId: string 
       </div>
 
       <h3>Paplóny podľa bytu</h3>
-      <p>Veľké = 1 veľký paplón na manželskú posteľ / gauč. Malé = 2 malé. Jednolôžko má vždy 1 malý paplón. Ak je v Guesty zapísaný typ, platí Guesty. Ak je v Guesty zapísaný počet, je to plná sada bytu a rozdeľuje sa na postele: manželská posteľ dostane svoj veľký paplón (alebo 2 malé), jednolôžko 1 malý. Posteľ sa chystá vždy celá, aj pre 1 hosťa; len uteráky idú presne podľa počtu hostí. Vankúše idú vždy k paplónom: k veľkému 2, k malému 1. Plachty idú podľa postelí z Guesty, vždy veľké: 1 na každú pripravenú posteľ. Malé plachty nebalíme automaticky; pri jednolôžku karta upozorní „veľkosť plachty preveriť s Angelikou“.</p>
+      <p>Veľké = 1 veľký paplón na manželskú posteľ / gauč. Malé = 2 malé. Jednolôžko má vždy 1 malý paplón. Ak je v Guesty zapísaný typ, platí Guesty. Ak je v Guesty zapísaný počet, je to plná sada bytu a rozdeľuje sa na postele: manželská posteľ dostane svoj veľký paplón (alebo 2 malé), jednolôžko 1 malý. Posteľ sa chystá vždy celá, aj pre 1 hosťa; len uteráky idú presne podľa počtu hostí. Vankúše idú vždy k paplónom: k veľkému 2, k malému 1. Plachty idú podľa pripravených postelí, 1 na posteľ: manželská posteľ a gauč dostanú veľkú; jednolôžko dostane veľkú a karta upozorní „veľkosť plachty preveriť s Angelikou“, okrem bytov, kde Angelika potvrdila malú (Skalická, Tomášikova); posteľ 140 cm (Vajnorská) má plachtu 140 cm. Pri bytoch, kde Angelika pozná postele, kapacitu či paplóny inak ako Guesty (Moyzesova, Skalická, Tomášikova, Vajnorská, Mestská), platí jej údaj; keď nahrádza počet paplónov (Moyzesova), karta píše „Paplóny: podľa Angeliky“.</p>
       <div className="dvlist">
         {view.listings
           .filter((l) => l.inScope)

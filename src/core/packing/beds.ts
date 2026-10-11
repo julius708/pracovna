@@ -5,7 +5,8 @@ const SOFA_LIKE: ReadonlySet<string> = new Set(['SOFA_BED', 'FUTON', 'AIR_MATTRE
 /** Not beds for linen purposes (proposal §6). Every other unlisted type = double bed + warning. */
 const IGNORED: ReadonlySet<string> = new Set(['CRIB', 'TODDLER_BED']);
 const KNOWN_DOUBLE: ReadonlySet<string> = new Set(['KING_BED', 'QUEEN_BED', 'DOUBLE_BED']);
-const SINGLE: ReadonlySet<string> = new Set(['SINGLE_BED', 'BUNK_BED']);
+/** BED_140 (src/core/packing/flats.ts): a 140 cm bed that sleeps one and takes a 140 cm sheet. */
+const SINGLE: ReadonlySet<string> = new Set(['SINGLE_BED', 'BUNK_BED', 'BED_140']);
 
 export const SLEEPS: Record<BedGroup, number> = { dvoj: 2, jedno: 1, gauc: 2 };
 

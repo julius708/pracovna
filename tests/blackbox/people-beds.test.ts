@@ -533,7 +533,7 @@ describe('beds through computePackage', () => {
     expect(count(r, 'plachta')).toBe(2);
     expect(count(r, 'osuskaV')).toBe(3);
     expect(count(r, 'uterakM')).toBe(3);
-    expect(count(r, 'toaletak')).toBe(3);
+    expect(count(r, 'toaletak')).toBe(4);
   });
 
   it('BUNK_BED flat for 2: single-bed linen ×2 + bunk warning', () => {

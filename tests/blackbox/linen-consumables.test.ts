@@ -347,22 +347,25 @@ describe('bathrooms: whole ones only, max(1, floor(b)) (spec §4)', () => {
 describe('consumables "Spotrebný tovar" (spec §4)', () => {
   it.each([
     [1, 2],
-    [2, 2],
-    [3, 3],
-    [6, 6],
-  ])('toilet paper for %s people = %s rolls (max(2, people))', (people, rolls) => {
+    [2, 3],
+    [3, 4],
+    [6, 7],
+  ])('toilet paper for %s people = %s rolls (people + 1, owner 2026-10-10)', (people, rolls) => {
     const r = computePackage(pkg({ listing: listing({ accommodates: 6 }), next: sameDay(people) }));
     expect(r.people).toBe(people);
     expect(count(r, 'toaletak')).toBe(rolls);
   });
 
-  it('fixed items: utierky 1 (rolka), spongia 1, kapsule do umývačky 2, vrecko veľké 1, vrecko malé 1', () => {
+  it('fixed items: utierky 1 (rolka), spongia 1, kapsule do umývačky 2; bin bags 3 + 3 for a 4-person flat, 2 + 2 for a smaller one', () => {
     const r = computePackage(pkg({ next: sameDay(2) }));
     expect(row(r, 'utierky')).toMatchObject({ n: 1, size: 'rolka', label: 'Kuchynské utierky' });
     expect(count(r, 'spongia')).toBe(1);
     expect(count(r, 'myckaKaps')).toBe(2);
-    expect(count(r, 'vreckoV')).toBe(1);
-    expect(count(r, 'vreckoM')).toBe(1);
+    expect(count(r, 'vreckoV')).toBe(3);
+    expect(count(r, 'vreckoM')).toBe(3);
+    const small = computePackage(pkg({ listing: listing({ beds: { KING_BED: 1 }, accommodates: 2 }), next: sameDay(2) }));
+    expect(count(small, 'vreckoV')).toBe(2);
+    expect(count(small, 'vreckoM')).toBe(2);
   });
 
   it('consumables and linen are separate lists: consumables hold exactly the consumable keys, linen none of them', () => {
@@ -405,12 +408,12 @@ describe('private linen "Prádlo: súkromné" (spec §3/§4, proposal Q5)', () =
   it('still packs every consumable, the capsules and the checklist', () => {
     const settings = mergeSettings({ checklist: ['Skontrolovať kľúče'] });
     const r = computePackage(pkg({ listing: listing({ laundry: privateWithEverything }), next: sameDay(3), settings }));
-    expect(count(r, 'toaletak')).toBe(3);
+    expect(count(r, 'toaletak')).toBe(4);
     expect(count(r, 'utierky')).toBe(1);
     expect(count(r, 'spongia')).toBe(1);
     expect(count(r, 'myckaKaps')).toBe(2);
-    expect(count(r, 'vreckoV')).toBe(1);
-    expect(count(r, 'vreckoM')).toBe(1);
+    expect(count(r, 'vreckoV')).toBe(3);
+    expect(count(r, 'vreckoM')).toBe(3);
     expect(r.capsules).toHaveLength(1);
     expect(r.capsules[0]).toMatchObject({ type: 'Tchibo Cafissimo', n: 3, state: 'ok' });
     expect(r.checklist).toContain('Skontrolovať kľúče');
@@ -722,12 +725,12 @@ describe('custom Settings flow into the result (spec §5 Settings, §4 "editable
     expect(count(r, 'predlozka')).toBe(4);
   });
 
-  it('changed per-apartment consumable counts', () => {
+  it('changed per-apartment consumable counts; the bin-bag rule ignores Settings', () => {
     const settings = mergeSettings({ perApartment: { myckaKaps: 3, vreckoM: 2 } });
     const r = computePackage(pkg({ settings, next: sameDay(2) }));
     expect(count(r, 'myckaKaps')).toBe(3);
-    expect(count(r, 'vreckoM')).toBe(2);
-    expect(count(r, 'vreckoV')).toBe(1);
+    expect(count(r, 'vreckoM')).toBe(3);
+    expect(count(r, 'vreckoV')).toBe(3);
   });
 
   it('global checklist + "Navyše:" items make the card checklist (global first)', () => {

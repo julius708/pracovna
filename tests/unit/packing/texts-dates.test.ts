@@ -148,7 +148,7 @@ describe('hash and settings', () => {
     expect(m.items.length).toBe(DEFAULT_SETTINGS.items.length);
     expect(m.beds.dvoj).toEqual({ paplonV: 1, vankus: 3, plachta: 1 });
     expect(m.beds.jedno).toEqual(DEFAULT_SETTINGS.beds.jedno);
-    expect(m.perApartment).toEqual({ utierky: 1, spongia: 2, myckaKaps: 2, vreckoV: 1, vreckoM: 1 });
+    expect(m.perApartment).toEqual({ utierky: 1, spongia: 2, myckaKaps: 2 });
     expect(m.checklist).toEqual([]);
     expect(mergeSettings(null)).toEqual(DEFAULT_SETTINGS);
   });

@@ -9,6 +9,8 @@ export { computePeople, evaluateGap } from './people';
 export { computeLinen, decideDuvets, duvetsForBeds, linenPerDuvet, pillowsPerDuvet, bathroomCount } from './linen';
 export { capsuleRows, capsulePhoto, canonicalCapsuleType } from './capsules';
 export { computePackage, packageHash } from './calculator';
+export { FLAT_FACTS, BED_140, flatFacts, flatAlias, sheetKeyFor } from './flats';
+export type { FlatFacts } from './flats';
 export { DEFAULT_SETTINGS, DEFAULT_ITEMS, mergeSettings } from './settings';
 export { addDays, diffDays, datesBetween, todayInTz, windowDates, WINDOW_DAYS, weekdayShort, formatDM, formatHM, ymdToDate, isYmd, zonedMidnight } from './dates';
 export { stableStringify, hashOf, fnv1a64 } from './hash';

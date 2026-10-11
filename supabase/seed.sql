@@ -7,6 +7,7 @@ insert into public.settings (key, value) values
       {"key":"vankus","label":"Vankúš","size":""},
       {"key":"plachta","label":"Plachta","size":""},
       {"key":"plachtaM","label":"Plachta malá","size":""},
+      {"key":"plachta140","label":"Plachta","size":"140 cm"},
       {"key":"osuskaV","label":"Osuška veľká","size":""},
       {"key":"uterakM","label":"Uterák malý","size":""},
       {"key":"predlozka","label":"Uterák na nohy do kúpeľne","size":""},
@@ -24,7 +25,7 @@ insert into public.settings (key, value) values
     },
     "perGuest": {"osuskaV":1,"uterakM":1},
     "perBathroom": {"predlozka":1},
-    "perApartment": {"utierky":1,"spongia":1,"myckaKaps":2,"vreckoV":1,"vreckoM":1},
+    "perApartment": {"utierky":1,"spongia":1,"myckaKaps":2},
     "checklist": []
   }'::jsonb),
   ('duvet_types', '{}'::jsonb)

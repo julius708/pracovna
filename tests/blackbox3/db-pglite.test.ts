@@ -24,6 +24,7 @@ const MIG7 = readFileSync(new URL('../../supabase/migrations/0007_board_notes.sq
 const MIG8 = readFileSync(new URL('../../supabase/migrations/0008_board_notes_per_day.sql', import.meta.url), 'utf8');
 const MIG9 = readFileSync(new URL('../../supabase/migrations/0009_board_notes_edit.sql', import.meta.url), 'utf8');
 const MIG10 = readFileSync(new URL('../../supabase/migrations/0010_week_window.sql', import.meta.url), 'utf8');
+const MIG11 = readFileSync(new URL('../../supabase/migrations/0011_pack_snapshot.sql', import.meta.url), 'utf8');
 
 const STUBS = `
 create role authenticated nologin;
@@ -76,6 +77,8 @@ describe('migrations', () => {
       expect(e9, `0009_board_notes_edit.sql failed: ${e9?.code} ${e9?.message} (line ${lineOf(MIG9, e9?.position)})`).toBeNull();
       const e10 = await pgError(fresh.exec(MIG10));
       expect(e10, `0010_week_window.sql failed: ${e10?.code} ${e10?.message} (line ${lineOf(MIG10, e10?.position)})`).toBeNull();
+      const e11 = await pgError(fresh.exec(MIG11));
+      expect(e11, `0011_pack_snapshot.sql failed: ${e11?.code} ${e11?.message} (line ${lineOf(MIG11, e11?.position)})`).toBeNull();
       const fns =(await fresh.query<Row>("select proname from pg_proc where pronamespace = 'public'::regnamespace order by 1")).rows.map((r) => r.proname);
       expect(fns).toEqual(expect.arrayContaining(['today_ba', 'is_admin', 'is_active_user', 'handle_new_user', 'sync_upsert_package', 'sync_set_lifecycle', 'pack_package', 'unpack_package', 'set_note', 'toggle_check', 'save_settings', 'admin_set_profile', 'acquire_lock', 'run_retention', 'increment_not_found', 'add_board_note', 'remove_board_note', 'edit_board_note']));
     } finally {
@@ -149,6 +152,7 @@ beforeAll(async () => {
   await db.exec(MIG8);
   await db.exec(MIG9);
   await db.exec(MIG10);
+  await db.exec(MIG11);
   await db.exec('set check_function_bodies = on');
   todayBa = (await one('select public.today_ba()::text as d')).d as string;
 });
@@ -302,6 +306,8 @@ describe('pack_package / unpack_package', () => {
     const ev = await events(id, 'packed');
     expect(ev).toHaveLength(1);
     expect(ev[0]).toMatchObject({ actor: angelika, actor_name: 'Angelika', client_action_id: action, listing_id: 'lst-1', listing_name: 'BA: Test 1' });
+    // the event keeps the card as packed (0011): people and the item lists from computed_items
+    expect(ev[0].data).toEqual({ people: 2, linen: c.computed_items.linen, consumables: [], capsules: [], private: false });
     expect(String(ev[0].package_date instanceof Date ? ev[0].package_date.toISOString().slice(0, 10) : ev[0].package_date)).toBe(todayBa);
   });
 

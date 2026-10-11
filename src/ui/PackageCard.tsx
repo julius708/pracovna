@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { BoardPackage } from '@/app/_lib/board';
 import type { Viewer } from '@/app/_lib/viewer';
-import { formatHM, NOTE_MAX_LENGTH, type PackingResult, type WarningCode } from '@/core/packing';
+import { flatFacts, formatHM, NOTE_MAX_LENGTH, type PackingResult, type WarningCode } from '@/core/packing';
 import { bedSummary, capsuleLabel, cheerDone, childrenBannerParts, duvetText, nextArrivalParts, packedBy, peopleParts, sk, sofaText, warningLine, type TextPart } from '@/core/i18n/sk';
 
 const AV = '/assets/angelika.jpg';
@@ -57,6 +57,8 @@ export function PackageCard({
   const done = checklist.filter((x) => checked[x]).length;
   const otherWarnings = (r.warnings as WarningCode[]).filter((w) => !INLINE.includes(w));
   const canAct = viewer.active && !cancelled;
+  // Angelika's name for the flat and her facts about it (src/core/packing/flats.ts)
+  const facts = flatFacts(p.listing_id);
 
   const pill = cancelled ? (
     <span className="pill handed">{sk.pill.cancelled}</span>
@@ -69,7 +71,10 @@ export function PackageCard({
   return (
     <article className={cls} id={`job-${p.id}`}>
       <div className="jh">
-        <h3>{p.listing_name}</h3>
+        <div>
+          <h3>{p.listing_name}</h3>
+          {facts?.alias && <div className="alias">{facts.alias}</div>}
+        </div>
         {pill}
       </div>
       {/* spec §5 order: badges, then banners (children, private linen) */}
@@ -105,6 +110,11 @@ export function PackageCard({
               {warningLine(w, r)}
             </span>
           ))}
+        </div>
+      )}
+      {facts?.note && (
+        <div className="lnote">
+          <b>{sk.flatNoteLabel}</b> {facts.note}
         </div>
       )}
       {r.guestyNote && (

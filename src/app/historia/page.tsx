@@ -6,6 +6,7 @@ import { getViewer } from '@/app/_lib/viewer';
 import { formatDM, formatHM, todayInTz } from '@/core/packing';
 import { sk } from '@/core/i18n/sk';
 import { AdminShell } from '@/ui/AdminShell';
+import { HistoryNav } from '@/ui/HistoryNav';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,6 +59,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Prom
     <AdminShell viewer={viewer}>
       <section className="sheet">
         <h2>História</h2>
+        <HistoryNav current="events" />
         <form method="get" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 12 }}>
           <div className="form-row">
             <label htmlFor="od">Od</label>

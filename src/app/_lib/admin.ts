@@ -1,12 +1,13 @@
 import 'server-only';
-import { addDays, DEFAULT_SETTINGS, mergeSettings, todayInTz, windowDates, zonedMidnight, type PackingSettings } from '@/core/packing';
+import { addDays, DEFAULT_SETTINGS, mergeSettings, todayInTz, windowDates, zonedMidnight, type PackingResult, type PackingSettings } from '@/core/packing';
 import type { MemoryRepo } from '@/db/memory-repo';
 import type { DuvetTypes } from '@/db/repo';
 import { createServerSupabase } from '@/db/server';
-import type { PackageEventRow, ProfileRow, SyncRunRow, WebhookEventRow } from '@/db/types';
+import type { PackageEventRow, PackageStatus, ProfileRow, SyncRunRow, WebhookEventRow } from '@/db/types';
 import { env } from '@/env';
 import { createRepoFromEnv } from '@/sync/context';
 import { HISTORY_PAGE, type HistoryFilter } from './history-filter';
+import { hasSnapshot, isSuperseded, snapshotOf, type PackingLogRow } from './packing-log';
 import { DEV_VIEWERS, supabaseConfigured } from './viewer';
 
 export { HISTORY_PAGE, type HistoryFilter } from './history-filter';
@@ -124,6 +125,88 @@ export async function loadHistory(f: HistoryFilter): Promise<HistoryView> {
     rows: all.slice(offset, offset + HISTORY_PAGE),
     listings: (await repo.getListings()).filter((l) => l.in_scope).map((l) => ({ id: l.guesty_id, name: l.name })).sort((a, b) => a.name.localeCompare(b.name, 'sk')),
     actors: [...new Set([...Object.values(DEV_VIEWERS).map((v) => v.name), ...repo.events.map((e) => e.actor_name), ...AUTOMATED_ACTORS])],
+    hasMore: all.length > offset + HISTORY_PAGE,
+  };
+}
+
+/* ---------------- história balenia ---------------- */
+
+export interface PackingLogView {
+  rows: PackingLogRow[];
+  listings: { id: string; name: string }[];
+  actors: string[];
+  hasMore: boolean;
+}
+
+/**
+ * "Zabalené balíčky": the packed events of the packing days in the filter,
+ * newest day first, with the counts as packed (the event snapshot, or the
+ * package's current counts for events from before migration 0011).
+ */
+export async function loadPackingLog(f: HistoryFilter): Promise<PackingLogView> {
+  const offset = Math.max(0, f.page - 1) * HISTORY_PAGE;
+  if (supabaseConfigured()) {
+    const c = await db();
+    let q = c
+      .from('package_events')
+      .select('*, packages(status, target_people, computed_items, packed_at)')
+      .eq('event', 'packed')
+      .gte('package_date', f.from)
+      .lte('package_date', f.to)
+      .order('package_date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + HISTORY_PAGE);
+    if (f.listingId) q = q.eq('listing_id', f.listingId);
+    if (f.actor) q = q.eq('actor_name', f.actor);
+    const [ev, ls, pr] = await Promise.all([q, c.from('listings').select('guesty_id, name').eq('in_scope', true).order('name'), c.from('profiles').select('display_name').order('display_name')]);
+    if (ev.error) throw new Error(`package_events: ${ev.error.message}`);
+    type Joined = PackageEventRow & { packages: { status: PackageStatus; target_people: number; computed_items: PackingResult; packed_at: string | null } | null };
+    const rows = ((ev.data ?? []) as unknown as Joined[]).slice(0, HISTORY_PAGE).map((e) => ({
+      id: e.id,
+      package_id: e.package_id,
+      package_date: String(e.package_date).slice(0, 10),
+      listing_id: e.listing_id,
+      listing_name: e.listing_name,
+      actor_name: e.actor_name,
+      created_at: e.created_at,
+      snapshot: snapshotOf(e.data, e.packages),
+      exact: hasSnapshot(e.data),
+      status: e.packages?.status ?? null,
+      superseded: e.packages?.status === 'packed' && isSuperseded(e.created_at, e.packages.packed_at),
+    }));
+    return {
+      rows,
+      listings: ((ls.data ?? []) as { guesty_id: string; name: string }[]).map((l) => ({ id: l.guesty_id, name: l.name })),
+      actors: ((pr.data ?? []) as { display_name: string }[]).map((p) => p.display_name),
+      hasMore: (ev.data ?? []).length > HISTORY_PAGE,
+    };
+  }
+  const repo = memory();
+  const all = repo.events
+    .filter((e) => e.event === 'packed' && e.package_date >= f.from && e.package_date <= f.to)
+    .filter((e) => !f.listingId || e.listing_id === f.listingId)
+    .filter((e) => !f.actor || e.actor_name === f.actor)
+    .sort((a, b) => b.package_date.localeCompare(a.package_date) || b.created_at.localeCompare(a.created_at));
+  const rows = all.slice(offset, offset + HISTORY_PAGE).map((e) => {
+    const p = repo.packages.get(e.package_id) ?? null;
+    return {
+      id: e.id,
+      package_id: e.package_id,
+      package_date: e.package_date,
+      listing_id: e.listing_id,
+      listing_name: e.listing_name,
+      actor_name: e.actor_name,
+      created_at: e.created_at,
+      snapshot: snapshotOf(e.data, p),
+      exact: hasSnapshot(e.data),
+      status: p?.status ?? null,
+      superseded: p?.status === 'packed' && isSuperseded(e.created_at, p.packed_at),
+    };
+  });
+  return {
+    rows,
+    listings: (await repo.getListings()).filter((l) => l.in_scope).map((l) => ({ id: l.guesty_id, name: l.name })).sort((a, b) => a.name.localeCompare(b.name, 'sk')),
+    actors: [...new Set([...Object.values(DEV_VIEWERS).map((v) => v.name), ...repo.events.filter((e) => e.event === 'packed').map((e) => e.actor_name)])],
     hasMore: all.length > offset + HISTORY_PAGE,
   };
 }

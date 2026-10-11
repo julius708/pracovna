@@ -1,17 +1,22 @@
 import { planBeds } from './beds';
 import { capsuleRows } from './capsules';
 import { hashOf } from './hash';
+import { flatFacts } from './flats';
 import { computeLinen } from './linen';
 import { uniqueStrings } from './normalize';
 import { computePeople } from './people';
-import type { PackageInput, PackingResult, WarningCode } from './types';
+import type { ListingInput, PackageInput, PackingResult, WarningCode } from './types';
 
 /**
  * The packing calculation of spec §4. Pure and deterministic: the same input
  * always gives the same result (and therefore the same hash).
  */
 export function computePackage(input: PackageInput): PackingResult {
-  const { listing, next, settings } = input;
+  const { next, settings } = input;
+  // what Angelika knows about the flat (beds, capacity, duvet set, sheet sizes); wins over the Guesty data it replaces
+  const facts = input.facts === undefined ? flatFacts(input.listing.guestyId) : input.facts;
+  const listing: ListingInput =
+    facts?.beds || facts?.capacity ? { ...input.listing, beds: facts.beds ?? input.listing.beds, accommodates: facts.capacity ?? input.listing.accommodates } : input.listing;
   const laundry = listing.laundry ?? null;
   const warnings: WarningCode[] = [];
 
@@ -29,6 +34,7 @@ export function computePackage(input: PackageInput): PackingResult {
     laundry,
     duvetTypeSetting: input.duvetTypeSetting ?? null,
     accommodates: listing.accommodates,
+    facts,
   });
   warnings.push(...linen.warnings);
 
@@ -46,11 +52,15 @@ export function computePackage(input: PackageInput): PackingResult {
   // clearly more duvets in Guesty than the flat sleeps (Mestská: 4 large for 2 guests): the entry needs
   // clarifying. One spare duvet is normal (a fold-out bed, Tomášikova: 6 for 5), so only a surplus of two or
   // more is flagged (private linen too: its counts are shown like everyone else's)
-  const inv = laundry?.duvetCounts;
+  const inv = facts?.duvets ?? laundry?.duvetCounts;
   const capacity = listing.accommodates ?? 0;
   const duvetInventory =
     inv && capacity > 0 && inv.large + inv.small >= capacity + 2 ? { large: inv.large, small: inv.small, capacity } : undefined;
   if (duvetInventory) warnings.push('duvets_exceed_capacity');
+
+  // questions Angelika has already answered for this flat stay off its card
+  const settled = new Set<WarningCode>(facts?.settled ?? []);
+  const shown = warnings.filter((w) => !settled.has(w));
 
   const checklist = uniqueStrings([...(settings.checklist ?? []), ...(laundry?.extras ?? [])]);
   const guestyNote = laundry?.notes.length ? laundry.notes.join(' · ') : null;
@@ -83,7 +93,7 @@ export function computePackage(input: PackageInput): PackingResult {
     guestyNote,
     checklist,
     cleaner: listing.cleaner ?? null,
-    warnings: uniqueStrings(warnings) as WarningCode[],
+    warnings: uniqueStrings(shown) as WarningCode[],
   };
 }
 

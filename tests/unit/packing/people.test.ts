@@ -11,7 +11,7 @@ describe('people rule 1 – same-day check-in', () => {
     expect(r.peopleSource).toBe('same_day');
     expect(count(r, 'osuskaV')).toBe(3);
     expect(count(r, 'uterakM')).toBe(3);
-    expect(count(r, 'toaletak')).toBe(3);
+    expect(count(r, 'toaletak')).toBe(4);
     expect(peopleSentence(r)).toBe('Balíme na 3 osoby (check-in v ten deň)');
   });
 

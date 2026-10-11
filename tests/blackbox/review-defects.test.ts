@@ -206,7 +206,7 @@ describe('checked OK', () => {
   it('mergeSettings: beds and perApartment partials are merged, null falls back to defaults', () => {
     const m = mergeSettings({ beds: { dvoj: { vankus: 3 } } as never, perApartment: { spongia: 2 } });
     expect(m.beds.dvoj).toEqual({ paplonV: 1, vankus: 3, plachta: 1 });
-    expect(m.perApartment).toEqual({ utierky: 1, spongia: 2, myckaKaps: 2, vreckoV: 1, vreckoM: 1 });
+    expect(m.perApartment).toEqual({ utierky: 1, spongia: 2, myckaKaps: 2 });
     expect(mergeSettings(undefined)).toEqual(DEFAULT_SETTINGS);
   });
 });

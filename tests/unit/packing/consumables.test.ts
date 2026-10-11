@@ -6,10 +6,10 @@ import { D0, count, laundry, listing, pkg, reservation } from './helpers';
 const sameDay = (guests: number) => reservation({ guestyId: 'R2', checkInDate: D0, guests });
 
 describe('test 8: toilet paper', () => {
-  it('1 person = 2 rolls, 3 people = 3 rolls', () => {
+  it('always one roll more than the people (owner 2026-10-10): 1 -> 2, 2 -> 3, 3 -> 4', () => {
     expect(count(computePackage(pkg({ next: sameDay(1) })), 'toaletak')).toBe(2);
-    expect(count(computePackage(pkg({ next: sameDay(3) })), 'toaletak')).toBe(3);
-    expect(count(computePackage(pkg({ next: sameDay(2) })), 'toaletak')).toBe(2);
+    expect(count(computePackage(pkg({ next: sameDay(3) })), 'toaletak')).toBe(4);
+    expect(count(computePackage(pkg({ next: sameDay(2) })), 'toaletak')).toBe(3);
   });
 
   it('the rule is fixed in code: a Settings value for toaletak is ignored', () => {
@@ -19,13 +19,13 @@ describe('test 8: toilet paper', () => {
 });
 
 describe('fixed consumables', () => {
-  it('kitchen towels 1, sponge 1, dishwasher capsules 2, big bag 1, small bag 1 – editable in Settings', () => {
+  it('kitchen towels 1, sponge 1, dishwasher capsules 2 (editable in Settings); bin bags by the flat size (rule in code)', () => {
     const r = computePackage(pkg());
     expect(count(r, 'utierky')).toBe(1);
     expect(count(r, 'spongia')).toBe(1);
     expect(count(r, 'myckaKaps')).toBe(2);
-    expect(count(r, 'vreckoV')).toBe(1);
-    expect(count(r, 'vreckoM')).toBe(1);
+    expect(count(r, 'vreckoV')).toBe(3);
+    expect(count(r, 'vreckoM')).toBe(3);
     const custom = computePackage(pkg({ settings: mergeSettings({ perApartment: { myckaKaps: 3 } }) }));
     expect(count(custom, 'myckaKaps')).toBe(3);
   });

@@ -215,22 +215,22 @@ describe('§4 linen table', () => {
 
 /* ------------------------------------------------------------------ */
 describe('§4 consumables', () => {
-  it('toilet paper max(2, people): 1->2, 2->2, 3->3, 6->6', () => {
+  it('toilet paper people + 1 (owner 2026-10-10): 1->2, 2->3, 3->4, 6->7', () => {
     expect(n(computePackage(pkg({ next: sameDay(1) })), 'toaletak')).toBe(2);
-    expect(n(computePackage(pkg({ next: sameDay(2) })), 'toaletak')).toBe(2);
-    expect(n(computePackage(pkg({ next: sameDay(3) })), 'toaletak')).toBe(3);
-    expect(n(computePackage(pkg({ next: sameDay(6) })), 'toaletak')).toBe(6);
+    expect(n(computePackage(pkg({ next: sameDay(2) })), 'toaletak')).toBe(3);
+    expect(n(computePackage(pkg({ next: sameDay(3) })), 'toaletak')).toBe(4);
+    expect(n(computePackage(pkg({ next: sameDay(6) })), 'toaletak')).toBe(7);
   });
 
-  it('fixed: utierky 1 rolka, špongia 1, kapsule do umývačky 2, vrecko veľké 1, vrecko malé 1', () => {
+  it('fixed: utierky 1 rolka, špongia 1, kapsule do umývačky 2; bin bags 3 + 3 for a 4-person flat (owner 2026-10-10)', () => {
     const r = computePackage(pkg());
     expect(r.consumables.map((l) => [l.label, l.size, l.n])).toEqual([
-      ['Toaletný papier', '', 4],
+      ['Toaletný papier', '', 5],
       ['Kuchynské utierky', 'rolka', 1],
       ['Špongia na riad', '', 1],
       ['Kapsule do umývačky', '', 2],
-      ['Vrecko do koša veľké', '', 1],
-      ['Vrecko do koša malé', '', 1],
+      ['Vrecko do koša veľké', '', 3],
+      ['Vrecko do koša malé', '', 3],
     ]);
   });
 

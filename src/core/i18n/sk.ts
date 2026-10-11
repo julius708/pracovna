@@ -73,6 +73,8 @@ export const sk = {
   noNextTag: 'Bez ďalšej rezervácie',
   privateBanner: 'Súkromné prádlo – nebaliť z našej bielizne',
   guestyNoteLabel: 'Z Guesty:',
+  /** Angelika's facts about the flat (src/core/packing/flats.ts). */
+  flatNoteLabel: 'Info o byte:',
   bedsLabel: 'Postele:',
   bedNotNeeded: 'netreba',
   duvetsLabel: 'Paplóny:',
@@ -84,7 +86,7 @@ export const sk = {
   capsuleUnsure: 'druh treba upresniť',
   capsuleMissing: 'druh nezadaný v Guesty',
   sofaNotNeeded: 'gauč netreba',
-  duvetSource: { exact: 'podľa Guesty', male: 'malé', velke: 'veľké' },
+  duvetSource: { exact: 'podľa Guesty', facts: 'podľa Angeliky', male: 'malé', velke: 'veľké' },
   cheers: ['Super, ďakujem!', 'Výborne, ďalší hotový!', 'Paráda, len tak ďalej!', 'Skvelá práca!', 'Perfektné!'],
   empty: {
     allPacked: 'Všetko zabalené',
@@ -180,7 +182,7 @@ export const sk = {
 export const warningText: Record<WarningCode, string> = {
   bunk: 'Poschodová posteľ – over balenie',
   no_duvet_info: 'Typ paplónov nezadaný – over na byte',
-  duvets_short: 'Paplónov v Guesty je menej ako postelí – over na byte',
+  duvets_short: '❓ Paplónov v Guesty je menej, ako treba na pripravené postele – preveriť s Angelikou',
   duvets_exceed_capacity: '❓ Otázka pre Angeliku: v Guesty je viac paplónov, ako je kapacita bytu – koľko baliť?',
   beds_insufficient: 'Postele v Guesty stačia len pre N osôb – over na byte',
   guests_missing: 'Počet hostí nezadaný v Guesty – balíme na max. kapacitu',
@@ -229,6 +231,7 @@ export const bedLabel: Record<string, string> = {
   QUEEN_BED: 'queen',
   DOUBLE_BED: 'manželská',
   SINGLE_BED: 'jednolôžko',
+  BED_140: 'posteľ 140 cm',
   SOFA_BED: 'gauč',
   BUNK_BED: 'poschodová (lôžko)',
   AIR_MATTRESS: 'nafukovací matrac',
@@ -326,10 +329,11 @@ export function sofaText(r: PackingResult): string | null {
   return r.beds.sofasUsed > 1 ? `rozložiť gauč ×${r.beds.sofasUsed}` : 'rozložiť gauč';
 }
 
-/** "podľa Guesty" / "malé" / "veľké" or null when no duvet info (warning shows instead). */
+/** "podľa Guesty" / "podľa Angeliky" / "malé" / "veľké" or null when no duvet info (warning shows instead). */
 export function duvetText(r: PackingResult): string | null {
   if (r.duvetSource === 'default') return null;
-  return r.duvetType === 'exact' ? sk.duvetSource.exact : sk.duvetSource[r.duvetType];
+  if (r.duvetType === 'exact') return r.duvetSource === 'facts' ? sk.duvetSource.facts : sk.duvetSource.exact;
+  return sk.duvetSource[r.duvetType];
 }
 
 /** Label and small note of a capsule row. */

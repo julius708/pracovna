@@ -124,7 +124,7 @@ describe('beds follow the people', () => {
     expect([count(chalupkova, 'paplonV'), count(chalupkova, 'vankus'), count(chalupkova, 'plachta')]).toEqual([2, 4, 2]);
     expect(count(chalupkova, 'osuskaV')).toBe(3);
     expect(count(chalupkova, 'uterakM')).toBe(3);
-    expect(count(chalupkova, 'toaletak')).toBe(3);
+    expect(count(chalupkova, 'toaletak')).toBe(4);
     expect(chalupkova.capsules[0]?.n).toBe(3);
     const small = computePackage(pkg({ listing: listing({ beds: { KING_BED: 1, SOFA_BED: 1 }, accommodates: 4, laundry: laundry('Paplón malý: 4') }), next: sameDay(3) }));
     expect(small.beds.usedGroups).toEqual(['dvoj', 'gauc']);
@@ -199,7 +199,7 @@ describe('beds follow the people', () => {
     expect(linenPerDuvet(DEFAULT_SETTINGS)).toEqual({ large: { vankus: 2 }, small: { vankus: 1 } });
     // towels, bathroom and consumables are untouched
     expect(count(r, 'osuskaV')).toBe(3);
-    expect(count(r, 'toaletak')).toBe(3);
+    expect(count(r, 'toaletak')).toBe(4);
   });
 
   it('pillows follow the duvets when Guesty counts apply: 2 per large, 1 per small (owner rule 2026-10-04)', () => {

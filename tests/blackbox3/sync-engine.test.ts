@@ -458,7 +458,7 @@ describe('recomputeWindow – settings, calendar, moves, scope, cancellation', (
     const diff = JSON.stringify(diffComputed(before, after));
     expect(diff).toContain('people 3→1');
     expect(diff).toContain('osuskaV');
-    expect(diff).toContain('toaletak'); // max(2, people): 3 → 2
+    expect(diff).toContain('toaletak'); // people + 1: 4 → 2
     expect(diff).toContain('vankus 4→2'); // the sofa is no longer needed for 1 person
     expect(diff).not.toContain('utierky'); // per apartment, unchanged
     expect(JSON.stringify(diffComputed(after, after))).not.toContain('people');

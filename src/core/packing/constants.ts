@@ -56,6 +56,12 @@ export const CITY_MATCH = 'bratislava';
 /** Maximum length of the staff note. */
 export const NOTE_MAX_LENGTH = 200;
 
+/** Item keys whose counts are rules in code, read-only in Settings (toilet paper, bin bags). */
+export const RULE_KEYS: ReadonlySet<string> = new Set(['toaletak', 'vreckoV', 'vreckoM']);
+
+/** Item keys derived from the bed type, not from the table (the 140 cm sheet goes with a 140 cm bed). */
+export const DERIVED_KEYS: ReadonlySet<string> = new Set(['plachta140']);
+
 /** Item keys that belong to "Spotrebný tovar" (packed in the same bag). */
 export const CONSUMABLE_KEYS: ReadonlySet<string> = new Set([
   'toaletak',
@@ -66,7 +72,18 @@ export const CONSUMABLE_KEYS: ReadonlySet<string> = new Set([
   'vreckoM',
 ]);
 
-/** Toilet paper rule: max(2, people). Fixed in code, read-only in Settings. */
+/** Toilet paper rule (owner, 2026-10-10): always one roll more than the people. Fixed in code, read-only in Settings. */
 export function toiletPaperCount(people: number): number {
-  return Math.max(2, people);
+  return Math.max(0, Math.floor(people) || 0) + 1;
+}
+
+/** Flats with this capacity or more are "large" for the bin-bag rule. */
+export const LARGE_FLAT_CAPACITY = 4;
+
+/**
+ * Bin bags rule (owner, 2026-10-10): a small flat gets 2 large + 2 small bags,
+ * a large flat (capacity 4+) 3 + 3. Both sizes get the same count.
+ */
+export function bagCount(capacity: number): number {
+  return capacity >= LARGE_FLAT_CAPACITY ? 3 : 2;
 }

@@ -75,7 +75,7 @@ describe('board model', () => {
     const towels = lines.find((l) => l.id === 'osuskaV')!;
     expect(towels).toMatchObject({ rem: 2, all: 5, consumable: false });
     const tp = lines.find((l) => l.id === 'toaletak')!;
-    expect(tp).toMatchObject({ rem: 2, all: 5, consumable: true });
+    expect(tp).toMatchObject({ rem: 3, all: 7, consumable: true }); // people + 1 per card
     const caps = lines.find((l) => l.id === 'kapsule|missing')!;
     expect(caps).toMatchObject({ label: 'Kapsule do kávy', note: 'm', rem: 2, all: 5 });
     expect(lines.findIndex((l) => l.consumable)).toBeGreaterThan(lines.filter((l) => !l.consumable).length - 1);
@@ -91,7 +91,7 @@ describe('board model', () => {
     const lines = summaryLines(jobs, { generic: 'g', typed: (t) => `Kapsule ${t}`, unsure: 'u', missing: 'm' });
     expect(lines.find((l) => l.id === 'paplonV')).toMatchObject({ rem: 1, all: 1 });
     expect(lines.find((l) => l.id === 'osuskaV')).toMatchObject({ rem: 2, all: 2 });
-    expect(lines.find((l) => l.id === 'toaletak')).toMatchObject({ rem: 4, all: 4 });
+    expect(lines.find((l) => l.id === 'toaletak')).toMatchObject({ rem: 6, all: 6 });
     expect(lines.find((l) => l.id.startsWith('kapsule|'))).toMatchObject({ rem: 4, all: 4 });
   });
 

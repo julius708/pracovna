@@ -72,7 +72,7 @@ export function Header({
       <div className="nav" style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 8, flexWrap: 'wrap', fontSize: 13 }}>
         {admin &&
           NAV.map((n) => (
-            <Link key={n.href} href={n.href} aria-current={path === n.href ? 'page' : undefined}>
+            <Link key={n.href} href={n.href} aria-current={path === n.href || (n.href !== '/' && path.startsWith(`${n.href}/`)) ? 'page' : undefined}>
               {n.label}
             </Link>
           ))}

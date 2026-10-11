@@ -7,6 +7,7 @@ export const DEFAULT_ITEMS: ItemDef[] = [
   { key: 'vankus', label: 'Vankúš', size: '' },
   { key: 'plachta', label: 'Plachta', size: '' },
   { key: 'plachtaM', label: 'Plachta malá', size: '' },
+  { key: 'plachta140', label: 'Plachta 140 cm', size: '' },
   { key: 'osuskaV', label: 'Osuška veľká', size: '' },
   { key: 'uterakM', label: 'Uterák malý', size: '' },
   { key: 'predlozka', label: 'Uterák na nohy do kúpeľne', size: '' },
@@ -28,19 +29,23 @@ export const DEFAULT_SETTINGS: PackingSettings = {
   },
   perGuest: { osuskaV: 1, uterakM: 1 },
   perBathroom: { predlozka: 1 },
-  perApartment: { utierky: 1, spongia: 1, myckaKaps: 2, vreckoV: 1, vreckoM: 1 },
+  // toilet paper and bin bags are rules in code (constants.ts), not table values
+  perApartment: { utierky: 1, spongia: 1, myckaKaps: 2 },
   checklist: [],
 };
 
 /**
- * Merges saved settings with the defaults: saved values win, items that were
- * added to the defaults later are appended, missing sections fall back.
+ * Merges saved settings with the defaults: saved values win, missing sections
+ * fall back. Items keep the table order of DEFAULT_ITEMS (the admin UI has no
+ * reorder control, so a saved order carries no intent): a saved label or size
+ * is kept, items added to the defaults later slot into their place, and saved
+ * keys the defaults do not know go last.
  */
 export function mergeSettings(saved: Partial<PackingSettings> | null | undefined): PackingSettings {
   const s = saved ?? {};
   const savedItems = Array.isArray(s.items) && s.items.length ? s.items : [];
   const items = savedItems.length
-    ? [...savedItems, ...DEFAULT_ITEMS.filter((d) => !savedItems.some((x) => x.key === d.key))]
+    ? [...DEFAULT_ITEMS.map((d) => savedItems.find((x) => x.key === d.key) ?? d), ...savedItems.filter((x) => !DEFAULT_ITEMS.some((d) => d.key === x.key))]
     : DEFAULT_ITEMS;
   return {
     items,

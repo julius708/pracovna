@@ -187,7 +187,7 @@ describe('per-item overrides and private linen', () => {
     expect(r.private).toBe(true);
     expect(count(r, 'paplonV')).toBe(2); // king + sofa for 4 guests, the full set
     expect(r.consumables.length).toBeGreaterThan(0);
-    expect(count(r, 'toaletak')).toBe(4);
+    expect(count(r, 'toaletak')).toBe(5);
     expect(r.capsules.length).toBe(1);
   });
 
@@ -202,12 +202,12 @@ describe('per-item overrides and private linen', () => {
       ['predlozka', 2],
     ]);
     expect(r.consumables.map((l) => [l.key, l.n])).toEqual([
-      ['toaletak', 6],
+      ['toaletak', 7],
       ['utierky', 1],
       ['spongia', 1],
       ['myckaKaps', 2],
-      ['vreckoV', 1],
-      ['vreckoM', 1],
+      ['vreckoV', 3],
+      ['vreckoM', 3],
     ]);
   });
 });

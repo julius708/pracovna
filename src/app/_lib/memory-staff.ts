@@ -3,6 +3,7 @@ import { addDays, isYmd, NOTE_MAX_LENGTH, todayInTz, WINDOW_DAYS } from '@/core/
 import type { MemoryRepo } from '@/db/memory-repo';
 import type { PackageEventInsert, PackageRow } from '@/db/types';
 import { randomUUID } from 'node:crypto';
+import { packSnapshot } from './packing-log';
 import type { Viewer } from './viewer';
 
 /**
@@ -49,8 +50,10 @@ export async function memoryPack(repo: MemoryRepo, viewer: Viewer, id: string, a
   if (p.status === 'packed') return { ok: false, already_packed: true, packed_by_name: p.packed_by_name, status: p.status };
   if (p.status !== 'todo') return { ok: false, status: p.status };
   const now = repo.now().toISOString();
+  // the card as packed goes into the event (migration 0011), so the history keeps it whatever is recomputed later
+  const snapshot = packSnapshot(p.target_people, p.computed_items) as unknown as Record<string, unknown>;
   Object.assign(p, { status: 'packed', packed_by: viewer.id, packed_by_name: viewer.name, packed_at: now, packed_hash: p.computed_hash, updated_at: now });
-  await event(repo, p, viewer, 'packed', actionId, {});
+  await event(repo, p, viewer, 'packed', actionId, snapshot);
   return { ok: true, status: 'packed', packed_by_name: viewer.name };
 }
 

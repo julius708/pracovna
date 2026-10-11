@@ -29,6 +29,11 @@ describe('historyFilterFrom', () => {
     expect(from({ od: '2000-01-01', do: '2099-12-31' })).toMatchObject({ from: '2000-01-01', to: '2099-12-31' });
   });
 
+  it('takes other defaults for the packing history (cards are packed up to a week ahead)', () => {
+    expect(historyFilterFrom(() => undefined, today, { to: '2026-10-08' })).toMatchObject({ from: '2026-09-25', to: '2026-10-08' });
+    expect(historyFilterFrom((k) => (k === 'do' ? '2026-10-03' : undefined), today, { to: '2026-10-08' })).toMatchObject({ to: '2026-10-03' });
+  });
+
   it('swaps a reversed range', () => {
     expect(from({ od: '2026-09-10', do: '2026-09-01' })).toMatchObject({ from: '2026-09-01', to: '2026-09-10' });
   });
