@@ -345,6 +345,7 @@ describe('mapReservation', () => {
       multi_stay: false,
       not_found_runs: 0,
       fetched_at: NOW,
+      arrival_time: null,
     });
   });
 

@@ -10,6 +10,8 @@ import type {
   PackageEventInsert,
   PackageRow,
   ReservationRow,
+  EarlyArrivalInsert,
+  EarlyArrivalRow,
   SyncJob,
   SyncRunRow,
   WebhookEventRow,
@@ -158,6 +160,19 @@ export class SupabaseRepo implements SyncRepo {
   }
   async resetNotFound(ids: string[]) {
     if (ids.length) must(await this.db.from('reservations').update({ not_found_runs: 0 }).in('guesty_id', ids), 'reservations.reset_not_found');
+  }
+
+  async getEarlyArrivals(dates: readonly Ymd[]) {
+    if (!dates.length) return [];
+    const rows = must(await this.db.from('early_arrivals').select('*').in('date', [...dates]).is('removed_at', null).order('date').order('arrival').order('created_at'), 'early_arrivals.select') as EarlyArrivalRow[];
+    return rows.map((r) => ({ ...r, date: String(r.date).slice(0, 10) }));
+  }
+  async insertEarlyArrivals(rows: EarlyArrivalInsert[]) {
+    for (const part of chunks(rows, 200)) must(await this.db.from('early_arrivals').insert(part), 'early_arrivals.insert');
+  }
+  async removeEarlyArrivals(ids: string[], by: string) {
+    const at = new Date().toISOString();
+    for (const part of chunks(ids, 200)) must(await this.db.from('early_arrivals').update({ removed_at: at, removed_by_name: by }).in('id', part).is('removed_at', null), 'early_arrivals.remove');
   }
 
   async upsertCalendar(rows: CalendarRow[]) {

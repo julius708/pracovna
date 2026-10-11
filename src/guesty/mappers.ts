@@ -122,6 +122,16 @@ export function mapListing(raw: ParsedListing, ctx: ListingMapContext): ListingR
   };
 }
 
+/**
+ * The planned arrival as "HH:MM" from what Guesty writes: the clock part of the
+ * check-in timestamp (16:00 standard, 13:00 for an agreed early check-in; the
+ * zone suffix is meaningless and ignored) or a bare "15:00" (eta). Null when absent.
+ */
+export function arrivalClock(value: string | null | undefined): string | null {
+  const m = /(?:^|T)(\d{2}):(\d{2})/.exec(value ?? '');
+  return m ? `${m[1]}:${m[2]}` : null;
+}
+
 /** Guesty reservation -> reservations row; null when it has no id, listing or dates. */
 export function mapReservation(raw: ParsedReservation, fetchedAt: string): ReservationRow | null {
   const id = raw._id ?? raw.reservationId ?? null;
@@ -134,6 +144,7 @@ export function mapReservation(raw: ParsedReservation, fetchedAt: string): Reser
   const arrivalListingId = (first && segListing(first)) ?? raw.listingId ?? listingId;
   const checkIn = first?.checkInDateLocalized ?? raw.checkInDateLocalized ?? null;
   const checkOut = last?.checkOutDateLocalized ?? raw.checkOutDateLocalized ?? null;
+  const arrivalTime = arrivalClock(first?.checkIn ?? first?.eta ?? raw.checkIn);
   if (!id || !listingId || !arrivalListingId || !checkIn || !checkOut) return null;
   const ng = first?.numberOfGuests ?? raw.numberOfGuests ?? null;
   const adults = ng?.numberOfAdults ?? null;
@@ -158,5 +169,6 @@ export function mapReservation(raw: ParsedReservation, fetchedAt: string): Reser
     multi_stay: listingIds.size > 1,
     not_found_runs: 0,
     fetched_at: fetchedAt,
+    arrival_time: arrivalTime,
   };
 }

@@ -40,6 +40,9 @@ export const staySegmentSchema = z.looseObject({
   unitId: str,
   checkInDateLocalized: str,
   checkOutDateLocalized: str,
+  /** Planned arrival: the search shape writes it as the clock part of checkIn, the by-ids shape as eta ("15:00" or a timestamp). */
+  checkIn: str,
+  eta: str,
   guestsCount: num.optional(),
   numberOfGuests: numberOfGuestsSchema.nullable().optional(),
 });
@@ -52,6 +55,7 @@ export const reservationSchema = z.looseObject({
   lastStayListingId: str,
   checkInDateLocalized: str,
   checkOutDateLocalized: str,
+  checkIn: str,
   guestsCount: num.optional(),
   numberOfGuests: numberOfGuestsSchema.nullable().optional(),
   confirmationCode: str,

@@ -46,6 +46,8 @@ export interface ReservationRow {
   multi_stay: boolean;
   not_found_runs: number;
   fetched_at: Instant;
+  /** Planned arrival "HH:MM" as Guesty writes it (see arrivalClock); null when unknown. Optional: older rows have none. */
+  arrival_time?: string | null;
 }
 
 export interface CalendarRow {
@@ -226,7 +228,14 @@ export interface EarlyArrivalRow {
   removed_by: string | null;
   removed_by_name: string | null;
   client_action_id: string | null;
+  /** Where the row came from ('guesty': derived from a reservation by the sync). */
+  source: string;
+  /** The reservation the row was derived from. */
+  reservation_id: string | null;
 }
+
+/** What the sync writes when a reservation turns out to arrive early. */
+export type EarlyArrivalInsert = Pick<EarlyArrivalRow, 'listing_id' | 'listing_name' | 'date' | 'arrival' | 'note' | 'author_name' | 'source' | 'reservation_id'>;
 
 export interface BoardNoteRow {
   id: string;

@@ -1,3 +1,4 @@
+import { syncEarlyArrivals, type EarlyArrivalsSyncResult } from './early-arrivals';
 import {
   addDays,
   computePackage,
@@ -33,6 +34,8 @@ export interface RecomputeResult {
   unchanged: number;
   cancelled: number;
   restored: number;
+  /** Early arrivals derived from the reservations of the window (src/sync/early-arrivals.ts). */
+  earlyArrivals?: EarlyArrivalsSyncResult;
 }
 
 export const CANCEL_REASONS = {
@@ -264,6 +267,8 @@ export async function recomputeWindow(deps: RecomputeDeps, trigger: string, toda
   }
 
   if (events.length) await repo.insertEvents(events);
+  // the "Skoré príchody" box follows the reservations we now hold
+  res.earlyArrivals = await syncEarlyArrivals(repo, dates, log);
   log.info('recompute.done', { ...res });
   return res;
 }

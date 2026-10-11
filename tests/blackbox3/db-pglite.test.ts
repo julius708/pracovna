@@ -26,6 +26,7 @@ const MIG9 = readFileSync(new URL('../../supabase/migrations/0009_board_notes_ed
 const MIG10 = readFileSync(new URL('../../supabase/migrations/0010_week_window.sql', import.meta.url), 'utf8');
 const MIG11 = readFileSync(new URL('../../supabase/migrations/0011_pack_snapshot.sql', import.meta.url), 'utf8');
 const MIG12 = readFileSync(new URL('../../supabase/migrations/0012_early_arrivals.sql', import.meta.url), 'utf8');
+const MIG13 = readFileSync(new URL('../../supabase/migrations/0013_guesty_early_arrivals.sql', import.meta.url), 'utf8');
 
 const STUBS = `
 create role authenticated nologin;
@@ -82,8 +83,16 @@ describe('migrations', () => {
       expect(e11, `0011_pack_snapshot.sql failed: ${e11?.code} ${e11?.message} (line ${lineOf(MIG11, e11?.position)})`).toBeNull();
       const e12 = await pgError(fresh.exec(MIG12));
       expect(e12, `0012_early_arrivals.sql failed: ${e12?.code} ${e12?.message} (line ${lineOf(MIG12, e12?.position)})`).toBeNull();
+      const e13 = await pgError(fresh.exec(MIG13));
+      expect(e13, `0013_guesty_early_arrivals.sql failed: ${e13?.code} ${e13?.message} (line ${lineOf(MIG13, e13?.position)})`).toBeNull();
+      // the manual entry of 0012 is withdrawn by 0013
+      const gone = (await fresh.query<Row>("select proname from pg_proc where pronamespace = 'public'::regnamespace and proname in ('add_early_arrival', 'remove_early_arrival')")).rows;
+      expect(gone).toEqual([]);
+      const cols = (await fresh.query<Row>("select column_name from information_schema.columns where table_schema = 'public' and table_name = 'early_arrivals' and column_name in ('source', 'reservation_id')")).rows.map((r) => r.column_name).sort();
+      expect(cols).toEqual(['reservation_id', 'source']);
+      expect((await fresh.query<Row>("select column_name from information_schema.columns where table_schema = 'public' and table_name = 'reservations' and column_name = 'arrival_time'")).rows).toHaveLength(1);
       const fns =(await fresh.query<Row>("select proname from pg_proc where pronamespace = 'public'::regnamespace order by 1")).rows.map((r) => r.proname);
-      expect(fns).toEqual(expect.arrayContaining(['today_ba', 'is_admin', 'is_active_user', 'handle_new_user', 'sync_upsert_package', 'sync_set_lifecycle', 'pack_package', 'unpack_package', 'set_note', 'toggle_check', 'save_settings', 'admin_set_profile', 'acquire_lock', 'run_retention', 'increment_not_found', 'add_board_note', 'remove_board_note', 'edit_board_note', 'add_early_arrival', 'remove_early_arrival']));
+      expect(fns).toEqual(expect.arrayContaining(['today_ba', 'is_admin', 'is_active_user', 'handle_new_user', 'sync_upsert_package', 'sync_set_lifecycle', 'pack_package', 'unpack_package', 'set_note', 'toggle_check', 'save_settings', 'admin_set_profile', 'acquire_lock', 'run_retention', 'increment_not_found', 'add_board_note', 'remove_board_note', 'edit_board_note']));
     } finally {
       await fresh.close();
     }
@@ -157,6 +166,7 @@ beforeAll(async () => {
   await db.exec(MIG10);
   await db.exec(MIG11);
   await db.exec(MIG12);
+  await db.exec(MIG13);
   await db.exec('set check_function_bodies = on');
   todayBa = (await one('select public.today_ba()::text as d')).d as string;
 });
@@ -787,6 +797,7 @@ describe('notify_board', () => {
       await rt.exec(MIG8);
       await rt.exec(MIG9);
       await rt.exec(MIG12);
+      await rt.exec(MIG13);
       await rt.exec(`
         create schema realtime;
         create table realtime.messages (id bigserial primary key, topic text, event text, payload jsonb, private boolean);
@@ -806,79 +817,6 @@ describe('notify_board', () => {
     } finally {
       await rt.close();
     }
-  });
-});
-
-// ------------------------------------------------------------------ 11. early arrivals (0012)
-describe('early_arrivals: add_early_arrival / remove_early_arrival (0012)', () => {
-  const FLAT = 'lst-arrival';
-  const listing = (over: Row = {}) =>
-    q(
-      `insert into public.listings (guesty_id, name, in_scope, fetched_at) values ($1, $2, $3, now())
-       on conflict (guesty_id) do update set name = excluded.name, in_scope = excluded.in_scope`,
-      [over.guesty_id ?? FLAT, over.name ?? 'Poštová, Heart', over.in_scope ?? true],
-    );
-
-  it('an active user records the flat (name copied from listings), day, time and note; the same action id replays', async () => {
-    await listing();
-    const eva = await newUser('Eva');
-    await actAs(eva);
-    const action = randomUUID();
-    const r1 = await one('select public.add_early_arrival($1, $2::date, $3, $4, $5) as r', [FLAT, todayBa, '12:00', '  zaplatený early check-in  ', action]);
-    expect(r1.r.ok).toBe(true);
-    const r2 = await one('select public.add_early_arrival($1, $2::date, $3, $4, $5) as r', [FLAT, todayBa, '12:00', 'x', action]);
-    expect(r2.r).toMatchObject({ ok: true, replayed: true, id: r1.r.id });
-    const rows = await q('select *, date::text as date from public.early_arrivals where id = $1', [r1.r.id]);
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ listing_id: FLAT, listing_name: 'Poštová, Heart', arrival: '12:00', note: 'zaplatený early check-in', author: eva, author_name: 'Eva', removed_at: null, client_action_id: action });
-    expect(String(rows[0].date).slice(0, 10)).toBe(todayBa);
-    // a missing note is stored as ''
-    const { r } = await one('select public.add_early_arrival($1, (public.today_ba() + 1)::date, $2, null, $3) as r', [FLAT, '13:30', randomUUID()]);
-    expect((await one('select note from public.early_arrivals where id = $1', [r.id])).note).toBe('');
-  });
-
-  it('refuses an unknown or out-of-scope flat, a bad time and a far day', async () => {
-    await listing();
-    await listing({ guesty_id: 'lst-out', name: 'Šustekova, Sky', in_scope: false });
-    const eva = await newUser('Eva');
-    await actAs(eva);
-    expect((await one('select public.add_early_arrival($1, $2::date, $3, $4, $5) as r', ['lst-nope', todayBa, '12:00', '', randomUUID()])).r).toEqual({ ok: false, status: 'bad_listing' });
-    expect((await one('select public.add_early_arrival($1, $2::date, $3, $4, $5) as r', ['lst-out', todayBa, '12:00', '', randomUUID()])).r).toEqual({ ok: false, status: 'bad_listing' });
-    for (const t of ['24:00', '12:60', '9:00', 'ráno', '']) {
-      expect((await one('select public.add_early_arrival($1, $2::date, $3, $4, $5) as r', [FLAT, todayBa, t, '', randomUUID()])).r).toEqual({ ok: false, status: 'bad_time' });
-    }
-    expect((await one('select public.add_early_arrival($1, null::date, $2, $3, $4) as r', [FLAT, '12:00', '', randomUUID()])).r).toEqual({ ok: false, status: 'bad_date' });
-    expect((await one("select public.add_early_arrival($1, (public.today_ba() - 2)::date, $2, $3, $4) as r", [FLAT, '12:00', '', randomUUID()])).r).toEqual({ ok: false, status: 'bad_date' });
-    expect((await one("select public.add_early_arrival($1, (public.today_ba() + 61)::date, $2, $3, $4) as r", [FLAT, '12:00', '', randomUUID()])).r).toEqual({ ok: false, status: 'bad_date' });
-    expect((await one("select public.add_early_arrival($1, (public.today_ba() + 60)::date, $2, $3, $4) as r", [FLAT, '12:00', '', randomUUID()])).r.ok).toBe(true);
-    // one active entry per flat and day; after a removal a new one may be written
-    expect((await one("select public.add_early_arrival($1, (public.today_ba() + 60)::date, $2, $3, $4) as r", [FLAT, '13:00', '', randomUUID()])).r).toEqual({ ok: false, status: 'duplicate' });
-    const gone = await newUser('Bývalá', { active: false });
-    await actAs(gone);
-    expect((await pgError(q('select public.add_early_arrival($1, $2::date, $3, $4, $5)', [FLAT, todayBa, '12:00', '', randomUUID()])))?.code).toBe('42501');
-    await actAs(null);
-    expect((await pgError(q('select public.add_early_arrival($1, $2::date, $3, $4, $5)', [FLAT, todayBa, '12:00', '', randomUUID()])))?.code).toBe('42501');
-  });
-
-  it('only the author or an admin removes an entry; removal is recorded and idempotent; staff no longer see it, admins do', async () => {
-    await listing();
-    const eva = await newUser('Eva');
-    const max = await newUser('Max');
-    const admin = await newUser('Julius', { role: 'admin' });
-    await actAs(eva);
-    const { r } = await one('select public.add_early_arrival($1, $2::date, $3, $4, $5) as r', [FLAT, (await one('select (public.today_ba() + 2)::text as d')).d, '11:00', '', randomUUID()]);
-    await actAs(max);
-    expect((await one('select public.remove_early_arrival($1, $2) as r', [r.id, randomUUID()])).r).toEqual({ ok: false, status: 'not_author' });
-    await actAs(admin);
-    expect((await one('select public.remove_early_arrival($1, $2) as r', [r.id, randomUUID()])).r).toEqual({ ok: true });
-    const row = await one('select * from public.early_arrivals where id = $1', [r.id]);
-    expect(row.removed_at).not.toBeNull();
-    expect(row).toMatchObject({ removed_by: admin, removed_by_name: 'Julius' });
-    expect((await one('select public.remove_early_arrival($1, $2) as r', [r.id, randomUUID()])).r).toEqual({ ok: true, replayed: true });
-    expect((await pgError(one('select public.remove_early_arrival($1, $2) as r', [randomUUID(), randomUUID()])))?.code).toBe('P0002');
-    await actAs(eva);
-    const { r: own } = await one('select public.add_early_arrival($1, $2::date, $3, $4, $5) as r', [FLAT, (await one('select (public.today_ba() + 2)::text as d')).d, '10:15', '', randomUUID()]);
-    expect((await one('select public.remove_early_arrival($1, $2) as r', [own.id, randomUUID()])).r).toEqual({ ok: true });
   });
 });
 

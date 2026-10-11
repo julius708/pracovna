@@ -10,18 +10,7 @@ import { env } from '@/env';
 import { createLogger } from '@/guesty/log';
 import { createRepoFromEnv } from '@/sync/context';
 import { loadBoard, type BoardData } from './board';
-import {
-  memoryAddBoardNote,
-  memoryAddEarlyArrival,
-  memoryCheck,
-  memoryEditBoardNote,
-  memoryNote,
-  memoryPack,
-  memoryRemoveBoardNote,
-  memoryRemoveEarlyArrival,
-  memoryUnpack,
-  type StaffResult,
-} from './memory-staff';
+import { memoryAddBoardNote, memoryCheck, memoryEditBoardNote, memoryNote, memoryPack, memoryRemoveBoardNote, memoryUnpack, type StaffResult } from './memory-staff';
 import { DEV_ROLE_COOKIE, devLoginAllowed, getViewer, supabaseConfigured } from './viewer';
 
 export interface ActionResult extends StaffResult {
@@ -100,22 +89,6 @@ export async function removeBoardNoteAction(id: string, actionId: string): Promi
   return withViewer(async (viewer) => {
     if (supabaseConfigured()) return rpc('remove_board_note', { p_id: id, p_action_id: actionId });
     return memoryRemoveBoardNote(memoryRepo(), viewer, id);
-  });
-}
-
-/** "Skoré príchody": records a guest arriving at `arrival` ("HH:MM") on `date` at the flat, under the viewer's name. */
-export async function addEarlyArrivalAction(listingId: string, date: string, arrival: string, note: string, actionId: string): Promise<ActionResult> {
-  return withViewer(async (viewer) => {
-    if (supabaseConfigured()) return rpc('add_early_arrival', { p_listing_id: listingId, p_date: date, p_arrival: arrival, p_note: note, p_action_id: actionId });
-    return memoryAddEarlyArrival(memoryRepo(), viewer, listingId, date, arrival, note, actionId);
-  });
-}
-
-/** Removes an early-arrival entry (author or admin). */
-export async function removeEarlyArrivalAction(id: string, actionId: string): Promise<ActionResult> {
-  return withViewer(async (viewer) => {
-    if (supabaseConfigured()) return rpc('remove_early_arrival', { p_id: id, p_action_id: actionId });
-    return memoryRemoveEarlyArrival(memoryRepo(), viewer, id);
   });
 }
 

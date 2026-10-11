@@ -112,7 +112,10 @@ describe('reservation mapper on the real shapes', () => {
     const a = mapReservation(reservationSchema.parse(searchShape('R1', 'TYPE1')), '2026-10-02T10:00:00.000Z');
     const b = mapReservation(reservationSchema.parse(byIdsShape('R1', 'TYPE1', 'TYPE1')), '2026-10-02T10:00:00.000Z');
     expect(a?.listing_id).toBe('TYPE1');
-    expect(a).toEqual(b);
+    // the planned arrival comes from checkIn's clock part in the search shape and from eta in the by-ids shape
+    expect(a?.arrival_time).toBe('13:00');
+    expect(b?.arrival_time).toBe('15:00');
+    expect({ ...a, arrival_time: null }).toEqual({ ...b, arrival_time: null });
   });
 
   it('a stay over two unit types is a multi-listing reservation whose package belongs to the last listing', () => {

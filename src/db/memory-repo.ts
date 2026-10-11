@@ -2,6 +2,7 @@ import { createMemoryTokenStore, type TokenStore } from '@/guesty/token';
 import type { LifecyclePatch, ReservationFilter, RetentionResult, SyncRepo, WebhookEventInsert } from './repo';
 import type {
   BoardNoteRow,
+  EarlyArrivalInsert,
   EarlyArrivalRow,
   AppStateKey,
   CalendarRow,
@@ -85,6 +86,27 @@ export class MemoryRepo implements SyncRepo {
     for (const id of ids) {
       const r = this.reservations.get(id);
       if (r) r.not_found_runs = 0;
+    }
+  }
+
+  async getEarlyArrivals(dates: readonly Ymd[]) {
+    return this.earlyArrivals
+      .filter((a) => !a.removed_at && dates.includes(a.date))
+      .sort((a, b) => a.date.localeCompare(b.date) || a.arrival.localeCompare(b.arrival) || a.created_at.localeCompare(b.created_at))
+      .map((a) => ({ ...a }));
+  }
+  async insertEarlyArrivals(rows: EarlyArrivalInsert[]) {
+    for (const r of rows) {
+      this.earlyArrivals.push({ ...r, id: uuid(), author: null, created_at: this.nowIso(), removed_at: null, removed_by: null, removed_by_name: null, client_action_id: null });
+    }
+  }
+  async removeEarlyArrivals(ids: string[], by: string) {
+    const at = this.nowIso();
+    for (const a of this.earlyArrivals) {
+      if (ids.includes(a.id) && !a.removed_at) {
+        a.removed_at = at;
+        a.removed_by_name = by;
+      }
     }
   }
 

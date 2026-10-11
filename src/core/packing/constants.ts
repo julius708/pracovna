@@ -59,6 +59,12 @@ export const NOTE_MAX_LENGTH = 200;
 /** Item keys whose counts are rules in code, read-only in Settings (toilet paper, bin bags). */
 export const RULE_KEYS: ReadonlySet<string> = new Set(['toaletak', 'vreckoV', 'vreckoM']);
 
+/**
+ * Standard check-in time: a reservation whose planned arrival (Guesty's check-in
+ * clock time) is earlier is an early arrival on the board (owner, 2026-10-11).
+ */
+export const EARLY_ARRIVAL_BEFORE = '16:00';
+
 /** Item keys derived from the bed type, not from the table (the 140 cm sheet goes with a 140 cm bed). */
 export const DERIVED_KEYS: ReadonlySet<string> = new Set(['plachta140']);
 

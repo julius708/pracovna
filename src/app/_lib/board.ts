@@ -73,10 +73,8 @@ export interface BoardData {
   packages: BoardPackage[];
   /** "Dôležité info" for the board days, newest first. */
   notes: BoardNote[];
-  /** "Skoré príchody" for the board days, by day and time. */
+  /** "Skoré príchody" for the board days (from Guesty, see src/sync/early-arrivals.ts), by day and time. */
   arrivals: EarlyArrival[];
-  /** In-scope flats for the early-arrival picker, by name. */
-  listings: { id: string; name: string }[];
   /** listing id -> cleaning company (null when none). */
   cleaners: Record<string, string | null>;
   status: { lastOkSyncAt: string | null; consecutiveFailures: number };
@@ -98,7 +96,7 @@ export async function loadBoard(viewer: Viewer): Promise<BoardData> {
     if (!db) throw new Error('Supabase client unavailable');
     const [pk, ls, st, nt, ea] = await Promise.all([
       db.from('packages').select(BOARD_COLUMNS).in('date', dates),
-      db.from('listings').select('guesty_id, name, cleaner, in_scope'),
+      db.from('listings').select('guesty_id, cleaner'),
       db.rpc('board_status'),
       db.from('board_notes').select(NOTE_COLUMNS).in('date', dates).is('removed_at', null).order('created_at', { ascending: false }),
       db.from('early_arrivals').select(ARRIVAL_COLUMNS).in('date', dates).is('removed_at', null).order('date').order('arrival').order('created_at'),
@@ -107,8 +105,7 @@ export async function loadBoard(viewer: Viewer): Promise<BoardData> {
     if (nt.error) throw new Error(`board_notes: ${nt.error.message}`);
     if (ea.error) throw new Error(`early_arrivals: ${ea.error.message}`);
     const cleaners: Record<string, string | null> = {};
-    const listingRows = (ls.data ?? []) as { guesty_id: string; name: string; cleaner: string | null; in_scope: boolean }[];
-    for (const l of listingRows) cleaners[l.guesty_id] = l.cleaner;
+    for (const l of (ls.data ?? []) as { guesty_id: string; cleaner: string | null }[]) cleaners[l.guesty_id] = l.cleaner;
     const status = (st.data ?? {}) as { last_ok_sync_at?: string | null; consecutive_failures?: number };
     return {
       today,
@@ -116,10 +113,6 @@ export async function loadBoard(viewer: Viewer): Promise<BoardData> {
       packages: (pk.data ?? []) as unknown as BoardPackage[],
       notes: (nt.data ?? []) as BoardNote[],
       arrivals: ((ea.data ?? []) as EarlyArrival[]).map((a) => ({ ...a, date: String(a.date).slice(0, 10) })),
-      listings: listingRows
-        .filter((l) => l.in_scope)
-        .map((l) => ({ id: l.guesty_id, name: l.name }))
-        .sort((a, b) => a.name.localeCompare(b.name, 'sk')),
       cleaners,
       status: { lastOkSyncAt: status.last_ok_sync_at ?? null, consecutiveFailures: status.consecutive_failures ?? 0 },
       loadedAt,
@@ -167,10 +160,6 @@ export async function loadBoard(viewer: Viewer): Promise<BoardData> {
       .filter((a) => !a.removed_at && (dates as readonly string[]).includes(a.date))
       .sort((a, b) => a.date.localeCompare(b.date) || a.arrival.localeCompare(b.arrival) || a.created_at.localeCompare(b.created_at))
       .map((a) => ({ id: a.id, listing_id: a.listing_id, listing_name: a.listing_name, date: a.date, arrival: a.arrival, note: a.note, author: a.author, author_name: a.author_name, created_at: a.created_at })),
-    listings: listings
-      .filter((l) => l.in_scope)
-      .map((l) => ({ id: l.guesty_id, name: l.name }))
-      .sort((a, b) => a.name.localeCompare(b.name, 'sk')),
     cleaners,
     status: { lastOkSyncAt: lastOk, consecutiveFailures: failures ?? 0 },
     loadedAt,

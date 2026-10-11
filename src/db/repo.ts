@@ -13,8 +13,7 @@ import type {
   SyncRunRow,
   WebhookEventRow,
   WebhookEventStatus,
-  Ymd,
-} from './types';
+  Ymd, EarlyArrivalInsert, EarlyArrivalRow } from './types';
 
 export interface ReservationFilter {
   checkOutGte?: Ymd;
@@ -67,6 +66,13 @@ export interface SyncRepo {
   getReservationsByIds(ids: string[]): Promise<ReservationRow[]>;
   incrementNotFound(ids: string[]): Promise<void>;
   resetNotFound(ids: string[]): Promise<void>;
+
+  // early arrivals: derived from the reservations by the sync (src/sync/early-arrivals.ts)
+  /** Active rows of the given days. */
+  getEarlyArrivals(dates: readonly Ymd[]): Promise<EarlyArrivalRow[]>;
+  insertEarlyArrivals(rows: EarlyArrivalInsert[]): Promise<void>;
+  /** Marks rows removed (they stay for the record), naming who removed them. */
+  removeEarlyArrivals(ids: string[], by: string): Promise<void>;
 
   // calendar
   upsertCalendar(rows: CalendarRow[]): Promise<void>;

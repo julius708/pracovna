@@ -57,7 +57,10 @@ export function generateSeedData(listings: ParsedListing[], opts: SeedOptions): 
   const mk = (listingId: string, checkIn: Ymd, checkOut: Ymd, guests: number, extra: Partial<ParsedReservation> & { children?: number; infants?: number } = {}): ParsedReservation => {
     n++;
     const adults = Math.max(1, guests - (extra.children ?? 0));
+    // planned arrival as Guesty writes it: 16:00, every 11th reservation an agreed early check-in at 13:00
+    const arrival = n % 11 === 0 ? '13:00' : '16:00';
     return {
+      checkIn: `${checkIn}T${arrival}:00.000Z`,
       _id: hexId('5eed', n),
       status: extra.status ?? 'confirmed',
       confirmationCode: `SEED-${n}`,
@@ -70,6 +73,7 @@ export function generateSeedData(listings: ParsedListing[], opts: SeedOptions): 
       stay: [
         {
           listingId,
+          checkIn: `${checkIn}T${arrival}:00.000Z`,
           checkInDateLocalized: checkIn,
           checkOutDateLocalized: checkOut,
           guestsCount: guests,
