@@ -3,7 +3,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { isTransientAuthError } from '@/db/auth-errors';
 import { createRetryingFetch } from '@/db/fetch-retry';
 
-const PUBLIC = ['/login', '/nove-heslo', '/auth/', '/health', '/api/'];
+// the service worker, the web manifest and the app icons are fetched without the session (push, home-screen install)
+const PUBLIC = ['/login', '/nove-heslo', '/auth/', '/health', '/api/', '/sw.js', '/manifest.webmanifest', '/icons/'];
 const ADMIN = ['/nastavenia', '/historia', '/stav'];
 const DEV_ROLE_COOKIE = 'pr-dev-role';
 
