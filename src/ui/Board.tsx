@@ -1,15 +1,27 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { addBoardNoteAction, checkAction, editBoardNoteAction, noteAction, packAction, removeBoardNoteAction, unpackAction, type ActionResult } from '@/app/_lib/actions';
-import type { BoardData, BoardNote, BoardPackage } from '@/app/_lib/board';
+import {
+  addBoardNoteAction,
+  addEarlyArrivalAction,
+  checkAction,
+  editBoardNoteAction,
+  noteAction,
+  packAction,
+  removeBoardNoteAction,
+  removeEarlyArrivalAction,
+  unpackAction,
+  type ActionResult,
+} from '@/app/_lib/actions';
+import type { BoardData, BoardNote, BoardPackage, EarlyArrival } from '@/app/_lib/board';
 import type { Viewer } from '@/app/_lib/viewer';
 import { formatDM } from '@/core/packing';
 import { dayLabel, dayWord, packedOf, sk } from '@/core/i18n/sk';
 import { useRouter } from 'next/navigation';
 import { newActionId } from './action-id';
 import { isRecoveryHash } from './recovery';
-import { angelikaNumbers, applyCleaner, boardNotices, cleanerOptions, counts, dayJobs, FILTER_KEYS, noteNotices, summaryLines, visibleJobs, type Filter } from './board-model';
+import { angelikaNumbers, applyCleaner, arrivalFor, arrivalNotices, boardNotices, cleanerOptions, counts, dayJobs, FILTER_KEYS, noteNotices, sortArrivals, summaryLines, visibleJobs, type Filter } from './board-model';
+import { EarlyArrivals } from './EarlyArrivals';
 import { Header } from './Header';
 import { NoticeBoard } from './NoticeBoard';
 import { PackageCard, type CardHandlers } from './PackageCard';
@@ -55,7 +67,11 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevPackages = useRef(initial.packages);
   const prevNotes = useRef(initial.notes);
+  const prevArrivals = useRef(initial.arrivals);
   const [noteBusy, setNoteBusy] = useState(false);
+  const [arrivalBusy, setArrivalBusy] = useState(false);
+  /** Early arrivals this device removed itself: no "zrušený" notice for them. */
+  const ownArrivalIds = useRef(new Set<string>());
   const ownChanges = useRef(new Map<string, number>());
   const noticeSeq = useRef(0);
   const router = useRouter();
@@ -65,14 +81,17 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
   useEffect(() => {
     const prev = prevPackages.current;
     const prevN = prevNotes.current;
+    const prevA = prevArrivals.current;
     prevPackages.current = data.packages;
     prevNotes.current = data.notes;
-    if (prev === data.packages && prevN === data.notes) return;
+    prevArrivals.current = data.arrivals;
+    if (prev === data.packages && prevN === data.notes && prevA === data.arrivals) return;
     const cutoff = Date.now() - OWN_CHANGE_MS;
     for (const [id, at] of ownChanges.current) if (at < cutoff) ownChanges.current.delete(id);
     const texts = [
       ...(prev === data.packages ? [] : boardNotices(prev, data.packages, viewer.name, new Set(ownChanges.current.keys()), (d) => dayWord(dates.indexOf(d as (typeof dates)[number]), d))),
       ...(prevN === data.notes ? [] : noteNotices(prevN, data.notes, viewer.name, (d) => `${dayWord(dates.indexOf(d as (typeof dates)[number]), d)} ${formatDM(d)}`)),
+      ...(prevA === data.arrivals ? [] : arrivalNotices(prevA, data.arrivals, viewer.name, ownArrivalIds.current, dates, (d) => `${dayWord(dates.indexOf(d as (typeof dates)[number]), d)} ${formatDM(d)}`)),
     ];
     if (texts.length === 0) return;
     const items = texts.map((text) => ({ id: ++noticeSeq.current, text }));
@@ -89,7 +108,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
       clearTimeout(show);
       clearTimeout(hide);
     };
-  }, [data.packages, data.notes, dates, viewer.name]);
+  }, [data.packages, data.notes, data.arrivals, dates, viewer.name]);
 
   useEffect(() => {
     // a password-recovery link opened while signed in lands here with the session in the fragment
@@ -291,6 +310,52 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
     }
   };
 
+  /** Records an early arrival for the selected day; true when it was saved (the form then clears). */
+  const addArrival = async (listingId: string, arrival: string, note: string): Promise<boolean> => {
+    const name = data.listings.find((l) => l.id === listingId)?.name ?? listingId;
+    const temp: EarlyArrival = { id: `temp-${newActionId()}`, listing_id: listingId, listing_name: name, date, arrival, note, author: viewer.id, author_name: viewer.name, created_at: new Date().toISOString() };
+    setArrivalBusy(true);
+    setData((d) => ({ ...d, arrivals: sortArrivals([...d.arrivals, temp]) }));
+    let res: ActionResult;
+    try {
+      res = await track(() => addEarlyArrivalAction(listingId, date, arrival, note, newActionId()));
+    } catch {
+      res = { ok: false, error: 'failed' };
+    }
+    setArrivalBusy(false);
+    if (res.ok) {
+      if (res.id) setData((d) => ({ ...d, arrivals: d.arrivals.map((a) => (a.id === temp.id ? { ...a, id: res.id as string } : a)) }));
+      void refresh();
+      return true;
+    }
+    setData((d) => ({ ...d, arrivals: d.arrivals.filter((a) => a.id !== temp.id) }));
+    const t = sk.earlyArrivals;
+    const why: Record<string, string> = { bad_time: t.badTime, bad_listing: t.badListing, bad_date: t.badDate, duplicate: t.duplicate };
+    showToast(res.error === 'unauthorized' ? sk.toasts.noPermission : (res.status && why[res.status]) || t.notSaved);
+    return false;
+  };
+
+  const removeArrival = async (a: EarlyArrival) => {
+    const before = data.arrivals;
+    ownArrivalIds.current.add(a.id);
+    setArrivalBusy(true);
+    setData((d) => ({ ...d, arrivals: d.arrivals.filter((x) => x.id !== a.id) }));
+    let res: ActionResult;
+    try {
+      res = await track(() => removeEarlyArrivalAction(a.id, newActionId()));
+    } catch {
+      res = { ok: false, error: 'failed' };
+    }
+    setArrivalBusy(false);
+    if (res.ok) {
+      void refresh();
+    } else {
+      ownArrivalIds.current.delete(a.id);
+      setData((d) => ({ ...d, arrivals: before }));
+      showToast(res.status === 'not_author' ? sk.earlyArrivals.notAuthor : res.error === 'unauthorized' ? sk.toasts.noPermission : sk.earlyArrivals.notRemoved);
+    }
+  };
+
   // seven day tabs: keep the chosen one in view on narrow screens (the row scrolls sideways)
   useEffect(() => {
     document.querySelector('.day[aria-pressed="true"]')?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
@@ -327,7 +392,14 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
                 <div className="d">
                   {dayLabel(i, d)} <span style={{ fontWeight: 600, opacity: 0.6 }}>{formatDM(d)}</span>
                 </div>
-                <div className="n">{hasData ? packedOf(dc.packed, dc.total) : sk.noDataDash}</div>
+                <div className="n">
+                  {data.arrivals.some((a) => a.date === d) && (
+                    <span className="day-arrival" title={sk.earlyArrivals.title}>
+                      ⏰<span className="sr-only"> {sk.earlyArrivals.title}</span>
+                    </span>
+                  )}
+                  {hasData ? packedOf(dc.packed, dc.total) : sk.noDataDash}
+                </div>
                 <div className="bar">
                   <i style={{ width: `${pct}%` }} />
                 </div>
@@ -359,6 +431,17 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
         onRemove={(n) => void removeNote(n)}
       />
 
+      <EarlyArrivals
+        arrivals={data.arrivals.filter((a) => a.date === date)}
+        listings={data.listings}
+        dayTitle={`${dayWord(sel, date)} ${formatDM(date)}`}
+        viewer={viewer}
+        now={now}
+        busy={arrivalBusy}
+        onAdd={addArrival}
+        onRemove={(a) => void removeArrival(a)}
+      />
+
       <Summary dayWord={dayWord(sel, date)} hasData={hasData} numbers={numbers} lines={lines} hasJobs={jobs.length > 0} />
 
       {cleaners.length > 0 && (
@@ -386,6 +469,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
             key={p.id}
             p={p}
             cleaner={data.cleaners[p.listing_id] ?? null}
+            arrival={arrivalFor(data.arrivals, p)}
             viewer={viewer}
             busy={busy.has(p.id)}
             cheer={cheer?.id === p.id ? cheer.msg : null}

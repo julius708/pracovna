@@ -10,7 +10,18 @@ import { env } from '@/env';
 import { createLogger } from '@/guesty/log';
 import { createRepoFromEnv } from '@/sync/context';
 import { loadBoard, type BoardData } from './board';
-import { memoryAddBoardNote, memoryCheck, memoryEditBoardNote, memoryNote, memoryPack, memoryRemoveBoardNote, memoryUnpack, type StaffResult } from './memory-staff';
+import {
+  memoryAddBoardNote,
+  memoryAddEarlyArrival,
+  memoryCheck,
+  memoryEditBoardNote,
+  memoryNote,
+  memoryPack,
+  memoryRemoveBoardNote,
+  memoryRemoveEarlyArrival,
+  memoryUnpack,
+  type StaffResult,
+} from './memory-staff';
 import { DEV_ROLE_COOKIE, devLoginAllowed, getViewer, supabaseConfigured } from './viewer';
 
 export interface ActionResult extends StaffResult {
@@ -68,7 +79,7 @@ export async function checkAction(packageId: string, item: string, checked: bool
 }
 
 /** Fresh board data for the live-update refetch. */
-/** "Dôležité info pre Angeliku a Maxa": adds a note for one board day under the viewer's name. */
+/** "Dôležité info": adds a note for one board day under the viewer's name. */
 export async function addBoardNoteAction(text: string, date: string, actionId: string): Promise<ActionResult> {
   return withViewer(async (viewer) => {
     if (supabaseConfigured()) return rpc('add_board_note', { p_text: text, p_date: date, p_action_id: actionId });
@@ -89,6 +100,22 @@ export async function removeBoardNoteAction(id: string, actionId: string): Promi
   return withViewer(async (viewer) => {
     if (supabaseConfigured()) return rpc('remove_board_note', { p_id: id, p_action_id: actionId });
     return memoryRemoveBoardNote(memoryRepo(), viewer, id);
+  });
+}
+
+/** "Skoré príchody": records a guest arriving at `arrival` ("HH:MM") on `date` at the flat, under the viewer's name. */
+export async function addEarlyArrivalAction(listingId: string, date: string, arrival: string, note: string, actionId: string): Promise<ActionResult> {
+  return withViewer(async (viewer) => {
+    if (supabaseConfigured()) return rpc('add_early_arrival', { p_listing_id: listingId, p_date: date, p_arrival: arrival, p_note: note, p_action_id: actionId });
+    return memoryAddEarlyArrival(memoryRepo(), viewer, listingId, date, arrival, note, actionId);
+  });
+}
+
+/** Removes an early-arrival entry (author or admin). */
+export async function removeEarlyArrivalAction(id: string, actionId: string): Promise<ActionResult> {
+  return withViewer(async (viewer) => {
+    if (supabaseConfigured()) return rpc('remove_early_arrival', { p_id: id, p_action_id: actionId });
+    return memoryRemoveEarlyArrival(memoryRepo(), viewer, id);
   });
 }
 

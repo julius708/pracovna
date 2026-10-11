@@ -2,6 +2,7 @@ import { createMemoryTokenStore, type TokenStore } from '@/guesty/token';
 import type { LifecyclePatch, ReservationFilter, RetentionResult, SyncRepo, WebhookEventInsert } from './repo';
 import type {
   BoardNoteRow,
+  EarlyArrivalRow,
   AppStateKey,
   CalendarRow,
   ListingRow,
@@ -36,6 +37,7 @@ export class MemoryRepo implements SyncRepo {
   locks = new Map<string, { until: number; runId: string }>();
   webhookEvents: WebhookEventRow[] = [];
   boardNotes: BoardNoteRow[] = [];
+  earlyArrivals: EarlyArrivalRow[] = [];
   readonly tokenStore: TokenStore = createMemoryTokenStore();
   now: () => Date = () => new Date();
 

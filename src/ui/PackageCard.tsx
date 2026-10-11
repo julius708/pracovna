@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import type { BoardPackage } from '@/app/_lib/board';
+import type { BoardPackage, EarlyArrival } from '@/app/_lib/board';
 import type { Viewer } from '@/app/_lib/viewer';
 import { flatFacts, formatHM, NOTE_MAX_LENGTH, type PackingResult, type WarningCode } from '@/core/packing';
 import { bedSummary, capsuleLabel, cheerDone, childrenBannerParts, duvetText, nextArrivalParts, packedBy, peopleParts, sk, sofaText, warningLine, type TextPart } from '@/core/i18n/sk';
@@ -26,6 +26,7 @@ export interface CardHandlers {
 export function PackageCard({
   p,
   cleaner,
+  arrival = null,
   viewer,
   busy,
   cheer,
@@ -33,6 +34,8 @@ export function PackageCard({
 }: {
   p: BoardPackage;
   cleaner: string | null;
+  /** The early arrival recorded for this flat on this day (owner, 2026-10-11), shown first on the card. */
+  arrival?: EarlyArrival | null;
   viewer: Viewer;
   busy: boolean;
   cheer: string | null;
@@ -77,6 +80,12 @@ export function PackageCard({
         </div>
         {pill}
       </div>
+      {arrival && (
+        <div className="arrival-bar">
+          {sk.earlyArrivals.cardLine(arrival.arrival)}
+          {arrival.note ? ` · ${arrival.note}` : ''}
+        </div>
+      )}
       {/* spec §5 order: badges, then banners (children, private linen) */}
       <div className="meta">
         {next ? (

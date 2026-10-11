@@ -20,7 +20,7 @@ export interface NoticeBoardProps {
 }
 
 /**
- * "Dôležité info pre Angeliku a Maxa": the shared notice board above the
+ * "Dôležité info": the shared notice board above the
  * apartment list, one box per board day (a note written under "Po 5.10." shows
  * only there). Always visible, even when empty; every note shows its author
  * and time. The author edits their own note; the author or an admin removes it.

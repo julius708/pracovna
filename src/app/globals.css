@@ -238,7 +238,7 @@ td input.lbl{width:190px;text-align:left}
 .stat small{color:var(--muted)}
 .stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-top:12px}
 
-/* "Dôležité info pre Angeliku a Maxa": the shared notice board above the list */
+/* "Dôležité info": the shared notice board above the list */
 /* fixed laundry contact above the notice board, every day */
 .contact{margin:14px 0 0;padding:10px 14px;border:1px solid var(--line);border-radius:14px;background:var(--surface);display:flex;flex-direction:column;align-items:flex-start;gap:2px}
 .contact-title{font-weight:700;font-size:15px;display:inline-flex;align-items:center;gap:6px}
@@ -262,6 +262,27 @@ td input.lbl{width:190px;text-align:left}
 .notice-form .btn{flex:0 0 auto;min-width:96px;min-height:44px;font-size:15px}
 .notice-form textarea{flex:1 1 auto;min-width:0;min-height:44px;resize:vertical;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font:inherit;font-size:16px;background:var(--surface);color:var(--ink)}
 .notice-form textarea:disabled{opacity:.6}
+.arrivals{margin:10px 0 2px;padding:12px 14px;border:3px solid #C92A2A;border-radius:16px;background:#FFF0F0;box-shadow:0 6px 18px rgba(201,42,42,.14)}
+.arrivals-title{margin:0 0 8px;font-family:var(--display);font-weight:800;font-size:18px;line-height:1.2;color:#A61E1E;display:flex;align-items:center;gap:8px}
+.arrivals .notice-day{background:#C92A2A}
+.arrival-item{border-left:5px solid #C92A2A}
+.arrival-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}
+.arrival-time{font-size:17px;color:#A61E1E}
+.arrival-flat{font-size:16px;font-weight:700}
+.arrival-flat small{font-weight:600;color:var(--muted)}
+.arrival-note{font-size:14px;font-weight:500;margin-top:4px}
+.arrival-form{display:grid;grid-template-columns:1fr;gap:8px;align-items:end}
+.arrival-field{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:var(--muted);min-width:0}
+.arrival-field select,.arrival-field input{min-height:44px;border:1px solid var(--line);border-radius:12px;padding:8px 12px;font:inherit;font-size:16px;background:var(--surface);color:var(--ink);min-width:0;width:100%;box-sizing:border-box}
+.arrival-field-note{grid-column:1 / -1}
+@media (min-width:640px){.arrival-form{grid-template-columns:2fr 1fr 2fr}.arrival-field-note{grid-column:auto}}
+.arrival-bar{margin-top:10px;padding:8px 12px;border-radius:10px;background:#FFF0F0;color:#A61E1E;border:2px solid #C92A2A;font-size:14px;font-weight:800}
+.day-arrival{margin-right:4px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.arrival-open{min-height:44px;font-size:15px;width:100%;border-color:#C92A2A;color:#A61E1E;font-weight:800}
+.arrival-actions{display:flex;justify-content:flex-end;gap:8px;grid-column:1 / -1}
+.arrival-actions .btn{min-height:44px;font-size:15px;flex:0 0 auto}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .arrivals{background:#3A1515;border-color:#FF7A7A;box-shadow:none}:root:not([data-theme="light"]) .arrivals-title,:root:not([data-theme="light"]) .arrival-time{color:#FFA3A3}:root:not([data-theme="light"]) .arrival-bar{background:#3A1515;color:#FFA3A3;border-color:#FF7A7A}}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .notice-board{background:#3A2314;border-color:#FF9B5C;box-shadow:none}:root:not([data-theme="light"]) .notice-title{color:#FFB380}}
 :root[data-theme="dark"] .notice-board{background:#3A2314;border-color:#FF9B5C;box-shadow:none}
 :root[data-theme="dark"] .notice-title{color:#FFB380}

@@ -209,7 +209,25 @@ export type AppStateKey =
   | 'reconcile_change_at'
   | 'token_quota_warning';
 
-/** A note on the shared notice board ("Dôležité info pre Angeliku a Maxa"). */
+/** A note on the shared notice board ("Dôležité info"). */
+/** "Skoré príchody": a guest arriving before 16:00 on `date` (migration 0012). */
+export interface EarlyArrivalRow {
+  id: string;
+  listing_id: string;
+  listing_name: string;
+  date: Ymd;
+  /** "HH:MM" */
+  arrival: string;
+  note: string;
+  author: string | null;
+  author_name: string;
+  created_at: Instant;
+  removed_at: Instant | null;
+  removed_by: string | null;
+  removed_by_name: string | null;
+  client_action_id: string | null;
+}
+
 export interface BoardNoteRow {
   id: string;
   text: string;
