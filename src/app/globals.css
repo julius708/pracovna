@@ -262,3 +262,9 @@ td input.lbl{width:190px;text-align:left}
 
 /* calm information lines in the card (house rules), not red warnings */
 .warn-list span.info{color:var(--muted);font-weight:600}
+
+
+/* LIVE-IN brand theme: dark green + orange, shared with all LIVE-IN apps */
+:root{--bg:#F4F5F0;--surface:#FFFFFF;--surface-2:#E8ECE4;--ink:#233E31;--muted:#626B60;--line:#DCE2D6;--accent:#173E2C;--accent-ink:#FFFFFF;--accent-soft:#E8ECE4;--brand:#F46D16;--logo:#173E2C;--shadow:0 1px 2px rgba(23,62,44,.06),0 4px 14px rgba(23,62,44,.08)}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0F1F17;--surface:#16291F;--surface-2:#1F3528;--ink:#EEF2EA;--muted:#A9B5A9;--line:#2C4636;--accent:#F46D16;--accent-ink:#FFFFFF;--accent-soft:#3A2410;--brand:#F46D16;--logo:#EEF2EA;--shadow:0 1px 0 rgba(0,0,0,.35)}}
+:root[data-theme=dark]{--bg:#0F1F17;--surface:#16291F;--surface-2:#1F3528;--ink:#EEF2EA;--muted:#A9B5A9;--line:#2C4636;--accent:#F46D16;--accent-ink:#FFFFFF;--accent-soft:#3A2410;--brand:#F46D16;--logo:#EEF2EA;--shadow:0 1px 0 rgba(0,0,0,.35)}
