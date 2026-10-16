@@ -9,7 +9,7 @@ import { dayLabel, dayWord, packedOf, sk } from '@/core/i18n/sk';
 import { useRouter } from 'next/navigation';
 import { newActionId } from './action-id';
 import { isRecoveryHash } from './recovery';
-import { angelikaNumbers, applyCleaner, arrivalFor, arrivalNotices, boardNotices, cleanerOptions, counts, dayJobs, FILTER_KEYS, noteNotices, summaryLines, visibleJobs, type Filter } from './board-model';
+import { angelikaNumbers, applyCleaner, arrivalFor, arrivalNotices, boardNotices, cleanerOptions, counts, dayJobs, FILTER_KEYS, noteNotices, summaryLines, searchPackages, visibleJobs, type Filter } from './board-model';
 import { EarlyArrivals } from './EarlyArrivals';
 import { Header } from './Header';
 import { NoticeBoard } from './NoticeBoard';
@@ -45,6 +45,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
   // the chosen filter is remembered per device below
   const [filter, setFilter] = useState<Filter>('all');
   const [cleaner, setCleaner] = useState('');
+  const [search, setSearch] = useState('');
   const [keep, setKeep] = useState<Set<string>>(() => new Set());
   const [busy, setBusy] = useState<Set<string>>(() => new Set());
   const [cheer, setCheer] = useState<{ id: string; msg: string } | null>(null);
@@ -133,7 +134,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
     () => summaryLines(jobs, { generic: sk.capsuleGeneric, typed: (t) => `Kapsule ${t}`, unsure: sk.capsuleUnsure, missing: sk.capsuleMissing }),
     [jobs],
   );
-  const list = useMemo(() => visibleJobs(jobs, filter, keep), [jobs, filter, keep]);
+  const list = useMemo(() => searchPackages(visibleJobs(jobs, filter, keep), search), [jobs, filter, keep, search]);
   const hasData = data.status.lastOkSyncAt !== null || data.packages.length > 0;
 
   const patch = (id: string, fn: (p: BoardPackage) => BoardPackage) => {
@@ -319,7 +320,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
   const filterCount = (f: Filter) => (f === 'all' ? jobs.length : f === 'todo' ? c.todo : c.packed);
 
   return (
-    <div className="wrap">
+    <div className="wrap li-laundry-board">
       <header className="top">
         <Header viewer={viewer} lastOkSyncAt={data.status.lastOkSyncAt} now={now} connected={connected} />
         <nav className="days" id="days" aria-label="Deň">
@@ -349,6 +350,17 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
         </nav>
       </header>
 
+      <section className="li-day-overview" aria-label="Prehľad vybraného dňa">
+        <div className="li-day-heading"><div><span className="li-eyebrow">VYBRANÝ DEŇ · {formatDM(date)}</span><h2>{dayWord(sel, date)} v práčovni</h2></div><a href="#jobs">Prejsť na balíky ↓</a></div>
+        <div className="li-day-stats">
+          <div><span>Balíkov spolu</span><strong>{hasData ? c.total : '—'}</strong></div>
+          <div className="li-todo-stat"><span>Zostáva zabaliť</span><strong>{hasData ? c.todo : '—'}</strong></div>
+          <div><span>Už zabalené</span><strong>{hasData ? c.packed : '—'}</strong></div>
+          <div><span>Rýchle výmeny na balenie</span><strong>{hasData ? numbers.rush : '—'}</strong></div>
+        </div>
+        {hasData && c.total > 0 && <div className="li-day-progress"><progress value={c.packed} max={c.total} aria-label="Priebeh balenia"/><span>{Math.round(c.packed / c.total * 100)} % hotovo</span></div>}
+        {effectiveCleaner && <p className="li-selection-note">Prehľad je filtrovaný podľa vybranej upratovacej služby.</p>}
+      </section>
       <section className="contact" aria-label={sk.contact.title}>
         <span className="contact-title">
           <span aria-hidden="true">📞</span> {sk.contact.title}
@@ -360,6 +372,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
         ))}
       </section>
 
+      <div className="li-shift-info">
       <NoticeBoard
         notes={data.notes.filter((n) => n.date === date)}
         dayTitle={`${dayWord(sel, date)} ${formatDM(date)}`}
@@ -373,8 +386,11 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
 
       <EarlyArrivals arrivals={data.arrivals.filter((a) => a.date === date)} dayTitle={`${dayWord(sel, date)} ${formatDM(date)}`} />
 
+      </div>
       <Summary dayWord={dayWord(sel, date)} hasData={hasData} numbers={numbers} lines={lines} hasJobs={jobs.length > 0} />
 
+      <section className="li-package-controls" aria-label="Výber balíkov">
+      <div className="li-package-heading"><div><span className="li-eyebrow">PRACOVNÝ ZOZNAM</span><h2>Balíky na {formatDM(date)}</h2></div><div className="li-package-search"><label className="sr-only" htmlFor="package-search">Hľadať byt podľa názvu</label><input id="package-search" type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Hľadať byt…" autoComplete="off"/>{search && <button type="button" onClick={() => setSearch('')}>Zrušiť hľadanie</button>}</div></div>
       {cleaners.length > 0 && (
         <div className="filters" id="cleaners" role="toolbar" aria-label="Upratovacia služba">
           {cleaners.map((o) => (
@@ -394,6 +410,8 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
         ))}
       </div>
 
+      <p className="li-results-count" role="status">Zobrazené balíky: {list.length}{search.trim() ? ` · hľadanie „${search.trim()}“` : ''}</p>
+      </section>
       <main className="jobs" id="jobs">
         {list.map((p) => (
           <PackageCard
@@ -411,12 +429,12 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
 
       {jobs.length > 0 && list.length === 0 && (
         <div className="state" id="state">
-          {filter === 'todo' && (
+          {!search.trim() && filter === 'todo' && (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img className="av2" src={AV} alt="" />
           )}
-          <strong>{filter === 'todo' ? sk.empty.allPacked : sk.empty.nothing}</strong>
-          {filter === 'todo' ? sk.empty.allPackedHint : sk.empty.nothingHint}
+          <strong>{search.trim() ? 'Pre tento názov sme nenašli balík.' : filter === 'todo' ? sk.empty.allPacked : sk.empty.nothing}</strong>
+          {search.trim() ? 'Skús kratší názov alebo zruš hľadanie. Denné súčty zostávajú nezmenené.' : filter === 'todo' ? sk.empty.allPackedHint : sk.empty.nothingHint}
         </div>
       )}
 

@@ -235,3 +235,10 @@ export function noteNotices(prev: BoardNote[], next: BoardNote[], myName: string
   }
   return out;
 }
+
+/** Search only the visible card names; never changes packing quantities or daily totals. */
+export function searchPackages(jobs: BoardPackage[], query: string): BoardPackage[] {
+  const fold = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('sk').trim();
+  const words = fold(query).split(/\s+/).filter(Boolean);
+  return words.length ? jobs.filter(p => words.every(word => fold(p.listing_name).includes(word))) : jobs;
+}

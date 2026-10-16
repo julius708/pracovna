@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { BoardPackage } from '@/app/_lib/board';
 import { computePackage, DEFAULT_SETTINGS, parseLaundry, type PackageInput } from '@/core/packing';
-import { angelikaNumbers, applyCleaner, cleanerOptions, counts, dayJobs, summaryLines, syncState, visibleJobs } from '@/ui/board-model';
+import { angelikaNumbers, applyCleaner, cleanerOptions, counts, dayJobs, summaryLines, syncState, visibleJobs, searchPackages } from '@/ui/board-model';
 
 const D0 = '2026-10-05';
 let n = 0;
@@ -119,6 +119,16 @@ describe('board model', () => {
     expect(visibleJobs(all, 'todo', new Set([packed.id])).map((p) => p.listing_name)).toEqual(['Baštová', 'Hlavatého', 'Chalupkova', 'Žilinská']);
     expect(visibleJobs(all, 'packed', new Set()).map((p) => p.listing_name)).toEqual(['Baštová']);
     expect(visibleJobs(all, 'all', new Set()).map((p) => p.listing_name)).toEqual(['Hlavatého', 'Chalupkova', 'Žilinská', 'Baštová', 'Adlerova']);
+  });
+
+  it('finds an apartment without accents and keeps packing totals unchanged', () => {
+    const jobs = [pkg({ listing_name: 'Žilinská 12' }), pkg({ listing_name: 'Žilinská 8', status: 'packed' }), pkg({ listing_name: 'Baštová 12' })];
+    const before = counts(jobs);
+    expect(searchPackages(jobs, '12 zilinska')).toEqual([jobs[0]]);
+    expect(searchPackages(visibleJobs(jobs, 'packed', new Set()), 'zilinska')).toEqual([jobs[1]]);
+    expect(searchPackages(jobs, 'missing')).toEqual([]);
+    expect(searchPackages(jobs, '  ')).toEqual(jobs);
+    expect(counts(jobs)).toEqual(before);
   });
 
   it('the sync badge turns stale after 30 minutes', () => {
