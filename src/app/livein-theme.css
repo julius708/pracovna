@@ -1,5 +1,6 @@
 /* LIVE-IN shared visual language, v1. Role checks and operational status colours stay in the application. */
 :root {
+  --display: var(--font-body), system-ui, sans-serif;
   --bg: #F6F2EA;
   --surface: #FFFFFF;
   --surface-2: #E8ECE4;
