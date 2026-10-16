@@ -1,0 +1,78 @@
+/* LIVE-IN shared visual language, v1. Role checks and operational status colours stay in the application. */
+:root {
+  --display: var(--font-body), system-ui, sans-serif;
+  --bg: #F6F2EA;
+  --surface: #FFFFFF;
+  --surface-2: #E8ECE4;
+  --ink: #173E2C;
+  --muted: #58665D;
+  --line: #DCE2D9;
+  --accent: #173E2C;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #E8ECE4;
+  --brand: #F46D16;
+  --logo: #173E2C;
+  --r: 20px;
+  --shadow: 0 2px 4px rgb(23 62 44 / 3%), 0 12px 30px rgb(23 62 44 / 5%);
+  --li-header: #173E2C;
+  --li-header-ink: #F6F2EA;
+  --li-orange-text: #A8420B;
+}
+
+/* Keep the existing system/user dark-mode preference and semantic alerts. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10281D; --surface: #183527; --surface-2: #214332;
+    --ink: #F6F2EA; --muted: #BECABD; --line: #3B5948;
+    --accent: #D3E5D6; --accent-ink: #10281D; --accent-soft: #214332;
+    --logo: #F6F2EA; --li-orange-text: #FFB485;
+    --shadow: 0 2px 18px rgb(0 0 0 / 12%);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10281D; --surface: #183527; --surface-2: #214332;
+  --ink: #F6F2EA; --muted: #BECABD; --line: #3B5948;
+  --accent: #D3E5D6; --accent-ink: #10281D; --accent-soft: #214332;
+  --logo: #F6F2EA; --li-orange-text: #FFB485;
+  --shadow: 0 2px 18px rgb(0 0 0 / 12%);
+}
+
+body { margin: 0; }
+.top { background: var(--li-header); color: var(--li-header-ink); border-bottom: 0; padding-block: 20px 14px; }
+.top .logo { color: var(--li-header-ink); }
+.top .brand h1 .sep { background: rgb(255 255 255 / 25%); }
+.top .nav { gap: 8px !important; }
+.top .nav a { color: var(--li-header-ink); padding-inline: 12px; border-radius: 999px; text-decoration: none; }
+.top .nav a:hover, .top .nav a[aria-current="page"] { background: rgb(255 255 255 / 14%); color: #FFFFFF; }
+.top .nav .li-home { border: 1px solid rgb(255 255 255 / 24%); }
+.top .nav form > span { color: #D9E3D8 !important; }
+.top .nav form > button { color: #FFFFFF !important; }
+.top .sync { background: #FFFFFF; color: #58665D; border-color: transparent; }
+.top .sync b { color: #173E2C; }
+.top .sync.stale { border: 2px solid #B42318; }
+.top .sync.stale b { color: #B42318; }
+.day { border-radius: 16px; padding: 12px; color: var(--ink); }
+.li-privacy {font-size:12px;line-height:1.5;color:var(--muted);margin:18px 0}
+.top .li-privacy {color:#D9E3D8}
+.day[aria-pressed="true"] { box-shadow: inset 0 -3px 0 var(--brand); }
+.card, .login-card, .notice-item { box-shadow: var(--shadow); }
+.login-card { border-top: 5px solid var(--brand); padding: 28px; }
+.notice-board { border-width: 1px; border-left-width: 4px; box-shadow: none; }
+.notice-day { background: #A8420B; }
+.notice-title { color: #A8420B; }
+.stat { border: 1px solid var(--line); border-radius: 16px; }
+.btn, .iconbtn { border-radius: 12px; }
+.form-row input, .form-row select, textarea { border-radius: 12px; }
+:focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; }
+@media (prefers-reduced-motion: no-preference) {
+  .btn, .iconbtn, .nav a { transition: background-color 160ms ease, box-shadow 160ms ease; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; scroll-behavior: auto !important; }
+}
+@media (max-width: 480px) {
+  .top { padding-block: 14px 10px; }
+  .top .nav { row-gap: 6px !important; }
+  .top .nav a { padding-inline: 10px; }
+  .top .nav form { width: 100%; justify-content: space-between; margin-left: 0 !important; }
+}

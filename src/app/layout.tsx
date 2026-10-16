@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import { Bricolage_Grotesque, Figtree } from 'next/font/google';
 import './globals.css';
+import './livein-theme.css'
+import './workspace.css';
 
 const display = Bricolage_Grotesque({ subsets: ['latin', 'latin-ext'], weight: ['600', '700', '800'], variable: '--font-display' });
 const body = Figtree({ subsets: ['latin', 'latin-ext'], weight: ['400', '500', '600', '700'], variable: '--font-body' });
@@ -19,14 +21,14 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: 'cover',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#F4F2F0' },
-    { media: '(prefers-color-scheme: dark)', color: '#141312' },
+    { media: '(prefers-color-scheme: light)', color: '#173E2C' },
+    { media: '(prefers-color-scheme: dark)', color: '#173E2C' },
   ],
 };
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
-    <html lang="sk" className={`${display.variable} ${body.variable}`}>
+    <html lang="sk" data-theme="light" className={`${display.variable} ${body.variable}`}>
       <body>{children}</body>
     </html>
   );
