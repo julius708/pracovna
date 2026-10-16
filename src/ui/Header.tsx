@@ -63,30 +63,18 @@ export function Header({
   const admin = viewer.role === 'admin';
   return (
     <>
-      <div className="brand">
-        <h1>
-          <LogoMark />
-          <span className="sep" aria-hidden="true" />
-          {sk.app}
-        </h1>
-        {showSync && <SyncBadge lastOkSyncAt={lastOkSyncAt} now={now} connected={connected} />}
-      </div>
-      <div className="nav" style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 8, flexWrap: 'wrap', fontSize: 13 }}>
-        <a className="li-home" href="https://app.live-in.international/">← LIVE-IN domov</a>
-        {admin &&
-          NAV.map((n) => (
-            <Link key={n.href} href={n.href} aria-current={path === n.href || (n.href !== '/' && path.startsWith(`${n.href}/`)) ? 'page' : undefined}>
-              {n.label}
-            </Link>
-          ))}
-        <PushToggle />
-        <form action={logoutAction} style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
-          <span style={{ color: 'var(--muted)' }}>{viewer.name}</span>
-          <button type="submit" style={{ background: 'none', border: 0, padding: '0 6px', fontSize: 13, fontWeight: 600, color: 'var(--accent)', minHeight: 44 }}>
-            {sk.buttons.logout}
-          </button>
-        </form>
-      </div>
+      <div className="li-masthead"><div className="li-masthead-inner">
+        <a className="li-brand-link" href="https://app.live-in.international/">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/livein-logo.png" alt="LIVE-IN"/><span className="li-product">Práčovňa</span>
+        </a>
+        <nav className="li-nav" aria-label="Práčovňa">
+          {(admin ? NAV : [NAV[0]]).map(n => <Link key={n.href} href={n.href} aria-current={path === n.href || (n.href !== '/' && path.startsWith(`${n.href}/`)) ? 'page' : undefined}>{n.label}</Link>)}
+        </nav>
+        <form action={logoutAction} className="li-account"><span>{viewer.name}</span><button type="submit">{sk.buttons.logout}</button></form>
+      </div></div>
+      <div className="li-trail"><a href="https://app.live-in.international/">LIVE-IN domov</a><span>Práčovňa</span></div>
+      <section className="li-page-intro"><div><span className="li-eyebrow">Upratovanie a bielizeň</span><h2>{path === '/' || path === '/packing' ? 'Pripravené na ďalší pobyt.' : NAV.find(n => n.href !== '/' && path.startsWith(n.href))?.label || 'Práčovňa'}</h2><p>Príprava balíkov, zásoby a prehľad práce na jednom mieste.</p></div><div className="li-laundry-tools">{showSync && <SyncBadge lastOkSyncAt={lastOkSyncAt} now={now} connected={connected} />}<PushToggle /></div></section>
       {!viewer.dev && <UsageTracker />}
     </>
   );
