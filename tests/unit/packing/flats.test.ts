@@ -185,7 +185,7 @@ describe('Vajnorská, Terrazzo: packed as it is, no questions', () => {
 
   it('owner 2026-10-16: no dishwasher tablets and no toilet paper for the flat, said on the card; the rest is packed', () => {
     const r = vajnorska(3);
-    expect(flatAlias(VAJNORSKA)).toBe('Vajnorská 32A');
+    expect(flatAlias(VAJNORSKA)).toBeNull(); // the card keeps the Guesty name (owner, 2026-10-16)
     expect(FLAT_FACTS[VAJNORSKA].note).toBe('Nenosiť tablety do umývačky riadu a zatiaľ ani toaletný papier – v zásuvke v skrini je veľká zásoba.');
     expect(count(r, 'toaletak')).toBe(0);
     expect(count(r, 'myckaKaps')).toBe(0);
