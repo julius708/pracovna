@@ -53,6 +53,11 @@ export function PushToggle() {
         const reg = await navigator.serviceWorker.getRegistration('/sw.js');
         const sub = reg ? await reg.pushManager.getSubscription() : null;
         if (!cancelled) setState(sub ? 'on' : 'off');
+        // the push service may have rotated the subscription: keep the stored one current
+        const json = sub?.toJSON();
+        if (sub && json?.endpoint && json.keys?.p256dh && json.keys?.auth) {
+          void savePushSubscriptionAction({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth } }, navigator.userAgent);
+        }
       } catch {
         if (!cancelled) setState('off');
       }
@@ -106,15 +111,17 @@ export function PushToggle() {
   if (state === 'checking' || state === 'unsupported') return null;
   if (state === 'ios-install') {
     return (
-      <span className="push ios" title={t.iosHint}>
-        🔔 {t.iosShort}
+      <span className="push ios">
+        <b>🔔 {t.iosShort}</b>
+        <small className="push-hint">{t.iosHint}</small>
       </span>
     );
   }
   if (state === 'blocked') {
     return (
-      <span className="push blocked" title={t.blockedHint}>
-        🔕 {t.blocked}
+      <span className="push blocked">
+        <b>🔕 {t.blocked}</b>
+        <small className="push-hint">{t.blockedHint}</small>
       </span>
     );
   }

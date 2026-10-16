@@ -26,6 +26,25 @@ self.addEventListener('push', (event) => {
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
+// the push service rotated the subscription: subscribe again and store the new one under the signed-in user
+self.addEventListener('pushsubscriptionchange', (event) => {
+  const old = event.oldSubscription || null;
+  const key = (old && old.options && old.options.applicationServerKey) || (event.newSubscription && event.newSubscription.options && event.newSubscription.options.applicationServerKey) || null;
+  event.waitUntil(
+    (async () => {
+      const sub = event.newSubscription || (key ? await self.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key }) : null);
+      if (!sub) return;
+      const json = sub.toJSON();
+      await fetch('/api/push/subscription', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys, oldEndpoint: old ? old.endpoint : null }),
+      });
+    })().catch(() => {}),
+  );
+});
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url = (event.notification.data && event.notification.data.url) || '/';

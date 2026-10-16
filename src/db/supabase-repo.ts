@@ -118,17 +118,18 @@ export class SupabaseRepo implements SyncRepo {
     if (!rows.length) return;
     // freshness guard: keep the fresher fetch
     const ids = rows.map((r) => r.guesty_id);
-    const existing = new Map<string, { guesty_id: string; fetched_at: string; not_found_runs: number }>();
+    const existing = new Map<string, { guesty_id: string; fetched_at: string; not_found_runs: number; arrival_time: string | null }>();
     for (const part of chunks(ids, 200)) {
-      const cur = must(await this.db.from('reservations').select('guesty_id, fetched_at, not_found_runs').in('guesty_id', part), 'reservations.select');
-      for (const r of cur as { guesty_id: string; fetched_at: string; not_found_runs: number }[]) existing.set(r.guesty_id, r);
+      const cur = must(await this.db.from('reservations').select('guesty_id, fetched_at, not_found_runs, arrival_time').in('guesty_id', part), 'reservations.select');
+      for (const r of cur as { guesty_id: string; fetched_at: string; not_found_runs: number; arrival_time: string | null }[]) existing.set(r.guesty_id, r);
     }
     const fresh = dedupe(rows, (r) => r.guesty_id)
       .filter((r) => {
         const cur = existing.get(r.guesty_id);
         return !cur || Date.parse(cur.fetched_at) <= Date.parse(r.fetched_at);
       })
-      .map((r) => ({ ...r, not_found_runs: existing.get(r.guesty_id)?.not_found_runs ?? r.not_found_runs ?? 0 }));
+      // the by-ids shape may carry no arrival time: keep the one we know
+      .map((r) => ({ ...r, arrival_time: r.arrival_time ?? existing.get(r.guesty_id)?.arrival_time ?? null, not_found_runs: existing.get(r.guesty_id)?.not_found_runs ?? r.not_found_runs ?? 0 }));
     for (const part of chunks(fresh, 200)) must(await this.db.from('reservations').upsert(part, { onConflict: 'guesty_id' }), 'reservations.upsert');
   }
   async getReservations(f: ReservationFilter) {

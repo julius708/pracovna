@@ -24,6 +24,8 @@ export interface FlatFacts {
   singleSheet?: 'small';
   /** Shown on the card ("Info o byte: …"). */
   note?: string;
+  /** Items never packed for this flat (the flat has its own stock); their rows leave the card and the day totals. */
+  skipItems?: string[];
   /** Questions Angelika has already settled for this flat; never shown on its card. */
   settled?: WarningCode[];
 }
@@ -71,9 +73,14 @@ export const FLAT_FACTS: Record<string, FlatFacts> = {
   // Vajnorská, Terrazzo (owner, 2026-10-10): packed as it is - king bed + a 140 cm bed for the third guest,
   // 1 large sheet + 1 sheet 140 cm; the one large duvet from Guesty covers both beds, so no duvet question on
   // the card (the bed warning stays for a reservation with more than 3 guests)
+  // Owner, 2026-10-16: the flat (Vajnorská 32A) has a large stock of toilet paper and dishwasher tablets in the
+  // wardrobe drawer, so neither is packed for now; the card says so every time
   '685925a3458130001380e80a': {
+    alias: 'Vajnorská 32A',
     beds: { KING_BED: 1, [BED_140]: 1 },
     settled: ['duvets_short'],
+    note: 'Nenosiť tablety do umývačky riadu a zatiaľ ani toaletný papier – v zásuvke v skrini je veľká zásoba.',
+    skipItems: ['myckaKaps', 'toaletak'],
   },
 };
 

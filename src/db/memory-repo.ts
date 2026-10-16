@@ -63,7 +63,8 @@ export class MemoryRepo implements SyncRepo {
     for (const r of rows) {
       const cur = this.reservations.get(r.guesty_id);
       if (cur && cur.fetched_at > r.fetched_at) continue;
-      this.reservations.set(r.guesty_id, { ...r, not_found_runs: cur?.not_found_runs ?? 0 });
+      // the by-ids shape may carry no arrival time: keep the one we know
+      this.reservations.set(r.guesty_id, { ...r, arrival_time: r.arrival_time ?? cur?.arrival_time ?? null, not_found_runs: cur?.not_found_runs ?? 0 });
     }
   }
   async getReservations(f: ReservationFilter) {

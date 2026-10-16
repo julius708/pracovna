@@ -216,6 +216,9 @@ export function computeLinen(args: {
     }
   }
 
+  // the flat has its own stock of these (flats.ts): nothing is packed, the rows leave the card and the totals
+  for (const key of facts?.skipItems ?? []) counts[key] = 0;
+
   const linen: LineItem[] = [];
   const consumables: LineItem[] = [];
   for (const item of settings.items) {

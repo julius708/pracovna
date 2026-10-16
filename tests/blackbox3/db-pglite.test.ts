@@ -94,9 +94,11 @@ describe('migrations', () => {
       expect((await fresh.query<Row>("select column_name from information_schema.columns where table_schema = 'public' and table_name = 'reservations' and column_name = 'arrival_time'")).rows).toHaveLength(1);
       const e14 = await pgError(fresh.exec(MIG14));
       expect(e14, `0014_push_subscriptions.sql failed: ${e14?.code} ${e14?.message} (line ${lineOf(MIG14, e14?.position)})`).toBeNull();
-      // users see and manage only their own subscriptions: four policies, all on auth.uid()
+      // users read only their own subscriptions; writes go through the two RPCs
       const policies = (await fresh.query<Row>("select policyname, cmd from pg_policies where schemaname = 'public' and tablename = 'push_subscriptions' order by policyname")).rows;
-      expect(policies.map((p) => p.cmd).sort()).toEqual(['DELETE', 'INSERT', 'SELECT', 'UPDATE']);
+      expect(policies.map((p) => p.cmd)).toEqual(['SELECT']);
+      const pushFns = (await fresh.query<Row>("select proname from pg_proc where pronamespace = 'public'::regnamespace and proname in ('save_push_subscription', 'remove_push_subscription') order by 1")).rows.map((r) => r.proname);
+      expect(pushFns).toEqual(['remove_push_subscription', 'save_push_subscription']);
       const fns =(await fresh.query<Row>("select proname from pg_proc where pronamespace = 'public'::regnamespace order by 1")).rows.map((r) => r.proname);
       expect(fns).toEqual(expect.arrayContaining(['today_ba', 'is_admin', 'is_active_user', 'handle_new_user', 'sync_upsert_package', 'sync_set_lifecycle', 'pack_package', 'unpack_package', 'set_note', 'toggle_check', 'save_settings', 'admin_set_profile', 'acquire_lock', 'run_retention', 'increment_not_found', 'add_board_note', 'remove_board_note', 'edit_board_note']));
     } finally {
@@ -828,6 +830,36 @@ describe('notify_board', () => {
 });
 
 // ------------------------------------------------------------------ 12. notice board (0007)
+describe('push_subscriptions: save_push_subscription / remove_push_subscription (0014)', () => {
+  const ENDPOINT = 'https://push.example.org/send/abc123def456';
+  it('a device belongs to whoever is signed in on it: saving moves the endpoint, keys refresh, removal works for the current user', async () => {
+    const eva = await newUser('Eva');
+    const max = await newUser('Max');
+    await actAs(eva);
+    expect((await one('select public.save_push_subscription($1, $2, $3, $4) as r', [ENDPOINT, 'p256dh-key-eva', 'auth-eva', 'Safari'])).r).toEqual({ ok: true });
+    let rows = await q('select user_id, user_name, p256dh, user_agent from public.push_subscriptions where endpoint = $1', [ENDPOINT]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ user_id: eva, user_name: 'Eva', p256dh: 'p256dh-key-eva', user_agent: 'Safari' });
+    // the same device under Max: the row moves to Max
+    await actAs(max);
+    expect((await one('select public.save_push_subscription($1, $2, $3, $4) as r', [ENDPOINT, 'p256dh-key-max', 'auth-max', 'Chrome'])).r).toEqual({ ok: true });
+    rows = await q('select user_id, user_name, p256dh from public.push_subscriptions where endpoint = $1', [ENDPOINT]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ user_id: max, user_name: 'Max', p256dh: 'p256dh-key-max' });
+    // invalid input is refused, an inactive user is not allowed
+    expect((await one('select public.save_push_subscription($1, $2, $3, $4) as r', ['http://insecure', 'k', 'a', ''])).r).toEqual({ ok: false, status: 'invalid' });
+    const gone = await newUser('Bývalá', { active: false });
+    await actAs(gone);
+    expect((await pgError(q('select public.save_push_subscription($1, $2, $3, $4)', [ENDPOINT, 'k', 'a', ''])))?.code).toBe('42501');
+    // turning off removes the device's row
+    await actAs(max);
+    expect((await one('select public.remove_push_subscription($1) as r', [ENDPOINT])).r).toEqual({ ok: true });
+    expect(await q('select 1 from public.push_subscriptions where endpoint = $1', [ENDPOINT])).toHaveLength(0);
+    await actAs(null);
+    expect((await pgError(q('select public.remove_push_subscription($1)', [ENDPOINT])))?.code).toBe('42501');
+  });
+});
+
 describe('board_notes: add_board_note / remove_board_note', () => {
   it('an active user adds a note under their name; the same action id replays without a second row', async () => {
     const eva = await newUser('Eva');

@@ -31,10 +31,11 @@ export async function savePushSubscriptionAction(sub: PushSubscriptionJson, user
   if (supabaseConfigured()) {
     const db = await createServerSupabase();
     if (!db) return { ok: false, error: 'failed' };
-    // the endpoint is unique: a device that subscribes again just refreshes its keys
-    const { error } = await db.from('push_subscriptions').upsert(row, { onConflict: 'endpoint' });
+    // the RPC moves the endpoint to the signed-in user (a shared device) and refreshes the keys
+    const { data, error } = await db.rpc('save_push_subscription', { p_endpoint: row.endpoint, p_p256dh: row.p256dh, p_auth: row.auth, p_user_agent: row.user_agent });
     if (error) return { ok: false, error: error.code === '42501' ? 'unauthorized' : 'failed' };
-    return { ok: true };
+    const res = (data ?? {}) as { ok?: boolean; status?: string };
+    return res.ok === false ? { ok: false, error: 'invalid' } : { ok: true };
   }
   const repo = createRepoFromEnv(env()).repo as MemoryRepo;
   repo.pushSubscriptions ??= [];
@@ -53,8 +54,8 @@ export async function removePushSubscriptionAction(endpoint: string): Promise<Pu
   if (supabaseConfigured()) {
     const db = await createServerSupabase();
     if (!db) return { ok: false, error: 'failed' };
-    const { error } = await db.from('push_subscriptions').delete().eq('endpoint', endpoint);
-    if (error) return { ok: false, error: 'failed' };
+    const { error } = await db.rpc('remove_push_subscription', { p_endpoint: endpoint });
+    if (error) return { ok: false, error: error.code === '42501' ? 'unauthorized' : 'failed' };
     return { ok: true };
   }
   const repo = createRepoFromEnv(env()).repo as MemoryRepo;

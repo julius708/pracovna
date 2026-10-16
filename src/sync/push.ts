@@ -48,7 +48,7 @@ export function webPushSender(env: Env): PushSender | null {
     lib ??= await import('web-push');
     lib.setVapidDetails(env.WEB_PUSH_SUBJECT!, env.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY!, env.WEB_PUSH_PRIVATE_KEY!);
     try {
-      const res = await lib.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, JSON.stringify(message), { TTL: 6 * 3600, urgency: 'high' });
+      const res = await lib.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, JSON.stringify(message), { TTL: 24 * 3600, urgency: 'high' });
       return res.statusCode;
     } catch (e) {
       const status = (e as { statusCode?: number }).statusCode;

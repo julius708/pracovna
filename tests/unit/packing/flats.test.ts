@@ -181,7 +181,19 @@ describe('Vajnorská, Terrazzo: packed as it is, no questions', () => {
     expect(r.warnings).not.toContain('unknown_bed_type');
     expect(count(r, 'osuskaV')).toBe(3);
     expect(DEFAULT_ITEMS.find((i) => i.key === 'plachta140')).toEqual({ key: 'plachta140', label: 'Plachta 140 cm', size: '' });
-    expect(FLAT_FACTS[VAJNORSKA].note).toBeUndefined(); // the owner asked for the note to go, so no new one either
+  });
+
+  it('owner 2026-10-16: no dishwasher tablets and no toilet paper for the flat, said on the card; the rest is packed', () => {
+    const r = vajnorska(3);
+    expect(flatAlias(VAJNORSKA)).toBe('Vajnorská 32A');
+    expect(FLAT_FACTS[VAJNORSKA].note).toBe('Nenosiť tablety do umývačky riadu a zatiaľ ani toaletný papier – v zásuvke v skrini je veľká zásoba.');
+    expect(count(r, 'toaletak')).toBe(0);
+    expect(count(r, 'myckaKaps')).toBe(0);
+    expect(r.consumables.map((l) => l.key)).toEqual(['utierky', 'spongia', 'vreckoV', 'vreckoM']);
+    expect(count(r, 'utierky')).toBe(1);
+    expect(count(r, 'osuskaV')).toBe(3);
+    // other flats are untouched
+    expect(count(computePackage(pkg({ next: sameDay(3) })), 'toaletak')).toBe(4);
   });
 
   it('a reservation with more guests than the two beds sleep still gets the bed warning', () => {

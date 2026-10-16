@@ -69,6 +69,26 @@ async function stageCheckouts(deps: ReconcileDeps, dates: Ymd[], fetchedAt: stri
 }
 
 /**
+ * Confirmed check-ins on the board days at any flat: the "Skoré príchody" box
+ * needs them even when the flat has no check-out in the window (a flat that was
+ * empty gets a guest with an early check-in), and a changed arrival time must
+ * reach the board without waiting for a webhook. One account-wide search per run.
+ */
+async function stageCheckins(deps: ReconcileDeps, dates: Ymd[], fetchedAt: string): Promise<{ seen: Set<string>; rows: ReservationRow[] }> {
+  const search = await deps.client.searchReservations({
+    checkInGte: dates[0],
+    checkInLt: addDays(dates[dates.length - 1], 1),
+    status: 'confirmed',
+    sort: 'checkIn',
+    maxPages: 10,
+  });
+  const rows = search.results.map((r) => mapReservation(r, fetchedAt)).filter((r): r is ReservationRow => !!r);
+  await deps.repo.upsertReservations(rows);
+  await deps.repo.resetNotFound(rows.map((r) => r.guesty_id));
+  return { seen: new Set(rows.map((r) => r.guesty_id)), rows };
+}
+
+/**
  * Next check-ins for every listing with a check-out in the window: paged per
  * chunk of listing ids until each listing has an arrival beyond the window
  * (sorted by check-in, so everything earlier is already known).
@@ -177,6 +197,10 @@ async function stageAbsence(
   for (const r of heldArrivals) {
     if (!seen.has(r.guesty_id) && listingSet.has(r.arrival_listing_id) && r.check_in_date <= horizon) candidates.set(r.guesty_id, r);
   }
+  // held check-ins on the board days at any flat (early arrivals): a cancellation is not returned by the confirmed-only searches
+  const last = dates[dates.length - 1];
+  const heldCheckins = (await deps.repo.getReservations({ checkInGte: dates[0], status: 'confirmed' })).filter((r) => r.check_in_date <= last);
+  for (const r of heldCheckins) if (!seen.has(r.guesty_id)) candidates.set(r.guesty_id, r);
   const all = [...candidates.values()];
   const missing = all.slice(0, ABSENCE_MAX_IDS);
   if (!missing.length) return { checked: 0, cancelled: 0, deleted: 0, pending: 0 };
@@ -278,7 +302,18 @@ export async function reconcile(deps: ReconcileDeps, trigger: string): Promise<R
       throw new StageError('arrivals', true, e);
     }
 
-    // 4. absence verification (check-outs and next arrivals we hold but did not see)
+    // 3b. check-ins on the board days at any flat (the early-arrivals box; non-fatal, the packages do not depend on it)
+    try {
+      const r = await stageCheckins(deps, dates, fetchedAt);
+      for (const id of r.seen) seen.add(id);
+      stats.checkins = r.rows.length;
+    } catch (e) {
+      partial.push('checkins');
+      stats.checkins_error = String(e);
+      log.warn('reconcile.checkins_failed', { error: String(e) });
+    }
+
+    // 4. absence verification (check-outs, next arrivals and window check-ins we hold but did not see)
     try {
       for (const a of arrivals) seen.add(a.guesty_id);
       stats.absence = await stageAbsence(deps, dates, seen, listingIds, fetchedAt);
