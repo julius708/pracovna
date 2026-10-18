@@ -60,3 +60,6 @@ dialog{border-radius:32px;background:#FCFBF8;box-shadow:0 24px 80px #173e2c30,in
 }
 @media(max-width:700px){:root{--li-glass-radius:25px;--li-glass-small:17px}.li-masthead{border-radius:0 0 23px 23px}.li-page-intro,.li-main-workspace .hero,.li-main-workspace .admin-hero{border-radius:28px} :is(.li-main-workspace,.li-cs,.li-ring-workspace,.li-economy-workspace) :is(.stat,.kpi,.metric,.comparison-kpi),.li-day-stats>div{border-radius:22px}}
 @media(prefers-reduced-transparency:reduce),(prefers-contrast:more){:root{--li-glass-surface:#FFFEFB;--li-glass-green:#173E2C} .li-masthead,:is(.li-main-workspace,.li-cs,.li-ring-workspace,.li-economy-workspace) :is(.card,.panel,.search,.analysis-dock),.li-laundry-board :is(.sum,.li-package-controls){-webkit-backdrop-filter:none;backdrop-filter:none}}
+/* Preserve operational alert meaning and readable controls on the dark hero. */
+.li-laundry-board .li-shift-info .notice-board{border-color:#F46D16}
+.top .li-laundry-tools button{background:#ffffff12;color:#F6F2EA;border:1px solid #ffffff55;box-shadow:inset 0 1px 0 #ffffff26}
