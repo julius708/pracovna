@@ -38,3 +38,25 @@
 
 /* Keep clipped accessible day labels inside their scrolling day button. */
 .li-laundry-board .day{position:relative}
+
+/* LIVE-IN soft glass — 2026-10-18. Opaque fallback; frosted surfaces stay 90%+ solid. */
+:root{--li-glass-radius:30px;--li-glass-small:19px;--li-glass-surface:#FCFBF8;--li-glass-green:#173E2C;--li-glass-shadow:inset 0 1px 0 #fff,0 8px 28px #173e2c09,0 1px 3px #173e2c06}
+body{background-color:#F6F2EA;background-image:radial-gradient(ellipse at 8% 0%,#dce7dba6,transparent 48%),radial-gradient(ellipse at 96% 28%,#f8dfcb66,transparent 45%);background-repeat:no-repeat}
+.li-masthead{background:linear-gradient(120deg,#ffffff0c,transparent 65%),var(--li-glass-green);border-bottom:1px solid #ffffff30;border-radius:0 0 28px 28px;box-shadow:inset 0 1px 0 #ffffff26,0 8px 28px #173e2c12}
+.li-page-intro,.li-main-workspace .hero,.li-main-workspace .admin-hero{border-radius:34px;background-image:linear-gradient(125deg,#ffffff14,transparent 55%);box-shadow:inset 0 1px 0 #ffffff40,0 12px 32px #173e2c12;border:1px solid #ffffff26}
+:is(.li-main-workspace,.li-cs,.li-ring-workspace,.li-economy-workspace) :is(.card,.panel,.search,.analysis-dock),.li-laundry-board :is(.sum,.days,.li-package-controls),.li-shift-info>section,.login-card{background:var(--li-glass-surface);border-radius:var(--li-glass-radius);border-color:#dce2d9;box-shadow:var(--li-glass-shadow)}
+:is(.li-main-workspace,.li-cs,.li-ring-workspace,.li-economy-workspace) :is(.stat,.kpi,.metric,.comparison-kpi),.li-day-stats>div{border-radius:26px;box-shadow:inset 0 1px 0 #ffffff80,0 5px 18px #173e2c07}
+.li-laundry-board .job{border-radius:var(--li-glass-radius);box-shadow:var(--li-glass-shadow)}
+.li-laundry-board .job.is-todo{background:var(--li-glass-surface)}
+.li-laundry-board .job.is-packed{background:#F0F5ED}
+:is(.li-main-workspace,.li-cs,.li-ring-workspace,.li-economy-workspace,.li-laundry-board) :is(input:not([type=checkbox]):not([type=radio]),select,textarea){border-radius:var(--li-glass-small)}
+.li-ring-workspace .tabs,.li-economy-workspace .presets{border-radius:22px}.li-ring-workspace .tab.on,.li-economy-workspace .presets button,.li-laundry-board .day{border-radius:17px}
+.li-page-intro .li-shortcut,.li-account button{box-shadow:inset 0 1px 0 #ffffff26;background:#ffffff10}
+dialog{border-radius:32px;background:#FCFBF8;box-shadow:0 24px 80px #173e2c30,inset 0 1px 0 #fff}
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+ :root{--li-glass-surface:rgba(255,254,251,.94);--li-glass-green:rgba(23,62,44,.94)}
+ .li-masthead{-webkit-backdrop-filter:blur(18px) saturate(120%);backdrop-filter:blur(18px) saturate(120%)}
+ :is(.li-main-workspace,.li-cs,.li-ring-workspace,.li-economy-workspace) :is(.card,.panel,.search,.analysis-dock),.li-laundry-board :is(.sum,.li-package-controls){-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+}
+@media(max-width:700px){:root{--li-glass-radius:25px;--li-glass-small:17px}.li-masthead{border-radius:0 0 23px 23px}.li-page-intro,.li-main-workspace .hero,.li-main-workspace .admin-hero{border-radius:28px} :is(.li-main-workspace,.li-cs,.li-ring-workspace,.li-economy-workspace) :is(.stat,.kpi,.metric,.comparison-kpi),.li-day-stats>div{border-radius:22px}}
+@media(prefers-reduced-transparency:reduce),(prefers-contrast:more){:root{--li-glass-surface:#FFFEFB;--li-glass-green:#173E2C} .li-masthead,:is(.li-main-workspace,.li-cs,.li-ring-workspace,.li-economy-workspace) :is(.card,.panel,.search,.analysis-dock),.li-laundry-board :is(.sum,.li-package-controls){-webkit-backdrop-filter:none;backdrop-filter:none}}
