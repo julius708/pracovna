@@ -1,15 +1,15 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { addBoardNoteAction, checkAction, editBoardNoteAction, noteAction, packAction, removeBoardNoteAction, unpackAction, type ActionResult } from '@/app/_lib/actions';
-import type { BoardData, BoardNote, BoardPackage } from '@/app/_lib/board';
+import { addBoardNoteAction, addBoardReplyAction, addEarlyArrivalAction, checkAction, editBoardNoteAction, noteAction, packAction, removeBoardNoteAction, removeEarlyArrivalAction, unpackAction, type ActionResult } from '@/app/_lib/actions';
+import type { BoardData, BoardNote, BoardPackage, EarlyArrival } from '@/app/_lib/board';
 import type { Viewer } from '@/app/_lib/viewer';
 import { formatDM } from '@/core/packing';
 import { dayLabel, dayWord, packedOf, sk } from '@/core/i18n/sk';
 import { useRouter } from 'next/navigation';
 import { newActionId } from './action-id';
 import { isRecoveryHash } from './recovery';
-import { angelikaNumbers, applyCleaner, arrivalFor, arrivalNotices, boardNotices, cleanerOptions, counts, dayJobs, FILTER_KEYS, noteNotices, summaryLines, searchPackages, visibleJobs, type Filter } from './board-model';
+import { angelikaNumbers, applyCleaner, arrivalFor, arrivalNotices, boardNotices, cleanerOptions, counts, dayJobs, FILTER_KEYS, noteNotices, sortArrivals, summaryLines, searchPackages, visibleJobs, type Filter } from './board-model';
 import { EarlyArrivals } from './EarlyArrivals';
 import { Header } from './Header';
 import { NoticeBoard } from './NoticeBoard';
@@ -59,6 +59,9 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
   const prevNotes = useRef(initial.notes);
   const prevArrivals = useRef(initial.arrivals);
   const [noteBusy, setNoteBusy] = useState(false);
+  const [arrivalBusy, setArrivalBusy] = useState(false);
+  /** Early arrivals this device removed itself: no "odstránený" notice for them. */
+  const ownArrivalIds = useRef(new Set<string>());
   const ownChanges = useRef(new Map<string, number>());
   const noticeSeq = useRef(0);
   const router = useRouter();
@@ -78,7 +81,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
     const texts = [
       ...(prev === data.packages ? [] : boardNotices(prev, data.packages, viewer.name, new Set(ownChanges.current.keys()), (d) => dayWord(dates.indexOf(d as (typeof dates)[number]), d))),
       ...(prevN === data.notes ? [] : noteNotices(prevN, data.notes, viewer.name, (d) => `${dayWord(dates.indexOf(d as (typeof dates)[number]), d)} ${formatDM(d)}`)),
-      ...(prevA === data.arrivals ? [] : arrivalNotices(prevA, data.arrivals, dates, (d) => `${dayWord(dates.indexOf(d as (typeof dates)[number]), d)} ${formatDM(d)}`)),
+      ...(prevA === data.arrivals ? [] : arrivalNotices(prevA, data.arrivals, viewer.name, ownArrivalIds.current, dates, (d) => `${dayWord(dates.indexOf(d as (typeof dates)[number]), d)} ${formatDM(d)}`)),
     ];
     if (texts.length === 0) return;
     const items = texts.map((text) => ({ id: ++noticeSeq.current, text }));
@@ -240,7 +243,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
   };
 
   const addNote = async (text: string) => {
-    const temp: BoardNote = { id: `temp-${newActionId()}`, text, date, author: viewer.id, author_name: viewer.name, created_at: new Date().toISOString(), edited_at: null };
+    const temp: BoardNote = { id: `temp-${newActionId()}`, text, date, author: viewer.id, author_name: viewer.name, created_at: new Date().toISOString(), edited_at: null, parent_id: null };
     setNoteBusy(true);
     setData((d) => ({ ...d, notes: [temp, ...d.notes] }));
     let res: ActionResult;
@@ -256,6 +259,74 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
     } else {
       setData((d) => ({ ...d, notes: d.notes.filter((n) => n.id !== temp.id) }));
       showToast(res.error === 'unauthorized' ? sk.toasts.noPermission : sk.noticeBoard.notSaved);
+    }
+  };
+
+  /** A reply under a note (on the note's day); true when it was saved. */
+  const addReply = async (parent: BoardNote, text: string): Promise<boolean> => {
+    const temp: BoardNote = { id: `temp-${newActionId()}`, text, date: parent.date, author: viewer.id, author_name: viewer.name, created_at: new Date().toISOString(), edited_at: null, parent_id: parent.id };
+    setNoteBusy(true);
+    setData((d) => ({ ...d, notes: [temp, ...d.notes] }));
+    let res: ActionResult;
+    try {
+      res = await track(() => addBoardReplyAction(parent.id, text, newActionId()));
+    } catch {
+      res = { ok: false, error: 'failed' };
+    }
+    setNoteBusy(false);
+    if (res.ok) {
+      if (res.id) setData((d) => ({ ...d, notes: d.notes.map((n) => (n.id === temp.id ? { ...n, id: res.id as string } : n)) }));
+      void refresh();
+      return true;
+    }
+    setData((d) => ({ ...d, notes: d.notes.filter((n) => n.id !== temp.id) }));
+    showToast(res.error === 'unauthorized' ? sk.toasts.noPermission : res.status === 'removed' ? sk.noticeBoard.replyParentGone : sk.noticeBoard.replyNotSaved);
+    return false;
+  };
+
+  /** Records an early arrival for the selected day; true when it was saved (the form then clears). */
+  const addArrival = async (listingId: string, arrival: string, note: string): Promise<boolean> => {
+    const name = data.listings.find((l) => l.id === listingId)?.name ?? listingId;
+    const temp: EarlyArrival = { id: `temp-${newActionId()}`, listing_id: listingId, listing_name: name, date, arrival, note, author: viewer.id, author_name: viewer.name, created_at: new Date().toISOString() };
+    setArrivalBusy(true);
+    setData((d) => ({ ...d, arrivals: sortArrivals([...d.arrivals, temp]) }));
+    let res: ActionResult;
+    try {
+      res = await track(() => addEarlyArrivalAction(listingId, date, arrival, note, newActionId()));
+    } catch {
+      res = { ok: false, error: 'failed' };
+    }
+    setArrivalBusy(false);
+    if (res.ok) {
+      if (res.id) setData((d) => ({ ...d, arrivals: d.arrivals.map((a) => (a.id === temp.id ? { ...a, id: res.id as string } : a)) }));
+      void refresh();
+      return true;
+    }
+    setData((d) => ({ ...d, arrivals: d.arrivals.filter((a) => a.id !== temp.id) }));
+    const t = sk.earlyArrivals;
+    const why: Record<string, string> = { bad_time: t.badTime, bad_listing: t.badListing, bad_date: t.badDate, duplicate: t.duplicate };
+    showToast(res.error === 'unauthorized' ? sk.toasts.noPermission : (res.status && why[res.status]) || t.notSaved);
+    return false;
+  };
+
+  const removeArrival = async (a: EarlyArrival) => {
+    const before = data.arrivals;
+    ownArrivalIds.current.add(a.id);
+    setArrivalBusy(true);
+    setData((d) => ({ ...d, arrivals: d.arrivals.filter((x) => x.id !== a.id) }));
+    let res: ActionResult;
+    try {
+      res = await track(() => removeEarlyArrivalAction(a.id, newActionId()));
+    } catch {
+      res = { ok: false, error: 'failed' };
+    }
+    setArrivalBusy(false);
+    if (res.ok) {
+      void refresh();
+    } else {
+      ownArrivalIds.current.delete(a.id);
+      setData((d) => ({ ...d, arrivals: before }));
+      showToast(res.status === 'not_author' ? sk.earlyArrivals.notAuthor : res.error === 'unauthorized' ? sk.toasts.noPermission : sk.earlyArrivals.notRemoved);
     }
   };
 
@@ -380,11 +451,21 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
         now={now}
         busy={noteBusy}
         onAdd={(t) => void addNote(t)}
+        onReply={addReply}
         onEdit={(n, t) => void editNote(n, t)}
         onRemove={(n) => void removeNote(n)}
       />
 
-      <EarlyArrivals arrivals={data.arrivals.filter((a) => a.date === date)} dayTitle={`${dayWord(sel, date)} ${formatDM(date)}`} />
+      <EarlyArrivals
+        arrivals={data.arrivals.filter((a) => a.date === date)}
+        listings={data.listings}
+        dayTitle={`${dayWord(sel, date)} ${formatDM(date)}`}
+        viewer={viewer}
+        now={now}
+        busy={arrivalBusy}
+        onAdd={addArrival}
+        onRemove={(a) => void removeArrival(a)}
+      />
 
       </div>
       <Summary dayWord={dayWord(sel, date)} hasData={hasData} numbers={numbers} lines={lines} hasJobs={jobs.length > 0} />
@@ -419,6 +500,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
             p={p}
             cleaner={data.cleaners[p.listing_id] ?? null}
             arrival={arrivalFor(data.arrivals, p)}
+            noCapsules={data.noCapsules.includes(p.listing_id)}
             viewer={viewer}
             busy={busy.has(p.id)}
             cheer={cheer?.id === p.id ? cheer.msg : null}

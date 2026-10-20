@@ -27,6 +27,7 @@ export function PackageCard({
   p,
   cleaner,
   arrival = null,
+  noCapsules = false,
   viewer,
   busy,
   cheer,
@@ -36,6 +37,8 @@ export function PackageCard({
   cleaner: string | null;
   /** The early arrival recorded for this flat on this day (owner, 2026-10-11), shown first on the card. */
   arrival?: EarlyArrival | null;
+  /** Guesty says "Kapsule: nedávať" for this flat: a red line on the card (Martina, 2026-10-19). */
+  noCapsules?: boolean;
   viewer: Viewer;
   busy: boolean;
   cheer: string | null;
@@ -142,9 +145,10 @@ export function PackageCard({
           ))}
         </ul>
       )}
-      {(r.consumables.length > 0 || r.capsules.length > 0) && (
+      {(r.consumables.length > 0 || r.capsules.length > 0 || noCapsules) && (
         <div className="cons">
           <div className="cons-h">{sk.consumablesTitle}</div>
+          {noCapsules && <div className="caps-refused">⛔ {sk.capsulesRefused}</div>}
           <ul>
             {r.consumables.map((l) => (
               <li key={l.key} className={l.source === 'guesty' ? 'cust' : undefined}>

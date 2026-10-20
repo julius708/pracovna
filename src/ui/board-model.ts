@@ -203,23 +203,39 @@ export function boardNotices(prev: BoardPackage[], next: BoardPackage[], myName:
   return out.slice(0, 3);
 }
 
-/** The early arrival Guesty reports for a card's flat on the card's day, or null. */
+/** "HH:MM" as the early-arrival box and the database accept it. */
+export function isArrivalTime(s: string): boolean {
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(s);
+}
+
+/** The early arrival written for a card's flat on the card's day, or null. */
 export function arrivalFor(arrivals: EarlyArrival[], p: Pick<BoardPackage, 'listing_id' | 'date'>): EarlyArrival | null {
   return arrivals.find((a) => a.listing_id === p.listing_id && a.date === p.date) ?? null;
 }
 
+/** The board's order of early arrivals: by day, then time, then when they were written. */
+export function sortArrivals(list: EarlyArrival[]): EarlyArrival[] {
+  return [...list].sort((a, b) => a.date.localeCompare(b.date) || a.arrival.localeCompare(b.arrival) || a.created_at.localeCompare(b.created_at));
+}
+
 /**
- * Notices for early arrivals that appeared since the last read (Guesty
- * reported one) or disappeared (Guesty withdrew or changed it). `dates` are the
- * board's current days: an entry that merely fell out of the window at
- * midnight is not a cancellation.
+ * Notices for early arrivals that appeared since the last read (written by
+ * someone else) or disappeared (removed, unless this device removed them).
+ * `dates` are the board's current days: an entry that merely fell out of the
+ * window at midnight is not a removal.
  */
-export function arrivalNotices(prev: EarlyArrival[], next: EarlyArrival[], dates: readonly string[], dayLabelOf: (date: EarlyArrival['date']) => string): string[] {
+export function arrivalNotices(prev: EarlyArrival[], next: EarlyArrival[], myName: string, ownIds: Set<string>, dates: readonly string[], dayLabelOf: (date: EarlyArrival['date']) => string): string[] {
   const before = new Set(prev.map((a) => a.id));
   const after = new Set(next.map((a) => a.id));
   const out: string[] = [];
-  for (const a of next) if (!before.has(a.id)) out.push(sk.notices.newArrival(a.listing_name, a.arrival, dayLabelOf(a.date)));
-  for (const a of prev) if (!after.has(a.id) && dates.includes(a.date)) out.push(sk.notices.removedArrival(a.listing_name, dayLabelOf(a.date)));
+  for (const a of next) {
+    if (before.has(a.id) || a.author_name === myName) continue;
+    out.push(sk.notices.newArrival(a.listing_name, a.arrival, dayLabelOf(a.date)));
+  }
+  for (const a of prev) {
+    if (after.has(a.id) || ownIds.has(a.id) || a.id.startsWith('temp-') || !dates.includes(a.date)) continue;
+    out.push(sk.notices.removedArrival(a.listing_name, dayLabelOf(a.date)));
+  }
   return out;
 }
 
@@ -230,7 +246,7 @@ export function noteNotices(prev: BoardNote[], next: BoardNote[], myName: string
   for (const n of next) {
     if (n.author_name === myName) continue;
     const was = before.get(n.id);
-    if (!was) out.push(sk.notices.newNote(n.author_name, dayLabelOf(n.date)));
+    if (!was) out.push(n.parent_id ? sk.notices.newReply(n.author_name, dayLabelOf(n.date)) : sk.notices.newNote(n.author_name, dayLabelOf(n.date)));
     else if (was.text !== n.text) out.push(sk.notices.editedNote(n.author_name, dayLabelOf(n.date)));
   }
   return out;

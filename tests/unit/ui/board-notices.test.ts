@@ -64,7 +64,7 @@ describe('boardNotices', () => {
 });
 
 describe('noteNotices', () => {
-  const n = (id: string, author_name: string) => ({ id, text: 'x', date: '2026-10-04', author: null, author_name, created_at: '2026-10-03T10:00:00Z', edited_at: null });
+  const n = (id: string, author_name: string) => ({ id, text: 'x', date: '2026-10-04', author: null, author_name, created_at: '2026-10-03T10:00:00Z', edited_at: null, parent_id: null });
   const dayOf = (d: string) => (d === '2026-10-04' ? 'Zajtra 4.10.' : d);
   it('announces notes by others that are new since the last read, with their day, never own ones', () => {
     expect(noteNotices([n('1', 'Eva')], [n('2', 'Max'), n('1', 'Eva')], 'Julius', dayOf)).toEqual(['📌 Nové dôležité info od Max · Zajtra 4.10.']);
@@ -74,5 +74,11 @@ describe('noteNotices', () => {
     // an edited text by someone else is announced too, own edits are not
     expect(noteNotices([n('1', 'Eva')], [{ ...n('1', 'Eva'), text: 'zmenené' }], 'Julius', dayOf)).toEqual(['📌 Upravené dôležité info od Eva · Zajtra 4.10.']);
     expect(noteNotices([n('1', 'Julius')], [{ ...n('1', 'Julius'), text: 'zmenené' }], 'Julius', dayOf)).toEqual([]);
+  });
+
+  it('a new reply by someone else is announced as a reply (Martina, 2026-10-19)', () => {
+    const reply = { ...n('2', 'Max'), parent_id: '1' };
+    expect(noteNotices([n('1', 'Eva')], [n('1', 'Eva'), reply], 'Julius', dayOf)).toEqual(['💬 Nová odpoveď od Max v dôležitom info · Zajtra 4.10.']);
+    expect(noteNotices([n('1', 'Eva')], [n('1', 'Eva'), { ...reply, author_name: 'Julius' }], 'Julius', dayOf)).toEqual([]);
   });
 });

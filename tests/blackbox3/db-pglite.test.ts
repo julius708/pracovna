@@ -28,6 +28,8 @@ const MIG11 = readFileSync(new URL('../../supabase/migrations/0011_pack_snapshot
 const MIG12 = readFileSync(new URL('../../supabase/migrations/0012_early_arrivals.sql', import.meta.url), 'utf8');
 const MIG13 = readFileSync(new URL('../../supabase/migrations/0013_guesty_early_arrivals.sql', import.meta.url), 'utf8');
 const MIG14 = readFileSync(new URL('../../supabase/migrations/0014_push_subscriptions.sql', import.meta.url), 'utf8');
+const MIG15 = readFileSync(new URL('../../supabase/migrations/0015_board_note_replies.sql', import.meta.url), 'utf8');
+const MIG16 = readFileSync(new URL('../../supabase/migrations/0016_manual_early_arrivals.sql', import.meta.url), 'utf8');
 
 const STUBS = `
 create role authenticated nologin;
@@ -99,6 +101,13 @@ describe('migrations', () => {
       expect(policies.map((p) => p.cmd)).toEqual(['SELECT']);
       const pushFns = (await fresh.query<Row>("select proname from pg_proc where pronamespace = 'public'::regnamespace and proname in ('save_push_subscription', 'remove_push_subscription') order by 1")).rows.map((r) => r.proname);
       expect(pushFns).toEqual(['remove_push_subscription', 'save_push_subscription']);
+      const e15 = await pgError(fresh.exec(MIG15));
+      expect(e15, `0015_board_note_replies.sql failed: ${e15?.code} ${e15?.message} (line ${lineOf(MIG15, e15?.position)})`).toBeNull();
+      const e16 = await pgError(fresh.exec(MIG16));
+      expect(e16, `0016_manual_early_arrivals.sql failed: ${e16?.code} ${e16?.message} (line ${lineOf(MIG16, e16?.position)})`).toBeNull();
+      // 0016 brings the manual entry back
+      const back = (await fresh.query<Row>("select proname from pg_proc where pronamespace = 'public'::regnamespace and proname in ('add_early_arrival', 'remove_early_arrival', 'add_board_reply') order by 1")).rows.map((r) => r.proname);
+      expect(back).toEqual(['add_board_reply', 'add_early_arrival', 'remove_early_arrival']);
       const fns =(await fresh.query<Row>("select proname from pg_proc where pronamespace = 'public'::regnamespace order by 1")).rows.map((r) => r.proname);
       expect(fns).toEqual(expect.arrayContaining(['today_ba', 'is_admin', 'is_active_user', 'handle_new_user', 'sync_upsert_package', 'sync_set_lifecycle', 'pack_package', 'unpack_package', 'set_note', 'toggle_check', 'save_settings', 'admin_set_profile', 'acquire_lock', 'run_retention', 'increment_not_found', 'add_board_note', 'remove_board_note', 'edit_board_note']));
     } finally {
@@ -176,6 +185,8 @@ beforeAll(async () => {
   await db.exec(MIG12);
   await db.exec(MIG13);
   await db.exec(MIG14);
+  await db.exec(MIG15);
+  await db.exec(MIG16);
   await db.exec('set check_function_bodies = on');
   todayBa = (await one('select public.today_ba()::text as d')).d as string;
 });
@@ -961,5 +972,64 @@ describe('board_notes: edit_board_note', () => {
     await q('select public.remove_board_note($1, $2)', [r.id, randomUUID()]);
     expect((await one('select public.edit_board_note($1, $2, $3) as r', [r.id, 'Po odstránení', randomUUID()])).r).toEqual({ ok: false, status: 'removed' });
     expect((await one('select text from public.board_notes where id = $1', [r.id])).text).toBe('Opravený text');
+  });
+});
+
+describe('board_notes: add_board_reply (0015)', () => {
+  it('anyone active replies under a note, on its day; one level only; replays on the action id; removed parents refuse', async () => {
+    const eva = await newUser('Eva');
+    const max = await newUser('Max');
+    await actAs(eva);
+    const tomorrow = (await one("select (public.today_ba() + 1)::text as d")).d as string;
+    const { r: parent } = await one('select public.add_board_note($1, $2::date, $3) as r', ['Zajtra príde technik', tomorrow, randomUUID()]);
+    await actAs(max);
+    const action = randomUUID();
+    const r1 = (await one('select public.add_board_reply($1, $2, $3) as r', [parent.id, '  Beriem si to na starosť  ', action])).r;
+    expect(r1.ok).toBe(true);
+    expect((await one('select public.add_board_reply($1, $2, $3) as r', [parent.id, 'Beriem si to na starosť', action])).r).toMatchObject({ ok: true, replayed: true, id: r1.id });
+    const row = await one('select text, author, author_name, parent_id, date::text as date from public.board_notes where id = $1', [r1.id]);
+    expect(row).toMatchObject({ text: 'Beriem si to na starosť', author: max, author_name: 'Max', parent_id: parent.id, date: tomorrow });
+    // no reply to a reply, no empty reply
+    expect((await one('select public.add_board_reply($1, $2, $3) as r', [r1.id, 'Hlbšie', randomUUID()])).r).toEqual({ ok: false, status: 'nested' });
+    expect((await one('select public.add_board_reply($1, $2, $3) as r', [parent.id, '   ', randomUUID()])).r).toEqual({ ok: false, status: 'empty' });
+    // the replier edits their own reply with the note RPC
+    expect((await one('select public.edit_board_note($1, $2, $3) as r', [r1.id, 'Beriem to ja', randomUUID()])).r).toEqual({ ok: true });
+    // a removed or unknown parent takes no replies
+    await actAs(eva);
+    await q('select public.remove_board_note($1, $2)', [parent.id, randomUUID()]);
+    expect((await one('select public.add_board_reply($1, $2, $3) as r', [parent.id, 'Neskoro', randomUUID()])).r).toEqual({ ok: false, status: 'removed' });
+    expect((await one('select public.add_board_reply($1, $2, $3) as r', [randomUUID(), 'Nikam', randomUUID()])).r).toEqual({ ok: false, status: 'removed' });
+    await actAs(null);
+    expect((await pgError(q('select public.add_board_reply($1, $2, $3)', [parent.id, 'x', randomUUID()])))?.code).toBe('42501');
+  });
+});
+
+describe('early_arrivals: typed in again (0016)', () => {
+  it('an active user writes an early arrival for an in-scope flat; Guesty rows do not block it; author or admin removes it', async () => {
+    await q("insert into public.listings (guesty_id, name, in_scope, fetched_at) values ('ea-1', 'Poštová, Heart', true, now()), ('ea-out', 'Mimo', false, now()) on conflict do nothing");
+    // a row the sync derived before 0016 stays in the table but does not count as a typed-in entry
+    await q("insert into public.early_arrivals (listing_id, listing_name, date, arrival, author_name, source) values ('ea-1', 'Poštová, Heart', public.today_ba(), '13:00', 'Guesty', 'guesty')");
+    const eva = await newUser('Eva');
+    const max = await newUser('Max');
+    const admin = await newUser('Julius', { role: 'admin' });
+    await actAs(eva);
+    const action = randomUUID();
+    const r1 = (await one('select public.add_early_arrival($1, $2::date, $3, $4, $5) as r', ['ea-1', todayBa, '12:00', ' zaplatený skorý check-in ', action])).r;
+    expect(r1.ok).toBe(true);
+    expect((await one('select public.add_early_arrival($1, $2::date, $3, $4, $5) as r', ['ea-1', todayBa, '12:00', '', action])).r).toMatchObject({ ok: true, replayed: true, id: r1.id });
+    const row = await one('select listing_name, arrival, note, author_name, source from public.early_arrivals where id = $1', [r1.id]);
+    expect(row).toEqual({ listing_name: 'Poštová, Heart', arrival: '12:00', note: 'zaplatený skorý check-in', author_name: 'Eva', source: 'manual' });
+    expect((await one('select public.add_early_arrival($1, $2::date, $3, $4, $5) as r', ['ea-1', todayBa, '11:00', '', randomUUID()])).r).toEqual({ ok: false, status: 'duplicate' });
+    expect((await one('select public.add_early_arrival($1, $2::date, $3, $4, $5) as r', ['ea-out', todayBa, '11:00', '', randomUUID()])).r).toEqual({ ok: false, status: 'bad_listing' });
+    expect((await one('select public.add_early_arrival($1, $2::date, $3, $4, $5) as r', ['ea-1', todayBa, '25:00', '', randomUUID()])).r).toEqual({ ok: false, status: 'bad_time' });
+    expect((await one('select public.add_early_arrival($1, (public.today_ba() - 2)::date, $2, $3, $4) as r', ['ea-1', '11:00', '', randomUUID()])).r).toEqual({ ok: false, status: 'bad_date' });
+    await actAs(max);
+    expect((await one('select public.remove_early_arrival($1, $2) as r', [r1.id, randomUUID()])).r).toEqual({ ok: false, status: 'not_author' });
+    await actAs(admin);
+    expect((await one('select public.remove_early_arrival($1, $2) as r', [r1.id, randomUUID()])).r).toEqual({ ok: true });
+    expect((await one('select public.remove_early_arrival($1, $2) as r', [r1.id, randomUUID()])).r).toMatchObject({ ok: true, replayed: true });
+    expect((await one('select removed_by_name from public.early_arrivals where id = $1', [r1.id])).removed_by_name).toBe('Julius');
+    await actAs(null);
+    expect((await pgError(q('select public.add_early_arrival($1, $2::date, $3, $4, $5)', ['ea-1', todayBa, '12:00', '', randomUUID()])))?.code).toBe('42501');
   });
 });

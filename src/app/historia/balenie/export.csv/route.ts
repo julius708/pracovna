@@ -1,7 +1,7 @@
 import { loadPackingLog } from '@/app/_lib/admin';
 import { csvField } from '@/app/_lib/csv';
 import { historyFilterFrom } from '@/app/_lib/history-filter';
-import { SNAPSHOT_COLUMNS, snapshotCells, statusNote } from '@/app/_lib/packing-log';
+import { BILLING_NOTE, SNAPSHOT_COLUMNS, snapshotCells, statusNote, threadDayNotes } from '@/app/_lib/packing-log';
 import { getViewer } from '@/app/_lib/viewer';
 import { addDays, formatHM, todayInTz, WINDOW_DAYS } from '@/core/packing';
 
@@ -14,7 +14,7 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const today = todayInTz(new Date());
   const filter = historyFilterFrom((k) => url.searchParams.get(k), today, { to: addDays(today, WINDOW_DAYS - 1) });
-  const header = ['den_balenia', 'byt', 'zabalil', 'zabalene_kedy', 'osoby', ...SNAPSHOT_COLUMNS, 'kapsule', 'sukromne_pradlo', 'stav_teraz', 'zdroj_poctov', 'package_id', 'listing_id'];
+  const header = ['den_balenia', 'byt', 'zabalil', 'zabalene_kedy', 'osoby', ...SNAPSHOT_COLUMNS, 'kapsule', 'sukromne_pradlo', 'stav_teraz', 'zdroj_poctov', 'poznamka_na_karte', 'vyuctovanie', 'dolezite_info_dna', 'package_id', 'listing_id'];
   const rows: string[] = [header.map(csvField).join(';')];
   for (let page = 1; page <= 50; page++) {
     const view = await loadPackingLog({ ...filter, page });
@@ -30,6 +30,9 @@ export async function GET(req: Request) {
         e.snapshot?.private ? 'áno' : '',
         statusNote(e.status, e.superseded) ?? 'zabalené',
         e.exact ? 'karta pri zabalení' : 'aktuálna karta',
+        e.note,
+        e.note ? BILLING_NOTE : '',
+        threadDayNotes(view.dayNotes[e.package_date] ?? []).map(({ note: n, reply }) => `${reply ? '↳ ' : ''}${n.text} (${n.author_name})`).join(' | '),
         e.package_id,
         e.listing_id,
       ];

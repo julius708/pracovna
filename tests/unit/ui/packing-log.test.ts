@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { hasSnapshot, isSuperseded, packSnapshot, SNAPSHOT_COLUMNS, snapshotCells, snapshotOf, snapshotText, statusNote } from '@/app/_lib/packing-log';
+import { BILLING_NOTE, threadDayNotes } from '@/app/_lib/packing-log';
 import { computePackage, DEFAULT_ITEMS, DEFAULT_SETTINGS, parseLaundry, type PackageInput } from '@/core/packing';
 
 const D0 = '2026-10-05';
@@ -86,5 +87,18 @@ describe('packing history snapshot', () => {
     expect(hasSnapshot(packSnapshot(2, result(2)))).toBe(true);
     expect(hasSnapshot({})).toBe(false);
     expect(hasSnapshot(null)).toBe(false);
+  });
+});
+
+describe('packing history: "Dôležité info" of the day (Martina, 2026-10-19)', () => {
+  const n = (id: string, created_at: string, parent_id: string | null = null) => ({ id, text: id, author_name: 'Eva', created_at, parent_id });
+  it('lists each note oldest first with its replies right under it; replies to a removed note are left out', () => {
+    const notes = [n('b', '2026-10-19T10:00:00Z'), n('a', '2026-10-19T08:00:00Z'), n('a2', '2026-10-19T11:00:00Z', 'a'), n('a1', '2026-10-19T09:00:00Z', 'a'), n('x1', '2026-10-19T09:30:00Z', 'gone')];
+    expect(threadDayNotes(notes).map((t) => `${t.reply ? '↳' : ''}${t.note.id}`)).toEqual(['a', '↳a1', '↳a2', 'b']);
+    expect(threadDayNotes([])).toEqual([]);
+  });
+
+  it('a card with a staff note is marked for billing', () => {
+    expect(BILLING_NOTE).toBe('DO VYÚČTOVANIA');
   });
 });

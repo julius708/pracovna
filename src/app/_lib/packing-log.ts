@@ -33,6 +33,31 @@ export interface PackingLogRow {
   status: PackageStatus | null;
   /** The package was unpacked and packed again after this event (a later "packed" row exists). */
   superseded: boolean;
+  /** The staff note on the card ("chýba 1 osuška"): something still to bring to the flat; empty when none. */
+  note: string;
+  note_by_name: string | null;
+}
+
+/** A "Dôležité info" note shown under its day in the packing history (owner, 2026-10-19). */
+export interface PackingDayNote {
+  id: string;
+  text: string;
+  author_name: string;
+  created_at: string;
+  /** Set on a reply: the note it answers. */
+  parent_id: string | null;
+}
+
+/** The day's notes in reading order: each note, then its replies (oldest first); replies to a removed note are left out. */
+export function threadDayNotes(notes: PackingDayNote[]): { note: PackingDayNote; reply: boolean }[] {
+  const byTime = [...notes].sort((a, b) => a.created_at.localeCompare(b.created_at));
+  const out: { note: PackingDayNote; reply: boolean }[] = [];
+  for (const n of byTime) {
+    if (n.parent_id) continue;
+    out.push({ note: n, reply: false });
+    for (const r of byTime) if (r.parent_id === n.id) out.push({ note: r, reply: true });
+  }
+  return out;
 }
 
 /** The snapshot the pack RPC stores, from the package row. */
@@ -111,6 +136,12 @@ export function statusNote(status: PackageStatus | null, superseded = false): st
   if (superseded) return 'neskôr vrátené a zabalené znova';
   return null;
 }
+
+/**
+ * A card with a staff note had something missing that is brought to the flat
+ * later; the history marks it for billing (owner, 2026-10-19).
+ */
+export const BILLING_NOTE = 'DO VYÚČTOVANIA';
 
 /** Small note when the counts are not the ones stored at packing time. */
 export const NOT_EXACT_NOTE = 'počty podľa aktuálnej karty (zabalené pred zavedením histórie)';

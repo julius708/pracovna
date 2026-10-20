@@ -7,7 +7,7 @@ import type { PackageEventRow, PackageStatus, ProfileRow, SyncRunRow, WebhookEve
 import { env } from '@/env';
 import { createRepoFromEnv } from '@/sync/context';
 import { HISTORY_PAGE, type HistoryFilter } from './history-filter';
-import { hasSnapshot, isSuperseded, snapshotOf, type PackingLogRow } from './packing-log';
+import { hasSnapshot, isSuperseded, snapshotOf, type PackingDayNote, type PackingLogRow } from './packing-log';
 import { DEV_VIEWERS, supabaseConfigured } from './viewer';
 
 export { HISTORY_PAGE, type HistoryFilter } from './history-filter';
@@ -133,6 +133,8 @@ export async function loadHistory(f: HistoryFilter): Promise<HistoryView> {
 
 export interface PackingLogView {
   rows: PackingLogRow[];
+  /** "Dôležité info" of the packing days on this page, oldest first per day. */
+  dayNotes: Record<string, PackingDayNote[]>;
   listings: { id: string; name: string }[];
   actors: string[];
   hasMore: boolean;
@@ -149,7 +151,7 @@ export async function loadPackingLog(f: HistoryFilter): Promise<PackingLogView> 
     const c = await db();
     let q = c
       .from('package_events')
-      .select('*, packages(status, target_people, computed_items, packed_at)')
+      .select('*, packages(status, target_people, computed_items, packed_at, note, note_by_name)')
       .eq('event', 'packed')
       .gte('package_date', f.from)
       .lte('package_date', f.to)
@@ -160,7 +162,7 @@ export async function loadPackingLog(f: HistoryFilter): Promise<PackingLogView> 
     if (f.actor) q = q.eq('actor_name', f.actor);
     const [ev, ls, pr] = await Promise.all([q, c.from('listings').select('guesty_id, name').eq('in_scope', true).order('name'), c.from('profiles').select('display_name').order('display_name')]);
     if (ev.error) throw new Error(`package_events: ${ev.error.message}`);
-    type Joined = PackageEventRow & { packages: { status: PackageStatus; target_people: number; computed_items: PackingResult; packed_at: string | null } | null };
+    type Joined = PackageEventRow & { packages: { status: PackageStatus; target_people: number; computed_items: PackingResult; packed_at: string | null; note: string | null; note_by_name: string | null } | null };
     const rows = ((ev.data ?? []) as unknown as Joined[]).slice(0, HISTORY_PAGE).map((e) => ({
       id: e.id,
       package_id: e.package_id,
@@ -173,9 +175,22 @@ export async function loadPackingLog(f: HistoryFilter): Promise<PackingLogView> 
       exact: hasSnapshot(e.data),
       status: e.packages?.status ?? null,
       superseded: e.packages?.status === 'packed' && isSuperseded(e.created_at, e.packages.packed_at),
+      note: e.packages?.note ?? '',
+      note_by_name: e.packages?.note_by_name ?? null,
     }));
+    const days = [...new Set(rows.map((r) => r.package_date))];
+    const dayNotes: Record<string, PackingDayNote[]> = {};
+    if (days.length) {
+      const nt = await c.from('board_notes').select('id, text, date, author_name, created_at, parent_id').in('date', days).is('removed_at', null).order('created_at');
+      if (nt.error) throw new Error(`board_notes: ${nt.error.message}`);
+      for (const n of (nt.data ?? []) as (PackingDayNote & { date: string })[]) {
+        const d = String(n.date).slice(0, 10);
+        (dayNotes[d] ??= []).push({ id: n.id, text: n.text, author_name: n.author_name, created_at: n.created_at, parent_id: n.parent_id ?? null });
+      }
+    }
     return {
       rows,
+      dayNotes,
       listings: ((ls.data ?? []) as { guesty_id: string; name: string }[]).map((l) => ({ id: l.guesty_id, name: l.name })),
       actors: ((pr.data ?? []) as { display_name: string }[]).map((p) => p.display_name),
       hasMore: (ev.data ?? []).length > HISTORY_PAGE,
@@ -201,10 +216,19 @@ export async function loadPackingLog(f: HistoryFilter): Promise<PackingLogView> 
       exact: hasSnapshot(e.data),
       status: p?.status ?? null,
       superseded: p?.status === 'packed' && isSuperseded(e.created_at, p.packed_at),
+      note: p?.note ?? '',
+      note_by_name: p?.note_by_name ?? null,
     };
   });
+  const days = new Set(rows.map((r) => r.package_date));
+  const dayNotes: Record<string, PackingDayNote[]> = {};
+  for (const n of [...(repo.boardNotes ?? [])].sort((a, b) => a.created_at.localeCompare(b.created_at))) {
+    if (n.removed_at || !days.has(n.date)) continue;
+    (dayNotes[n.date] ??= []).push({ id: n.id, text: n.text, author_name: n.author_name, created_at: n.created_at, parent_id: n.parent_id ?? null });
+  }
   return {
     rows,
+    dayNotes,
     listings: (await repo.getListings()).filter((l) => l.in_scope).map((l) => ({ id: l.guesty_id, name: l.name })).sort((a, b) => a.name.localeCompare(b.name, 'sk')),
     actors: [...new Set([...Object.values(DEV_VIEWERS).map((v) => v.name), ...repo.events.filter((e) => e.event === 'packed').map((e) => e.actor_name)])],
     hasMore: all.length > offset + HISTORY_PAGE,

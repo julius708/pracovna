@@ -567,7 +567,7 @@ describe('reconcile – arrivals paging and fallbacks', () => {
 });
 
 // =====================================================================
-describe('reconcile – early arrivals from Guesty (check-ins of the board days at any flat)', () => {
+describe('reconcile – check-ins of the board days at any flat (arrival times)', () => {
   /** A confirmed reservation whose planned arrival Guesty writes as the clock part of the check-in timestamp. */
   function arriving(id: string, listingId: string, checkIn: string, checkOut: string, clock: string, status = 'confirmed'): ParsedReservation {
     const r = fakeRes(id, listingId, checkIn, checkOut, 2, status);
@@ -583,40 +583,15 @@ describe('reconcile – early arrivals from Guesty (check-ins of the board days 
     );
   }
 
-  it('an early check-in at a flat without a check-out in the window reaches the board after one reconcile', async () => {
+  it('the arrival time is stored, but early arrivals are typed in by hand: the sync writes no rows (Martina, 2026-10-19)', async () => {
     const repo = newRepo();
     const client = createFakeGuestyClient(data());
     const r = await reconcile(cdeps(repo, client), 'cron');
     expect(r.ok, r.error ?? '').toBe(true);
     expect(r.stats.checkins).toBe(2);
     expect(repo.reservations.get('EARLY')).toMatchObject({ status: 'confirmed', arrival_time: '13:00' });
-    const rows = await repo.getEarlyArrivals(windowDates(D0));
-    expect(rows.map((a) => [a.listing_id, a.date, a.arrival, a.reservation_id])).toEqual([['L1', D2, '13:00', 'EARLY']]);
-    expect(r.recompute?.earlyArrivals).toEqual({ added: 1, removed: 0, kept: 0 });
-  });
-
-  it('a cancellation or a changed time in Guesty is picked up by the next reconcile without a webhook', async () => {
-    const repo = newRepo();
-    const client = createFakeGuestyClient(data());
-    await reconcile(cdeps(repo, client), 'cron');
-    // the guest now arrives at the standard time: the row goes
-    const early = client.data.reservations.find((x) => x._id === 'EARLY')!;
-    early.checkIn = `${D2}T16:00:00.000Z`;
-    early.stay![0].checkIn = early.checkIn;
-    const r2 = await reconcile(cdeps(repo, client, at(shift(3 * 60_000))), 'cron');
-    expect(r2.ok, r2.error ?? '').toBe(true);
     expect(await repo.getEarlyArrivals(windowDates(D0))).toEqual([]);
-    expect(repo.earlyArrivals.filter((a) => a.removed_at).map((a) => a.removed_by_name)).toEqual(['Guesty']);
-    // back to an early arrival, then cancelled altogether (no webhook): the row appears and disappears again
-    early.checkIn = `${D2}T12:00:00.000Z`;
-    early.stay![0].checkIn = early.checkIn;
-    await reconcile(cdeps(repo, client, at(shift(6 * 60_000))), 'cron');
-    expect((await repo.getEarlyArrivals(windowDates(D0))).map((a) => a.arrival)).toEqual(['12:00']);
-    early.status = 'canceled';
-    const r4 = await reconcile(cdeps(repo, client, at(shift(9 * 60_000))), 'cron');
-    expect(r4.ok, r4.error ?? '').toBe(true);
-    expect(repo.reservations.get('EARLY')?.status).toBe('canceled');
-    expect(await repo.getEarlyArrivals(windowDates(D0))).toEqual([]);
+    expect(repo.earlyArrivals).toEqual([]);
   });
 
   it('a refetch by id without the arrival time keeps the time we know', async () => {

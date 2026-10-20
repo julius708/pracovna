@@ -263,4 +263,6 @@ export interface BoardNoteRow {
   removed_by_name: string | null;
   client_action_id: string | null;
   edited_at: Instant | null;
+  /** Set on a reply: the note it answers (migration 0015). */
+  parent_id: string | null;
 }

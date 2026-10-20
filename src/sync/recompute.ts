@@ -1,5 +1,3 @@
-import { syncEarlyArrivals, type EarlyArrivalsSyncResult } from './early-arrivals';
-import { pushEarlyArrivals, type PushResult, type PushSender } from './push';
 import {
   addDays,
   computePackage,
@@ -24,8 +22,6 @@ export interface RecomputeDeps {
   repo: SyncRepo;
   log?: Logger;
   now?: () => Date;
-  /** Push sender for the early arrivals just added; undefined = from the environment, null = off (tests). */
-  push?: PushSender | null;
 }
 
 export interface RecomputeResult {
@@ -37,10 +33,6 @@ export interface RecomputeResult {
   unchanged: number;
   cancelled: number;
   restored: number;
-  /** Early arrivals derived from the reservations of the window (src/sync/early-arrivals.ts). */
-  earlyArrivals?: EarlyArrivalsSyncResult;
-  /** Push notifications sent for the early arrivals just added (src/sync/push.ts); absent when push is off. */
-  push?: PushResult;
 }
 
 export const CANCEL_REASONS = {
@@ -272,11 +264,8 @@ export async function recomputeWindow(deps: RecomputeDeps, trigger: string, toda
   }
 
   if (events.length) await repo.insertEvents(events);
-  // the "Skoré príchody" box follows the reservations we now hold; new entries go out as notifications
-  const early = await syncEarlyArrivals(repo, dates, log);
-  res.earlyArrivals = { added: early.added, removed: early.removed, kept: early.kept };
-  const push = await pushEarlyArrivals(repo, early.addedRows, today, log, deps.push);
-  if (push) res.push = push;
+  // "Skoré príchody" are typed in by the office since 2026-10-19 (migration 0016): the sync no longer
+  // writes them; src/sync/early-arrivals.ts stays for the record should Guesty take over again
   log.info('recompute.done', { ...res });
   return res;
 }

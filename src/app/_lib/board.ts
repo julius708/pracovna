@@ -42,9 +42,11 @@ export interface BoardNote {
   created_at: string;
   /** Set when the author changed the text. */
   edited_at: string | null;
+  /** Set on a reply: the note it answers (shown under it). */
+  parent_id: string | null;
 }
 
-export const NOTE_COLUMNS = 'id, text, date, author, author_name, created_at, edited_at';
+export const NOTE_COLUMNS = 'id, text, date, author, author_name, created_at, edited_at, parent_id';
 
 /** "Skoré príchody": a guest arriving before 16:00 at a flat on a board day (owner, 2026-10-11). */
 export interface EarlyArrival {
@@ -73,10 +75,14 @@ export interface BoardData {
   packages: BoardPackage[];
   /** "Dôležité info" for the board days, newest first. */
   notes: BoardNote[];
-  /** "Skoré príchody" for the board days (from Guesty, see src/sync/early-arrivals.ts), by day and time. */
+  /** "Skoré príchody" typed in for the board days (migration 0016), by day and time. */
   arrivals: EarlyArrival[];
+  /** In-scope flats for the early-arrival picker, by name. */
+  listings: { id: string; name: string }[];
   /** listing id -> cleaning company (null when none). */
   cleaners: Record<string, string | null>;
+  /** Flats whose Guesty laundry field says "Kapsule: nedávať" (Martina, 2026-10-19): the card says so in red. */
+  noCapsules: string[];
   status: { lastOkSyncAt: string | null; consecutiveFailures: number };
   /** ISO instant the data was read on the server. */
   loadedAt: string;
@@ -96,16 +102,17 @@ export async function loadBoard(viewer: Viewer): Promise<BoardData> {
     if (!db) throw new Error('Supabase client unavailable');
     const [pk, ls, st, nt, ea] = await Promise.all([
       db.from('packages').select(BOARD_COLUMNS).in('date', dates),
-      db.from('listings').select('guesty_id, cleaner'),
+      db.from('listings').select('guesty_id, name, cleaner, in_scope, capsules:laundry->capsules'),
       db.rpc('board_status'),
       db.from('board_notes').select(NOTE_COLUMNS).in('date', dates).is('removed_at', null).order('created_at', { ascending: false }),
-      db.from('early_arrivals').select(ARRIVAL_COLUMNS).in('date', dates).is('removed_at', null).order('date').order('arrival').order('created_at'),
+      db.from('early_arrivals').select(ARRIVAL_COLUMNS).in('date', dates).is('removed_at', null).eq('source', 'manual').order('date').order('arrival').order('created_at'),
     ]);
     if (pk.error) throw new Error(`packages: ${pk.error.message}`);
     if (nt.error) throw new Error(`board_notes: ${nt.error.message}`);
     if (ea.error) throw new Error(`early_arrivals: ${ea.error.message}`);
     const cleaners: Record<string, string | null> = {};
-    for (const l of (ls.data ?? []) as { guesty_id: string; cleaner: string | null }[]) cleaners[l.guesty_id] = l.cleaner;
+    const listingRows = (ls.data ?? []) as { guesty_id: string; name: string; cleaner: string | null; in_scope: boolean; capsules: unknown }[];
+    for (const l of listingRows) cleaners[l.guesty_id] = l.cleaner;
     const status = (st.data ?? {}) as { last_ok_sync_at?: string | null; consecutive_failures?: number };
     return {
       today,
@@ -113,7 +120,9 @@ export async function loadBoard(viewer: Viewer): Promise<BoardData> {
       packages: (pk.data ?? []) as unknown as BoardPackage[],
       notes: (nt.data ?? []) as BoardNote[],
       arrivals: ((ea.data ?? []) as EarlyArrival[]).map((a) => ({ ...a, date: String(a.date).slice(0, 10) })),
+      listings: pickerListings(listingRows.map((l) => ({ guesty_id: l.guesty_id, name: l.name, in_scope: l.in_scope }))),
       cleaners,
+      noCapsules: listingRows.filter((l) => capsulesRefused(l.capsules)).map((l) => l.guesty_id),
       status: { lastOkSyncAt: status.last_ok_sync_at ?? null, consecutiveFailures: status.consecutive_failures ?? 0 },
       loadedAt,
       live: true,
@@ -155,14 +164,29 @@ export async function loadBoard(viewer: Viewer): Promise<BoardData> {
     notes: ((repo as MemoryRepo).boardNotes ?? [])
       .filter((n) => !n.removed_at && (dates as readonly string[]).includes(n.date))
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
-      .map((n) => ({ id: n.id, text: n.text, date: n.date, author: n.author, author_name: n.author_name, created_at: n.created_at, edited_at: n.edited_at })),
+      .map((n) => ({ id: n.id, text: n.text, date: n.date, author: n.author, author_name: n.author_name, created_at: n.created_at, edited_at: n.edited_at, parent_id: n.parent_id ?? null })),
     arrivals: ((repo as MemoryRepo).earlyArrivals ?? [])
-      .filter((a) => !a.removed_at && (dates as readonly string[]).includes(a.date))
+      .filter((a) => !a.removed_at && a.source === 'manual' && (dates as readonly string[]).includes(a.date))
       .sort((a, b) => a.date.localeCompare(b.date) || a.arrival.localeCompare(b.arrival) || a.created_at.localeCompare(b.created_at))
       .map((a) => ({ id: a.id, listing_id: a.listing_id, listing_name: a.listing_name, date: a.date, arrival: a.arrival, note: a.note, author: a.author, author_name: a.author_name, created_at: a.created_at })),
+    listings: pickerListings(listings),
     cleaners,
+    noCapsules: listings.filter((l) => l.in_scope && capsulesRefused(l.laundry?.capsules)).map((l) => l.guesty_id),
     status: { lastOkSyncAt: lastOk, consecutiveFailures: failures ?? 0 },
     loadedAt,
     live: false,
   };
+}
+
+/** The early-arrival picker: in-scope flats by name. */
+function pickerListings(rows: { guesty_id: string; name: string; in_scope: boolean }[]): { id: string; name: string }[] {
+  return rows
+    .filter((l) => l.in_scope)
+    .map((l) => ({ id: l.guesty_id, name: l.name }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'sk'));
+}
+
+/** The parsed "Kapsule:" line is an explicit none ("nedávať", "žiadne"): an empty list, not a missing line (null). */
+function capsulesRefused(capsules: unknown): boolean {
+  return Array.isArray(capsules) && capsules.length === 0;
 }

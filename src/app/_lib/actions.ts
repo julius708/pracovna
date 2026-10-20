@@ -8,9 +8,23 @@ import type { MemoryRepo } from '@/db/memory-repo';
 import { createServerSupabase } from '@/db/server';
 import { env } from '@/env';
 import { createLogger } from '@/guesty/log';
+import { todayInTz } from '@/core/packing';
 import { createRepoFromEnv } from '@/sync/context';
+import { pushEarlyArrivals } from '@/sync/push';
 import { loadBoard, type BoardData } from './board';
-import { memoryAddBoardNote, memoryCheck, memoryEditBoardNote, memoryNote, memoryPack, memoryRemoveBoardNote, memoryUnpack, type StaffResult } from './memory-staff';
+import {
+  memoryAddBoardNote,
+  memoryAddBoardReply,
+  memoryAddEarlyArrival,
+  memoryCheck,
+  memoryEditBoardNote,
+  memoryNote,
+  memoryPack,
+  memoryRemoveBoardNote,
+  memoryRemoveEarlyArrival,
+  memoryUnpack,
+  type StaffResult,
+} from './memory-staff';
 import { DEV_ROLE_COOKIE, devLoginAllowed, getViewer, supabaseConfigured } from './viewer';
 
 export interface ActionResult extends StaffResult {
@@ -76,6 +90,14 @@ export async function addBoardNoteAction(text: string, date: string, actionId: s
   });
 }
 
+/** "Dôležité info": a reply under a note, on the note's day, under the viewer's name. */
+export async function addBoardReplyAction(parentId: string, text: string, actionId: string): Promise<ActionResult> {
+  return withViewer(async (viewer) => {
+    if (supabaseConfigured()) return rpc('add_board_reply', { p_parent: parentId, p_text: text, p_action_id: actionId });
+    return memoryAddBoardReply(memoryRepo(), viewer, parentId, text, actionId);
+  });
+}
+
 /** Rewrites a notice-board note (author only). */
 export async function editBoardNoteAction(id: string, text: string, actionId: string): Promise<ActionResult> {
   return withViewer(async (viewer) => {
@@ -90,6 +112,42 @@ export async function removeBoardNoteAction(id: string, actionId: string): Promi
     if (supabaseConfigured()) return rpc('remove_board_note', { p_id: id, p_action_id: actionId });
     return memoryRemoveBoardNote(memoryRepo(), viewer, id);
   });
+}
+
+/**
+ * "Skoré príchody" (typed in since 2026-10-19): records a guest arriving at
+ * `arrival` ("HH:MM") on `date` at the flat, under the viewer's name; the other
+ * people's devices get a notification.
+ */
+export async function addEarlyArrivalAction(listingId: string, date: string, arrival: string, note: string, actionId: string): Promise<ActionResult> {
+  return withViewer(async (viewer) => {
+    const res: ActionResult = supabaseConfigured()
+      ? await rpc('add_early_arrival', { p_listing_id: listingId, p_date: date, p_arrival: arrival, p_note: note, p_action_id: actionId })
+      : await memoryAddEarlyArrival(memoryRepo(), viewer, listingId, date, arrival, note, actionId);
+    if (res.ok && !res.replayed) await notifyEarlyArrival(viewer.id, viewer.name, listingId, date, arrival);
+    return res;
+  });
+}
+
+/** Removes an early-arrival entry (author or admin). */
+export async function removeEarlyArrivalAction(id: string, actionId: string): Promise<ActionResult> {
+  return withViewer(async (viewer) => {
+    if (supabaseConfigured()) return rpc('remove_early_arrival', { p_id: id, p_action_id: actionId });
+    return memoryRemoveEarlyArrival(memoryRepo(), viewer, id);
+  });
+}
+
+/** The push for a new early arrival; a failure is logged and never fails the saved entry. */
+async function notifyEarlyArrival(userId: string, userName: string, listingId: string, date: string, arrival: string): Promise<void> {
+  const log = createLogger({ level: env().LOG_LEVEL });
+  try {
+    const { repo } = createRepoFromEnv(env());
+    const listing = (await repo.getListings()).find((l) => l.guesty_id === listingId);
+    const row = { listing_id: listingId, listing_name: listing?.name ?? listingId, date, arrival, note: '', author_name: userName, source: 'manual', reservation_id: null };
+    await pushEarlyArrivals(repo, [row], todayInTz(new Date()), log, undefined, userId);
+  } catch (e) {
+    log.warn('push.early_arrival_failed', { error: String(e) });
+  }
 }
 
 export async function refreshBoard(): Promise<BoardData | null> {

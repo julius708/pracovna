@@ -26,7 +26,7 @@ function dayText(date: Ymd, today: Ymd): string {
   return `${weekdayShort(date)} ${formatDM(date)}`;
 }
 
-/** The notification for each early arrival Guesty just reported (owner, 2026-10-11). */
+/** The notification for each early arrival just written on the board (owner, 2026-10-11; typed in since 2026-10-19). */
 export function earlyArrivalMessages(rows: EarlyArrivalInsert[], today: Ymd): PushMessage[] {
   return rows.map((r) => {
     const alias = flatAlias(r.listing_id);
@@ -70,10 +70,11 @@ export interface PushResult {
  * the push service no longer knows is deleted; other failures are logged and
  * the subscription kept (the service may be down).
  */
-export async function sendPushes(repo: SyncRepo, messages: PushMessage[], send: PushSender, log: Logger = silentLogger): Promise<PushResult> {
+export async function sendPushes(repo: SyncRepo, messages: PushMessage[], send: PushSender, log: Logger = silentLogger, skipUserId?: string): Promise<PushResult> {
   const res: PushResult = { sent: 0, failed: 0, pruned: 0 };
   if (!messages.length) return res;
-  const subs = await repo.getPushSubscriptions();
+  // the writer's own devices get nothing: they just saw it
+  const subs = (await repo.getPushSubscriptions()).filter((s) => !skipUserId || s.user_id !== skipUserId);
   const gone = new Set<string>();
   for (const sub of subs) {
     for (const m of messages) {
@@ -103,10 +104,11 @@ export async function sendPushes(repo: SyncRepo, messages: PushMessage[], send: 
 }
 
 /**
- * Pushes the early arrivals the sync just added, when push is configured in the
- * environment. Called by the recompute; `sender` is injected by tests.
+ * Pushes the early arrivals just written, when push is configured in the
+ * environment. Called by the add action with the writer's id (their devices are
+ * skipped); `sender` is injected by tests.
  */
-export async function pushEarlyArrivals(repo: SyncRepo, added: EarlyArrivalInsert[], today: Ymd, log: Logger = silentLogger, sender?: PushSender | null): Promise<PushResult | null> {
+export async function pushEarlyArrivals(repo: SyncRepo, added: EarlyArrivalInsert[], today: Ymd, log: Logger = silentLogger, sender?: PushSender | null, skipUserId?: string): Promise<PushResult | null> {
   if (!added.length) return null;
   let send = sender;
   if (send === undefined) {
@@ -117,5 +119,5 @@ export async function pushEarlyArrivals(repo: SyncRepo, added: EarlyArrivalInser
     }
   }
   if (!send) return null;
-  return sendPushes(repo, earlyArrivalMessages(added, today), send, log);
+  return sendPushes(repo, earlyArrivalMessages(added, today), send, log, skipUserId);
 }

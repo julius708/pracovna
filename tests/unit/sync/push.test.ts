@@ -57,6 +57,18 @@ describe('push notifications for early arrivals (owner, 2026-10-11)', () => {
     expect(n).toBe(1);
   });
 
+  it('a typed-in arrival goes to everyone but the writer (Martina, 2026-10-19)', async () => {
+    const repo = new MemoryRepo();
+    repo.pushSubscriptions = [sub('https://push.example/a'), sub('https://push.example/b', 'Max'), sub('https://push.example/c', 'Max')];
+    const to: string[] = [];
+    const res = await pushEarlyArrivals(repo, [row()], '2026-10-11', undefined, async (s) => {
+      to.push(s.user_name);
+      return 201;
+    }, 'u-Max');
+    expect(res).toEqual({ sent: 1, failed: 0, pruned: 0 });
+    expect(to).toEqual(['Angelika']);
+  });
+
   it('push is configured only with all three VAPID settings; the sender is null otherwise', () => {
     const base = { SEED_MODE: 'true' };
     expect(pushConfigured(loadEnv(base))).toBe(false);
