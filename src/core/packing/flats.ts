@@ -24,6 +24,8 @@ export interface FlatFacts {
   singleSheet?: 'small';
   /** Shown on the card ("Info o byte: …"). */
   note?: string;
+  /** A must-not-miss instruction, shown in red on every card of the flat (Martina, 2026-10-21). */
+  alert?: string;
   /** Items never packed for this flat (the flat has its own stock); their rows leave the card and the day totals. */
   skipItems?: string[];
   /** Questions Angelika has already settled for this flat; never shown on its card. */
@@ -80,6 +82,12 @@ export const FLAT_FACTS: Record<string, FlatFacts> = {
     settled: ['duvets_short'],
     note: 'Nenosiť tablety do umývačky riadu a zatiaľ ani toaletný papier – v zásuvke v skrini je veľká zásoba.',
     skipItems: ['myckaKaps', 'toaletak'],
+  },
+  // Ventúrska A, Charming (Martina, 2026-10-21): the flat has no dishwasher, so no dishwasher tablets; the card says so
+  // in red every time
+  '6859255a167a6d001324a29a': {
+    alert: 'Nebaliť tablety do umývačky – v byte nie je umývačka.',
+    skipItems: ['myckaKaps'],
   },
 };
 

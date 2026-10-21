@@ -81,7 +81,7 @@ describe('board model', () => {
     expect(lines.findIndex((l) => l.consumable)).toBeGreaterThan(lines.filter((l) => !l.consumable).length - 1);
   });
 
-  it('private linen stays out of the linen totals; its consumables and capsules still count (owner 2026-10-05)', () => {
+  it('private linen counts in the linen totals like any other, with its consumables and capsules (Martina, 2026-10-21)', () => {
     const jobs = [
       pkg({ sameDay: true, people: 2, laundry: 'Paplón veľký: 1\nKapsule: Tchibo Cafissimo' }),
       pkg({ sameDay: true, people: 2, laundry: 'Prádlo: súkromné\nPaplón veľký: 1\nKapsule: Tchibo Cafissimo' }),
@@ -89,8 +89,8 @@ describe('board model', () => {
     expect((jobs[1].computed_items as { private: boolean }).private).toBe(true);
     expect(jobs[1].computed_items.linen.length).toBeGreaterThan(0); // the card itself shows the linen
     const lines = summaryLines(jobs, { generic: 'g', typed: (t) => `Kapsule ${t}`, unsure: 'u', missing: 'm' });
-    expect(lines.find((l) => l.id === 'paplonV')).toMatchObject({ rem: 1, all: 1 });
-    expect(lines.find((l) => l.id === 'osuskaV')).toMatchObject({ rem: 2, all: 2 });
+    expect(lines.find((l) => l.id === 'paplonV')).toMatchObject({ rem: 2, all: 2 });
+    expect(lines.find((l) => l.id === 'osuskaV')).toMatchObject({ rem: 4, all: 4 });
     expect(lines.find((l) => l.id === 'toaletak')).toMatchObject({ rem: 6, all: 6 });
     expect(lines.find((l) => l.id.startsWith('kapsule|'))).toMatchObject({ rem: 4, all: 4 });
   });

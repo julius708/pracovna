@@ -266,3 +266,11 @@ describe('toilet paper and bin bags (owner, 2026-10-10)', () => {
     expect([count(r, 'toaletak'), count(r, 'vreckoV'), count(r, 'vreckoM')]).toEqual([2, 2, 2]);
   });
 });
+
+describe('Ventúrska A, Charming: no dishwasher (Martina, 2026-10-21)', () => {
+  it('no dishwasher tablets are packed and the card carries the red line', () => {
+    const facts = FLAT_FACTS['6859255a167a6d001324a29a'];
+    expect(facts.alert).toBe('Nebaliť tablety do umývačky – v byte nie je umývačka.');
+    expect(facts.skipItems).toEqual(['myckaKaps']);
+  });
+});

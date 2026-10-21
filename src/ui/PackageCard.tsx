@@ -124,6 +124,7 @@ export function PackageCard({
           ))}
         </div>
       )}
+      {facts?.alert && <div className="flat-alert">⛔ {facts.alert}</div>}
       {facts?.note && (
         <div className="lnote">
           <b>{sk.flatNoteLabel}</b> {facts.note}

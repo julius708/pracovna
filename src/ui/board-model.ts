@@ -78,7 +78,7 @@ export interface SummaryLine {
   source: 'calc' | 'guesty';
 }
 
-/** Totals of the day's active cards, linen first, consumables after, in card order. Private linen is left out of the linen totals. */
+/** Totals of the day's active cards, linen first, consumables after, in card order. Private linen counts too (Martina, 2026-10-21). */
 export function summaryLines(jobs: BoardPackage[], capsuleTexts: { generic: string; typed: (t: string) => string; unsure: string; missing: string }): SummaryLine[] {
   const lines = new Map<string, SummaryLine>();
   const add = (id: string, make: () => Omit<SummaryLine, 'rem' | 'all' | 'id'>, n: number, todo: boolean) => {
@@ -93,8 +93,8 @@ export function summaryLines(jobs: BoardPackage[], capsuleTexts: { generic: stri
   for (const p of activeJobs(jobs)) {
     const r = p.computed_items as PackingResult;
     const todo = p.status === 'todo';
-    // private linen comes from the flat's own set, not from our stock: shown on the card, kept out of the totals (owner, 2026-10-05)
-    if (!r.private) for (const l of r.linen as LineItem[]) add(l.key, () => ({ label: l.label, size: l.size, consumable: false, photo: null, note: null, source: l.source }), l.n, todo);
+    // private linen counts in the day's totals as well (Martina and Angelika, 2026-10-21; it was left out from 2026-10-05)
+    for (const l of r.linen as LineItem[]) add(l.key, () => ({ label: l.label, size: l.size, consumable: false, photo: null, note: null, source: l.source }), l.n, todo);
     for (const l of r.consumables as LineItem[]) add(l.key, () => ({ label: l.label, size: l.size, consumable: true, photo: null, note: null, source: l.source }), l.n, todo);
     for (const c of r.capsules as CapsuleLine[]) {
       const id = c.state === 'ok' ? `kapsule|${c.typeKey}` : `kapsule|${c.state}`;
