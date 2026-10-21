@@ -83,6 +83,8 @@ export function PackageCard({
         </div>
         {pill}
       </div>
+      {/* the flat's must-not-miss line comes first, right under the name (Martina, 2026-10-21) */}
+      {facts?.alert && <div className="flat-alert">⛔ {facts.alert}</div>}
       {arrival && (
         <div className="arrival-bar">
           {sk.earlyArrivals.cardLine(arrival.arrival)}
@@ -124,7 +126,6 @@ export function PackageCard({
           ))}
         </div>
       )}
-      {facts?.alert && <div className="flat-alert">⛔ {facts.alert}</div>}
       {facts?.note && (
         <div className="lnote">
           <b>{sk.flatNoteLabel}</b> {facts.note}
