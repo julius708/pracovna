@@ -150,7 +150,9 @@ The app also raises its own alerts (sync failed twice in a row, Guesty token quo
 
 `POST /api/admin/webhooks/register`'s sibling `POST /api/admin/alerts/test` (cron secret or admin session) sends a test message through every configured sink and reports what was delivered.
 
-"Prádlo: súkromné" in the Guesty field is a note for the packers (purple banner on the card: take the flat's own linen); the counts are computed and shown exactly like for every other flat, but the linen of these flats stays out of the day totals (their consumables and capsules count); owner's decision of 2026-10-05, replacing proposal Q5.
+"Prádlo: súkromné" in the Guesty field is a note for the packers (purple banner on the card: take the flat's own linen); the counts are computed and shown exactly like for every other flat, and since 2026-10-21 (Martina and Angelika) they count in the day totals too, linen included: no difference between our linen and private linen. From 2026-10-05 to 2026-10-21 the linen of these flats stayed out of the totals.
+
+Sheets follow the made beds (one per bed; a small sheet only where Angelika confirmed it, flats.ts). On a card with small duvets only, 2 small duvets = 1 bed = 1 sheet is the floor (Martina, 2026-10-21: Jégého A has 4 small duvets but one bed in Guesty, so 2 sheets). Flats can carry a red must-not-miss line on every card (`FlatFacts.alert`, e.g. Ventúrska A: no dishwasher tablets; Modrá Guľa 3: small Nespresso, not Tchibo).
 
 ## Board window
 
