@@ -52,6 +52,8 @@ export const FLAT_FACTS: Record<string, FlatFacts> = {
   '694aa0c5b0f9ec001691d05d': {
     duvets: { large: 3, small: 2 },
     note: '1 malá posteľ, 3 veľké manželské, gauč sa nedá rozložiť · plný byt: 3× veľký + 2× malý paplón',
+    // the small bed takes a small sheet (Martina, 2026-10-21)
+    singleSheet: 'small',
     settled: ['beds_insufficient'],
   },
   // Skalická 3A, Bright (owner, 2026-10-10): 2 small beds + 3 large; full flat = 2 small + 3 large sheets
@@ -82,6 +84,10 @@ export const FLAT_FACTS: Record<string, FlatFacts> = {
     settled: ['duvets_short'],
     note: 'Nenosiť tablety do umývačky riadu a zatiaľ ani toaletný papier – v zásuvke v skrini je veľká zásoba.',
     skipItems: ['myckaKaps', 'toaletak'],
+  },
+  // Modrá Guľa 3, Bright (Martina, 2026-10-21): the owner complained about Tchibo capsules
+  '6a8d58f50566cf002a7d2acf': {
+    alert: 'Pozor – kapsule baliť malé Nespresso, nie Tchibo.',
   },
   // Ventúrska A, Charming (Martina, 2026-10-21): the flat has no dishwasher, so no dishwasher tablets; the card says so
   // in red every time

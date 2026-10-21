@@ -92,14 +92,14 @@ describe('Moyzesova: 1 small bed, 3 large double beds, a sofa that does not unfo
   it('6 guests: every bed (one per guest where the flat has them): three large duvets plus a small one for the single bed', () => {
     const r = moyzesova(6);
     expect(r.beds.usedGroups).toEqual(['dvoj', 'dvoj', 'dvoj', 'jedno']);
-    expect([count(r, 'paplonV'), count(r, 'paplonM'), count(r, 'vankus'), count(r, 'plachta')]).toEqual([3, 1, 7, 4]);
+    expect([count(r, 'paplonV'), count(r, 'paplonM'), count(r, 'vankus'), count(r, 'plachta'), count(r, 'plachtaM')]).toEqual([3, 1, 7, 3, 1]);
   });
 
-  it('4 guests: three doubles with a large duvet each plus the single bed with a small one; its sheet is still a question', () => {
+  it('4 guests: three doubles with a large duvet each plus the single bed with a small one and its small sheet (Martina, 2026-10-21)', () => {
     const r = moyzesova(4);
     expect([count(r, 'paplonV'), count(r, 'paplonM')]).toEqual([3, 1]);
-    expect([count(r, 'plachta'), count(r, 'plachtaM')]).toEqual([4, 0]);
-    expect(r.warnings).toContain('sheet_size_check');
+    expect([count(r, 'plachta'), count(r, 'plachtaM')]).toEqual([3, 1]);
+    expect(r.warnings).not.toContain('sheet_size_check');
   });
 });
 
@@ -272,5 +272,28 @@ describe('Ventúrska A, Charming: no dishwasher (Martina, 2026-10-21)', () => {
     const facts = FLAT_FACTS['6859255a167a6d001324a29a'];
     expect(facts.alert).toBe('Nebaliť tablety do umývačky – v byte nie je umývačka.');
     expect(facts.skipItems).toEqual(['myckaKaps']);
+  });
+});
+
+describe('2 small duvets = 1 bed = 1 sheet (Martina, 2026-10-21)', () => {
+  const card = (text: string, beds: Record<string, number>, guests: number, accommodates: number) =>
+    computePackage(pkg({ listing: listing({ guestyId: 'L-small', beds, accommodates, laundry: laundry(text) }), next: sameDay(guests) }));
+
+  it('Jégého-like: 4 small duvets on the one double bed Guesty lists get 2 sheets, not 1', () => {
+    const r = card('Paplón veľký: 0\nPaplón malý: 4', { KING_BED: 1 }, 2, 2);
+    expect([count(r, 'paplonM'), count(r, 'plachta')]).toEqual([4, 2]);
+  });
+
+  it('never fewer sheets than the beds already give, and large-duvet flats keep 1 sheet per made bed', () => {
+    const small = card('Paplón veľký: 0\nPaplón malý: 2', { KING_BED: 1 }, 2, 2);
+    expect([count(small, 'paplonM'), count(small, 'plachta')]).toEqual([2, 1]);
+    const large = card('Paplón veľký: 2\nPaplón malý: 0', { KING_BED: 1 }, 2, 2);
+    expect([count(large, 'paplonV'), count(large, 'plachta')]).toEqual([2, 1]);
+  });
+});
+
+describe('Modrá Guľa 3, Bright: red capsule warning (Martina, 2026-10-21)', () => {
+  it('the card carries the red line', () => {
+    expect(FLAT_FACTS['6a8d58f50566cf002a7d2acf'].alert).toBe('Pozor – kapsule baliť malé Nespresso, nie Tchibo.');
   });
 });

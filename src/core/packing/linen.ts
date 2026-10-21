@@ -209,6 +209,13 @@ export function computeLinen(args: {
   for (const key of new Set([...Object.keys(per.large), ...Object.keys(per.small)])) {
     counts[key] = Math.round((counts.paplonV ?? 0) * (per.large[key] ?? 0) + (counts.paplonM ?? 0) * (per.small[key] ?? 0));
   }
+  // 2 small duvets = 1 bed = 1 sheet (Martina, 2026-10-21): a small-duvet set covers more beds than Guesty lists
+  // (Jégého: 4 small duvets, one double bed in Guesty), so the card gets a large sheet per pair of small duvets
+  if (!counts.paplonV && counts.paplonM) {
+    const sheets = (counts.plachta ?? 0) + (counts.plachtaM ?? 0) + (counts.plachta140 ?? 0);
+    const needed = Math.floor(counts.paplonM / 2);
+    if (needed > sheets) counts.plachta = (counts.plachta ?? 0) + needed - sheets;
+  }
   for (const [key, n] of Object.entries(laundry?.overrides ?? {})) {
     if (typeof n === 'number') {
       counts[key] = n;
