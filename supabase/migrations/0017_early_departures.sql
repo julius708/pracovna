@@ -6,7 +6,8 @@
 -- user may add an entry; the author's name and time are recorded; the author
 -- or an admin removes it (removed rows stay for the record). Writes go only
 -- through the two RPCs; every change is broadcast on the "board" topic.
--- Purely additive: one new table, two RPCs.
+-- Purely additive: one new table, two RPCs. No bare dollar sign outside the function
+-- bodies: the Supabase SQL editor splits the script on it (2026-10-22).
 
 create table if not exists public.early_departures (
   id uuid primary key default gen_random_uuid(),
@@ -15,7 +16,7 @@ create table if not exists public.early_departures (
   -- the departure day (Bratislava calendar date)
   date date not null,
   -- "HH:MM"
-  departure text not null check (departure ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'),
+  departure text not null check (char_length(departure) = 5 and departure ~ '^([01][0-9]|2[0-3]):[0-5][0-9]'),
   note text not null default '' check (char_length(note) <= 300),
   author uuid references public.profiles(id) on delete set null,
   author_name text not null,
@@ -37,7 +38,7 @@ revoke insert, update, delete, truncate, references, trigger on public.early_dep
 grant select on public.early_departures to authenticated;
 
 create or replace function public.add_early_departure(p_listing_id text, p_date date, p_departure text, p_note text, p_action_id uuid) returns jsonb
-language plpgsql security definer set search_path = '' as $$
+language plpgsql security definer set search_path = '' as $fn$
 declare
   me uuid := auth.uid();
   me_name text;
@@ -62,7 +63,7 @@ begin
   if p_date is null or p_date < public.today_ba() - 1 or p_date > public.today_ba() + 60 then
     return jsonb_build_object('ok', false, 'status', 'bad_date');
   end if;
-  if p_departure is null or p_departure !~ '^([01][0-9]|2[0-3]):[0-5][0-9]$' then
+  if p_departure is null or char_length(p_departure) <> 5 or p_departure !~ '^([01][0-9]|2[0-3]):[0-5][0-9]' then
     return jsonb_build_object('ok', false, 'status', 'bad_time');
   end if;
   -- one entry per flat and day: remove the old one to change the time
@@ -74,10 +75,10 @@ begin
   values (p_listing_id, lname, p_date, p_departure, clean_note, me, coalesce(me_name, '—'), p_action_id)
   returning * into row;
   return jsonb_build_object('ok', true, 'id', row.id);
-end $$;
+end $fn$;
 
 create or replace function public.remove_early_departure(p_id uuid, p_action_id uuid) returns jsonb
-language plpgsql security definer set search_path = '' as $$
+language plpgsql security definer set search_path = '' as $fn$
 declare
   me uuid := auth.uid();
   me_name text;
@@ -101,7 +102,7 @@ begin
     set removed_at = now(), removed_by = me, removed_by_name = coalesce(me_name, '—')
     where id = p_id;
   return jsonb_build_object('ok', true);
-end $$;
+end $fn$;
 
 revoke execute on function public.add_early_departure(text, date, text, text, uuid) from public, anon;
 revoke execute on function public.remove_early_departure(uuid, uuid) from public, anon;
