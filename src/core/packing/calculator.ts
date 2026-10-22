@@ -38,7 +38,8 @@ export function computePackage(input: PackageInput): PackingResult {
   });
   warnings.push(...linen.warnings);
 
-  const capsules = capsuleRows(laundry, people.people);
+  // the owners bring their own coffee capsules (flats.ts noCapsules): no capsule rows, whatever Guesty says
+  const capsules = facts?.noCapsules ? { rows: [], warnings: [] } : capsuleRows(laundry, people.people);
   warnings.push(...capsules.warnings);
 
   if (next?.multiStay || input.outgoing.multiStay) warnings.push('multi_stay');

@@ -28,6 +28,8 @@ export interface FlatFacts {
   alert?: string;
   /** Items never packed for this flat (the flat has its own stock); their rows leave the card and the day totals. */
   skipItems?: string[];
+  /** No coffee capsules are packed for this flat, whatever Guesty says (the owners bring their own). */
+  noCapsules?: boolean;
   /** Questions Angelika has already settled for this flat; never shown on its card. */
   settled?: WarningCode[];
 }
@@ -88,6 +90,12 @@ export const FLAT_FACTS: Record<string, FlatFacts> = {
   // Modrá Guľa 3, Bright (Martina, 2026-10-21): the owner complained about Tchibo capsules
   '6a8d58f50566cf002a7d2acf': {
     alert: 'Pozor – kapsule baliť malé Nespresso, nie Tchibo.',
+  },
+  // Antolská, Studio (Martina, 2026-10-22): no dishwasher, and the owners bring their own coffee capsules
+  '6ad9eddc12036300315cbcd3': {
+    alert: 'NEBALIŤ tablety do umývačky (v byte nie je umývačka) ani kapsule do kávovaru – majitelia si ich nosia sami.',
+    skipItems: ['myckaKaps'],
+    noCapsules: true,
   },
   // Ventúrska A, Charming (Martina, 2026-10-21): the flat has no dishwasher, so no dishwasher tablets; the card says so
   // in red every time

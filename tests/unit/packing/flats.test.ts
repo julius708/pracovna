@@ -297,3 +297,14 @@ describe('Modrá Guľa 3, Bright: red capsule warning (Martina, 2026-10-21)', ()
     expect(FLAT_FACTS['6a8d58f50566cf002a7d2acf'].alert).toBe('Pozor – kapsule baliť malé Nespresso, nie Tchibo.');
   });
 });
+
+describe('Antolská, Studio: no dishwasher tablets, no coffee capsules (Martina, 2026-10-22)', () => {
+  it('neither is packed although Guesty lists capsules, and the card carries the red line', () => {
+    const r = computePackage(
+      pkg({ listing: listing({ guestyId: '6ad9eddc12036300315cbcd3', beds: { KING_BED: 1 }, accommodates: 2, laundry: laundry('Paplón veľký: 1\nKapsule: Dolce Gusto') }), next: sameDay(2) }),
+    );
+    expect(r.capsules).toEqual([]);
+    expect(r.consumables.map((l) => l.key)).not.toContain('myckaKaps');
+    expect(FLAT_FACTS['6ad9eddc12036300315cbcd3'].alert).toContain('NEBALIŤ tablety do umývačky');
+  });
+});
