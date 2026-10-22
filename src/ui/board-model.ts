@@ -3,7 +3,7 @@
  * counts, the summary totals and the sort order. Unit-tested.
  */
 import { DEFAULT_ITEMS, type CapsuleLine, type LineItem, type PackingResult } from '@/core/packing';
-import type { BoardNote, BoardPackage, EarlyArrival } from '@/app/_lib/board';
+import type { BoardNote, BoardPackage, EarlyArrival, EarlyDeparture } from '@/app/_lib/board';
 import { sk } from '@/core/i18n/sk';
 
 export type Filter = 'todo' | 'packed' | 'all';
@@ -211,6 +211,16 @@ export function isArrivalTime(s: string): boolean {
 /** The early arrival written for a card's flat on the card's day, or null. */
 export function arrivalFor(arrivals: EarlyArrival[], p: Pick<BoardPackage, 'listing_id' | 'date'>): EarlyArrival | null {
   return arrivals.find((a) => a.listing_id === p.listing_id && a.date === p.date) ?? null;
+}
+
+/** The early departure written for a card's flat on the card's day (its check-out day), or null. */
+export function departureFor(departures: EarlyDeparture[], p: Pick<BoardPackage, 'listing_id' | 'date'>): EarlyDeparture | null {
+  return departures.find((d) => d.listing_id === p.listing_id && d.date === p.date) ?? null;
+}
+
+/** The board's order of early departures: by day, then time, then when they were written. */
+export function sortDepartures(list: EarlyDeparture[]): EarlyDeparture[] {
+  return [...list].sort((a, b) => a.date.localeCompare(b.date) || a.departure.localeCompare(b.departure) || a.created_at.localeCompare(b.created_at));
 }
 
 /** The board's order of early arrivals: by day, then time, then when they were written. */

@@ -1,7 +1,7 @@
 import 'server-only';
 import { addDays, isYmd, NOTE_MAX_LENGTH, todayInTz, WINDOW_DAYS } from '@/core/packing';
 import type { MemoryRepo } from '@/db/memory-repo';
-import type { EarlyArrivalRow, PackageEventInsert, PackageRow } from '@/db/types';
+import type { EarlyArrivalRow, EarlyDepartureRow, PackageEventInsert, PackageRow } from '@/db/types';
 import { randomUUID } from 'node:crypto';
 import { packSnapshot } from './packing-log';
 import type { Viewer } from './viewer';
@@ -209,6 +209,49 @@ export async function memoryRemoveEarlyArrival(repo: MemoryRepo, viewer: Viewer,
   a.removed_at = repo.now().toISOString();
   a.removed_by = viewer.id;
   a.removed_by_name = viewer.name;
+  return { ok: true };
+}
+
+/** add_early_departure as in Postgres (migration 0017): the flat in scope, the day near, the time "HH:MM", one per flat and day. */
+export async function memoryAddEarlyDeparture(repo: MemoryRepo, viewer: Viewer, listingId: string, date: string, departure: string, note: string, actionId: string | null): Promise<StaffResult> {
+  repo.earlyDepartures ??= []; // a dev-server singleton created before this field existed
+  const existing = actionId ? repo.earlyDepartures.find((d) => d.client_action_id === actionId) : undefined;
+  if (existing) return { ok: true, replayed: true, id: existing.id };
+  const listing = repo.listings.get(listingId);
+  if (!listing || !listing.in_scope) return { ok: false, status: 'bad_listing' };
+  const today = todayInTz(repo.now());
+  if (!isYmd(date) || date < addDays(today, -1) || date > addDays(today, 60)) return { ok: false, status: 'bad_date' };
+  if (!ARRIVAL_TIME.test(departure)) return { ok: false, status: 'bad_time' };
+  if (repo.earlyDepartures.some((d) => d.listing_id === listingId && d.date === date && !d.removed_at)) return { ok: false, status: 'duplicate' };
+  const row: EarlyDepartureRow = {
+    id: randomUUID(),
+    listing_id: listingId,
+    listing_name: listing.name,
+    date,
+    departure,
+    note: note.trim().slice(0, 300),
+    author: viewer.id,
+    author_name: viewer.name,
+    created_at: repo.now().toISOString(),
+    removed_at: null,
+    removed_by: null,
+    removed_by_name: null,
+    client_action_id: actionId,
+  };
+  repo.earlyDepartures.push(row);
+  return { ok: true, id: row.id };
+}
+
+/** remove_early_departure: by the author or an admin; removing twice is a no-op. */
+export async function memoryRemoveEarlyDeparture(repo: MemoryRepo, viewer: Viewer, id: string): Promise<StaffResult> {
+  repo.earlyDepartures ??= [];
+  const d = repo.earlyDepartures.find((x) => x.id === id);
+  if (!d) throw new Error('early departure not found');
+  if (d.removed_at) return { ok: true, replayed: true };
+  if (d.author !== viewer.id && viewer.role !== 'admin') return { ok: false, status: 'not_author' };
+  d.removed_at = repo.now().toISOString();
+  d.removed_by = viewer.id;
+  d.removed_by_name = viewer.name;
   return { ok: true };
 }
 

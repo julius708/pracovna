@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import type { BoardPackage, EarlyArrival } from '@/app/_lib/board';
+import type { BoardPackage, EarlyArrival, EarlyDeparture } from '@/app/_lib/board';
 import type { Viewer } from '@/app/_lib/viewer';
 import { flatFacts, formatHM, NOTE_MAX_LENGTH, type PackingResult, type WarningCode } from '@/core/packing';
 import { bedSummary, capsuleLabel, cheerDone, childrenBannerParts, duvetText, nextArrivalParts, packedBy, peopleParts, sk, sofaText, warningLine, type TextPart } from '@/core/i18n/sk';
@@ -27,6 +27,7 @@ export function PackageCard({
   p,
   cleaner,
   arrival = null,
+  departure = null,
   noCapsules = false,
   viewer,
   busy,
@@ -37,6 +38,8 @@ export function PackageCard({
   cleaner: string | null;
   /** The early arrival recorded for this flat on this day (owner, 2026-10-11), shown first on the card. */
   arrival?: EarlyArrival | null;
+  /** The early departure recorded for this flat on this (check-out) day (Martina, 2026-10-22). */
+  departure?: EarlyDeparture | null;
   /** Guesty says "Kapsule: nedávať" for this flat: a red line on the card (Martina, 2026-10-19). */
   noCapsules?: boolean;
   viewer: Viewer;
@@ -85,6 +88,12 @@ export function PackageCard({
       </div>
       {/* the flat's must-not-miss line comes first, right under the name (Martina, 2026-10-21) */}
       {facts?.alert && <div className="flat-alert">⛔ {facts.alert}</div>}
+      {departure && (
+        <div className="arrival-bar departure-bar">
+          {sk.earlyDepartures.cardLine(departure.departure)}
+          {departure.note ? ` · ${departure.note}` : ''}
+        </div>
+      )}
       {arrival && (
         <div className="arrival-bar">
           {sk.earlyArrivals.cardLine(arrival.arrival)}

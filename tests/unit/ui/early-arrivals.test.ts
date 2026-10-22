@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { EarlyArrival } from '@/app/_lib/board';
-import { arrivalFor, arrivalNotices, isArrivalTime, sortArrivals } from '@/ui/board-model';
+import type { EarlyArrival, EarlyDeparture } from '@/app/_lib/board';
+import { arrivalFor, arrivalNotices, departureFor, isArrivalTime, sortArrivals, sortDepartures } from '@/ui/board-model';
 import { sk } from '@/core/i18n/sk';
 
 const day = (d: string) => (d === '2026-10-11' ? 'Dnes 11.10.' : 'Zajtra 12.10.');
@@ -59,5 +59,18 @@ describe('early arrivals, typed in (owner, 2026-10-11; Martina, 2026-10-19)', ()
     const early = arrival({ id: 'e', arrival: '12:00', created_at: '2026-10-11T09:00:00Z' });
     const nextDay = arrival({ id: 'n', date: '2026-10-13', arrival: '09:00' });
     expect(sortArrivals([nextDay, late, early]).map((a) => a.id)).toEqual(['e', 'l', 'n']);
+  });
+});
+
+describe('early departures (Martina, 2026-10-22)', () => {
+  const dep = (over: Partial<EarlyDeparture> = {}): EarlyDeparture => ({ id: over.id ?? 'd1', listing_id: over.listing_id ?? 'L1', listing_name: 'Poštová, Heart', date: over.date ?? '2026-10-12', departure: over.departure ?? '09:40', note: '', author: null, author_name: 'Eva', created_at: over.created_at ?? '2026-10-11T08:00:00Z' });
+  it('a card shows the departure written for its flat on its check-out day only, and the line says the team can go earlier', () => {
+    const d = dep();
+    expect(departureFor([d], { listing_id: 'L1', date: '2026-10-12' })).toBe(d);
+    expect(departureFor([d], { listing_id: 'L1', date: '2026-10-13' })).toBeNull();
+    expect(sk.earlyDepartures.cardLine('09:40')).toBe('🚪 Skorý odchod hostí o 09:40 – práčovňa môže ísť skôr');
+  });
+  it('the list keeps the order by day and time', () => {
+    expect(sortDepartures([dep({ id: 'b', departure: '10:00' }), dep({ id: 'c', date: '2026-10-11' }), dep({ id: 'a', departure: '08:30' })]).map((d) => d.id)).toEqual(['c', 'a', 'b']);
   });
 });

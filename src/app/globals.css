@@ -290,6 +290,17 @@ td input.lbl{width:190px;text-align:left}
 .arrival-actions .btn{min-height:44px;font-size:15px;flex:0 0 auto}
 .arrival-bar{margin-top:10px;padding:8px 12px;border-radius:10px;background:#FFF0F0;color:#A61E1E;border:2px solid #C92A2A;font-size:14px;font-weight:800}
 .day-arrival{margin-right:4px}
+.early-grid{display:grid;grid-template-columns:1fr;gap:0;align-items:start}
+.arrivals.departures{border-color:#2B8A3E;background:#EBFBEE;box-shadow:0 6px 18px rgba(43,138,62,.14)}
+.arrivals.departures .arrivals-title,.arrivals.departures .arrival-time{color:#1E6B30}
+.arrivals.departures .notice-day{background:#2B8A3E}
+.arrivals.departures .arrival-item{border-left-color:#2B8A3E}
+.arrivals.departures .arrival-open{border-color:#2B8A3E;color:#1E6B30}
+.arrival-bar.departure-bar{background:#EBFBEE;color:#1E6B30;border-color:#2B8A3E}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .arrivals.departures{background:#12301B;border-color:#69DB7C;box-shadow:none}:root:not([data-theme="light"]) .arrivals.departures .arrival-item{border-left-color:#69DB7C}:root:not([data-theme="light"]) .arrivals.departures .arrivals-title,:root:not([data-theme="light"]) .arrivals.departures .arrival-time,:root:not([data-theme="light"]) .arrivals.departures .arrival-open{color:#8CE99A}:root:not([data-theme="light"]) .arrival-bar.departure-bar{background:#12301B;color:#8CE99A;border-color:#69DB7C}}
+:root[data-theme="dark"] .arrivals.departures{background:#12301B;border-color:#69DB7C;box-shadow:none}
+:root[data-theme="dark"] .arrivals.departures .arrivals-title,:root[data-theme="dark"] .arrivals.departures .arrival-time,:root[data-theme="dark"] .arrivals.departures .arrival-open{color:#8CE99A}
+:root[data-theme="dark"] .arrival-bar.departure-bar{background:#12301B;color:#8CE99A;border-color:#69DB7C}
 .push{display:inline-flex;align-items:center;gap:6px;font-size:13px;flex-wrap:wrap}
 .push-btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;min-height:40px}
 .push-btn.on{border-color:#2B8A3E;color:#2B8A3E}

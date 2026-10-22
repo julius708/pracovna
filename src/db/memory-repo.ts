@@ -4,6 +4,7 @@ import type {
   BoardNoteRow,
   EarlyArrivalInsert,
   EarlyArrivalRow,
+  EarlyDepartureRow,
   PushSubscriptionRow,
   AppStateKey,
   CalendarRow,
@@ -40,6 +41,8 @@ export class MemoryRepo implements SyncRepo {
   webhookEvents: WebhookEventRow[] = [];
   boardNotes: BoardNoteRow[] = [];
   earlyArrivals: EarlyArrivalRow[] = [];
+  /** "Skoré odchody" typed in (migration 0017). */
+  earlyDepartures: EarlyDepartureRow[] = [];
   pushSubscriptions: PushSubscriptionRow[] = [];
   readonly tokenStore: TokenStore = createMemoryTokenStore();
   now: () => Date = () => new Date();

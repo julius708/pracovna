@@ -30,6 +30,7 @@ const MIG13 = readFileSync(new URL('../../supabase/migrations/0013_guesty_early_
 const MIG14 = readFileSync(new URL('../../supabase/migrations/0014_push_subscriptions.sql', import.meta.url), 'utf8');
 const MIG15 = readFileSync(new URL('../../supabase/migrations/0015_board_note_replies.sql', import.meta.url), 'utf8');
 const MIG16 = readFileSync(new URL('../../supabase/migrations/0016_manual_early_arrivals.sql', import.meta.url), 'utf8');
+const MIG17 = readFileSync(new URL('../../supabase/migrations/0017_early_departures.sql', import.meta.url), 'utf8');
 
 const STUBS = `
 create role authenticated nologin;
@@ -108,6 +109,10 @@ describe('migrations', () => {
       // 0016 brings the manual entry back
       const back = (await fresh.query<Row>("select proname from pg_proc where pronamespace = 'public'::regnamespace and proname in ('add_early_arrival', 'remove_early_arrival', 'add_board_reply') order by 1")).rows.map((r) => r.proname);
       expect(back).toEqual(['add_board_reply', 'add_early_arrival', 'remove_early_arrival']);
+      const e17 = await pgError(fresh.exec(MIG17));
+      expect(e17, `0017_early_departures.sql failed: ${e17?.code} ${e17?.message} (line ${lineOf(MIG17, e17?.position)})`).toBeNull();
+      const dep = (await fresh.query<Row>("select proname from pg_proc where pronamespace = 'public'::regnamespace and proname in ('add_early_departure', 'remove_early_departure') order by 1")).rows.map((r) => r.proname);
+      expect(dep).toEqual(['add_early_departure', 'remove_early_departure']);
       const fns =(await fresh.query<Row>("select proname from pg_proc where pronamespace = 'public'::regnamespace order by 1")).rows.map((r) => r.proname);
       expect(fns).toEqual(expect.arrayContaining(['today_ba', 'is_admin', 'is_active_user', 'handle_new_user', 'sync_upsert_package', 'sync_set_lifecycle', 'pack_package', 'unpack_package', 'set_note', 'toggle_check', 'save_settings', 'admin_set_profile', 'acquire_lock', 'run_retention', 'increment_not_found', 'add_board_note', 'remove_board_note', 'edit_board_note']));
     } finally {
@@ -187,6 +192,7 @@ beforeAll(async () => {
   await db.exec(MIG14);
   await db.exec(MIG15);
   await db.exec(MIG16);
+  await db.exec(MIG17);
   await db.exec('set check_function_bodies = on');
   todayBa = (await one('select public.today_ba()::text as d')).d as string;
 });
@@ -1031,5 +1037,29 @@ describe('early_arrivals: typed in again (0016)', () => {
     expect((await one('select removed_by_name from public.early_arrivals where id = $1', [r1.id])).removed_by_name).toBe('Julius');
     await actAs(null);
     expect((await pgError(q('select public.add_early_arrival($1, $2::date, $3, $4, $5)', ['ea-1', todayBa, '12:00', '', randomUUID()])))?.code).toBe('42501');
+  });
+});
+
+describe('early_departures (0017)', () => {
+  it('an active user writes an early departure for an in-scope flat; one per flat and day; author or admin removes it; staff cannot write the table', async () => {
+    await q("insert into public.listings (guesty_id, name, in_scope, fetched_at) values ('ed-1', 'Poštová, Heart', true, now()), ('ed-out', 'Mimo', false, now()) on conflict do nothing");
+    const eva = await newUser('Eva');
+    const max = await newUser('Max');
+    const admin = await newUser('Julius', { role: 'admin' });
+    await actAs(eva);
+    const action = randomUUID();
+    const r1 = (await one('select public.add_early_departure($1, $2::date, $3, $4, $5) as r', ['ed-1', todayBa, '09:40', ' podľa kamery už odišli ', action])).r;
+    expect(r1.ok).toBe(true);
+    expect((await one('select public.add_early_departure($1, $2::date, $3, $4, $5) as r', ['ed-1', todayBa, '09:40', '', action])).r).toMatchObject({ ok: true, replayed: true, id: r1.id });
+    expect(await one('select listing_name, departure, note, author_name from public.early_departures where id = $1', [r1.id])).toEqual({ listing_name: 'Poštová, Heart', departure: '09:40', note: 'podľa kamery už odišli', author_name: 'Eva' });
+    expect((await one('select public.add_early_departure($1, $2::date, $3, $4, $5) as r', ['ed-1', todayBa, '08:00', '', randomUUID()])).r).toEqual({ ok: false, status: 'duplicate' });
+    expect((await one('select public.add_early_departure($1, $2::date, $3, $4, $5) as r', ['ed-out', todayBa, '08:00', '', randomUUID()])).r).toEqual({ ok: false, status: 'bad_listing' });
+    expect((await one('select public.add_early_departure($1, $2::date, $3, $4, $5) as r', ['ed-1', todayBa, '9:40', '', randomUUID()])).r).toEqual({ ok: false, status: 'bad_time' });
+    await actAs(max);
+    expect((await one('select public.remove_early_departure($1, $2) as r', [r1.id, randomUUID()])).r).toEqual({ ok: false, status: 'not_author' });
+    await actAs(admin);
+    expect((await one('select public.remove_early_departure($1, $2) as r', [r1.id, randomUUID()])).r).toEqual({ ok: true });
+    await actAs(null);
+    expect((await pgError(q('select public.add_early_departure($1, $2::date, $3, $4, $5)', ['ed-1', todayBa, '09:00', '', randomUUID()])))?.code).toBe('42501');
   });
 });

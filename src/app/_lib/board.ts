@@ -65,6 +65,23 @@ export interface EarlyArrival {
 
 export const ARRIVAL_COLUMNS = 'id, listing_id, listing_name, date, arrival, note, author, author_name, created_at';
 
+/** "Skoré odchody": guests leaving a flat early on a board day (Martina, 2026-10-22). */
+export interface EarlyDeparture {
+  id: string;
+  listing_id: string;
+  listing_name: string;
+  /** The departure day. */
+  date: Ymd;
+  /** "HH:MM" */
+  departure: string;
+  note: string;
+  author: string | null;
+  author_name: string;
+  created_at: string;
+}
+
+export const DEPARTURE_COLUMNS = 'id, listing_id, listing_name, date, departure, note, author, author_name, created_at';
+
 export const BOARD_COLUMNS =
   'id, listing_id, listing_name, date, status, hidden, cancel_reason, same_day, target_people, incoming_reservation_id, computed_items, computed_hash, warnings, note, note_by_name, note_at, checklist, packed_by_name, packed_at, packed_hash';
 
@@ -77,6 +94,8 @@ export interface BoardData {
   notes: BoardNote[];
   /** "Skoré príchody" typed in for the board days (migration 0016), by day and time. */
   arrivals: EarlyArrival[];
+  /** "Skoré odchody" typed in for the board days (migration 0017), by day and time. */
+  departures: EarlyDeparture[];
   /** In-scope flats for the early-arrival picker, by name. */
   listings: { id: string; name: string }[];
   /** listing id -> cleaning company (null when none). */
@@ -100,16 +119,18 @@ export async function loadBoard(viewer: Viewer): Promise<BoardData> {
   if (supabaseConfigured(e)) {
     const db = await createServerSupabase();
     if (!db) throw new Error('Supabase client unavailable');
-    const [pk, ls, st, nt, ea] = await Promise.all([
+    const [pk, ls, st, nt, ea, ed] = await Promise.all([
       db.from('packages').select(BOARD_COLUMNS).in('date', dates),
       db.from('listings').select('guesty_id, name, cleaner, in_scope, capsules:laundry->capsules'),
       db.rpc('board_status'),
       db.from('board_notes').select(NOTE_COLUMNS).in('date', dates).is('removed_at', null).order('created_at', { ascending: false }),
       db.from('early_arrivals').select(ARRIVAL_COLUMNS).in('date', dates).is('removed_at', null).eq('source', 'manual').order('date').order('arrival').order('created_at'),
+      db.from('early_departures').select(DEPARTURE_COLUMNS).in('date', dates).is('removed_at', null).order('date').order('departure').order('created_at'),
     ]);
     if (pk.error) throw new Error(`packages: ${pk.error.message}`);
     if (nt.error) throw new Error(`board_notes: ${nt.error.message}`);
     if (ea.error) throw new Error(`early_arrivals: ${ea.error.message}`);
+    if (ed.error) throw new Error(`early_departures: ${ed.error.message}`);
     const cleaners: Record<string, string | null> = {};
     const listingRows = (ls.data ?? []) as { guesty_id: string; name: string; cleaner: string | null; in_scope: boolean; capsules: unknown }[];
     for (const l of listingRows) cleaners[l.guesty_id] = l.cleaner;
@@ -120,6 +141,7 @@ export async function loadBoard(viewer: Viewer): Promise<BoardData> {
       packages: (pk.data ?? []) as unknown as BoardPackage[],
       notes: (nt.data ?? []) as BoardNote[],
       arrivals: ((ea.data ?? []) as EarlyArrival[]).map((a) => ({ ...a, date: String(a.date).slice(0, 10) })),
+      departures: ((ed.data ?? []) as EarlyDeparture[]).map((d) => ({ ...d, date: String(d.date).slice(0, 10) })),
       listings: pickerListings(listingRows.map((l) => ({ guesty_id: l.guesty_id, name: l.name, in_scope: l.in_scope }))),
       cleaners,
       noCapsules: listingRows.filter((l) => capsulesRefused(l.capsules)).map((l) => l.guesty_id),
@@ -169,6 +191,10 @@ export async function loadBoard(viewer: Viewer): Promise<BoardData> {
       .filter((a) => !a.removed_at && a.source === 'manual' && (dates as readonly string[]).includes(a.date))
       .sort((a, b) => a.date.localeCompare(b.date) || a.arrival.localeCompare(b.arrival) || a.created_at.localeCompare(b.created_at))
       .map((a) => ({ id: a.id, listing_id: a.listing_id, listing_name: a.listing_name, date: a.date, arrival: a.arrival, note: a.note, author: a.author, author_name: a.author_name, created_at: a.created_at })),
+    departures: ((repo as MemoryRepo).earlyDepartures ?? [])
+      .filter((d) => !d.removed_at && (dates as readonly string[]).includes(d.date))
+      .sort((a, b) => a.date.localeCompare(b.date) || a.departure.localeCompare(b.departure) || a.created_at.localeCompare(b.created_at))
+      .map((d) => ({ id: d.id, listing_id: d.listing_id, listing_name: d.listing_name, date: d.date, departure: d.departure, note: d.note, author: d.author, author_name: d.author_name, created_at: d.created_at })),
     listings: pickerListings(listings),
     cleaners,
     noCapsules: listings.filter((l) => l.in_scope && capsulesRefused(l.laundry?.capsules)).map((l) => l.guesty_id),

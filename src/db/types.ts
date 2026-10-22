@@ -234,6 +234,24 @@ export interface EarlyArrivalRow {
   reservation_id: string | null;
 }
 
+/** "Skoré odchody": guests leaving the flat early on `date` (migration 0017, typed in). */
+export interface EarlyDepartureRow {
+  id: string;
+  listing_id: string;
+  listing_name: string;
+  date: Ymd;
+  /** "HH:MM" */
+  departure: string;
+  note: string;
+  author: string | null;
+  author_name: string;
+  created_at: Instant;
+  removed_at: Instant | null;
+  removed_by: string | null;
+  removed_by_name: string | null;
+  client_action_id: string | null;
+}
+
 /** A device's Web Push subscription (migration 0014), stored under the signed-in user. */
 export interface PushSubscriptionRow {
   id: string;

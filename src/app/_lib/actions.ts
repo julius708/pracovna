@@ -16,12 +16,14 @@ import {
   memoryAddBoardNote,
   memoryAddBoardReply,
   memoryAddEarlyArrival,
+  memoryAddEarlyDeparture,
   memoryCheck,
   memoryEditBoardNote,
   memoryNote,
   memoryPack,
   memoryRemoveBoardNote,
   memoryRemoveEarlyArrival,
+  memoryRemoveEarlyDeparture,
   memoryUnpack,
   type StaffResult,
 } from './memory-staff';
@@ -134,6 +136,22 @@ export async function removeEarlyArrivalAction(id: string, actionId: string): Pr
   return withViewer(async (viewer) => {
     if (supabaseConfigured()) return rpc('remove_early_arrival', { p_id: id, p_action_id: actionId });
     return memoryRemoveEarlyArrival(memoryRepo(), viewer, id);
+  });
+}
+
+/** "Skoré odchody" (Martina, 2026-10-22): guests leaving the flat at `departure` ("HH:MM") on `date`; no push. */
+export async function addEarlyDepartureAction(listingId: string, date: string, departure: string, note: string, actionId: string): Promise<ActionResult> {
+  return withViewer(async (viewer) => {
+    if (supabaseConfigured()) return rpc('add_early_departure', { p_listing_id: listingId, p_date: date, p_departure: departure, p_note: note, p_action_id: actionId });
+    return memoryAddEarlyDeparture(memoryRepo(), viewer, listingId, date, departure, note, actionId);
+  });
+}
+
+/** Removes an early-departure entry (author or admin). */
+export async function removeEarlyDepartureAction(id: string, actionId: string): Promise<ActionResult> {
+  return withViewer(async (viewer) => {
+    if (supabaseConfigured()) return rpc('remove_early_departure', { p_id: id, p_action_id: actionId });
+    return memoryRemoveEarlyDeparture(memoryRepo(), viewer, id);
   });
 }
 
