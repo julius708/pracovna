@@ -56,9 +56,8 @@ export function EarlyDepartures({ departures, listings, dayTitle, viewer, now, b
         <span aria-hidden="true">🚪</span> {t.title}
         <span className="notice-day">{dayTitle}</span>
       </h2>
-      {departures.length === 0 ? (
-        <p className="notice-empty">{t.empty}</p>
-      ) : (
+      {/* no hint text when the day has none (Martina, 2026-10-22): just the title and the button */}
+      {departures.length > 0 && (
         <ul className="notice-list">
           {departures.map((d) => {
             const own = d.author === viewer.id;

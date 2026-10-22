@@ -199,7 +199,6 @@ export const sk = {
   /** "Skoré odchody": the green box next to "Skoré príchody", one per day, typed in (Martina, 2026-10-22). */
   earlyDepartures: {
     title: 'Skoré odchody',
-    empty: 'Na tento deň nie je zapísaný skorý odchod. Keď hostia odídu skôr (napíšu nám alebo to vidno na kamere), zapíš to sem – práčovňa môže ísť skôr.',
     flat: 'Byt',
     pickFlat: 'vyber byt…',
     time: 'Odchod o',
