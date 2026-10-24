@@ -30,9 +30,18 @@ interface Bluetooth {
 
 export type LabelError = 'noBluetooth' | 'cancelled' | 'notConnected' | 'wrongProtocol' | 'failed';
 export class LabelPrintError extends Error {
-  constructor(public code: LabelError) {
+  /** `detail`: the browser's own error ("NotSupportedError: …"), shown small so a failed print can be diagnosed. */
+  constructor(
+    public code: LabelError,
+    public detail: string | null = null,
+  ) {
     super(code);
   }
+}
+
+function describe(step: string, e: unknown): string {
+  const err = e as { name?: string; message?: string } | null;
+  return `${step}: ${err?.name ?? 'Error'}${err?.message ? ` – ${err.message}` : ''}`;
 }
 
 const REMEMBER_KEY = 'pracovna.labelPrinter';
@@ -129,7 +138,8 @@ async function pick(bt: Bluetooth): Promise<BtDevice> {
       optionalServices: [PRINTER_SERVICE],
     });
   } catch (e) {
-    throw new LabelPrintError((e as Error)?.name === 'NotFoundError' ? 'cancelled' : 'failed');
+    if ((e as Error)?.name === 'NotFoundError') throw new LabelPrintError('cancelled');
+    throw new LabelPrintError('failed', describe('výber tlačiarne', e));
   }
 }
 
@@ -138,8 +148,8 @@ async function open(d: BtDevice): Promise<BtCharacteristic> {
   let server: BtServer;
   try {
     server = d.gatt.connected ? d.gatt : await d.gatt.connect();
-  } catch {
-    throw new LabelPrintError('notConnected');
+  } catch (e) {
+    throw new LabelPrintError('notConnected', describe('pripojenie', e));
   }
   // anything other than the AE30 service with its AE01 write characteristic is not this protocol: stop
   let service: BtService;
@@ -147,8 +157,8 @@ async function open(d: BtDevice): Promise<BtCharacteristic> {
   try {
     service = await server.getPrimaryService(PRINTER_SERVICE);
     char = await service.getCharacteristic(PRINTER_WRITE_CHAR);
-  } catch {
-    throw new LabelPrintError('wrongProtocol');
+  } catch (e) {
+    throw new LabelPrintError('wrongProtocol', describe('služba AE30/AE01', e));
   }
   try {
     const notify = await service.getCharacteristic(PRINTER_NOTIFY_CHAR);
@@ -190,6 +200,21 @@ async function connect(onConnecting: () => void): Promise<BtCharacteristic> {
   return writer;
 }
 
+/** Writes without response where the browser and printer allow it, else with response (some browsers have only that). */
+let withResponse = false;
+
+async function write(char: BtCharacteristic, chunk: Uint8Array<ArrayBuffer>) {
+  if (!withResponse && char.writeValueWithoutResponse) {
+    try {
+      await char.writeValueWithoutResponse(chunk);
+      return;
+    } catch {
+      withResponse = true;
+    }
+  }
+  await char.writeValue(chunk);
+}
+
 async function send(char: BtCharacteristic, packets: Uint8Array[]) {
   const stream = new Uint8Array(packets.reduce((n, p) => n + p.length, 0));
   let at = 0;
@@ -199,9 +224,7 @@ async function send(char: BtCharacteristic, packets: Uint8Array[]) {
   }
   for (let i = 0; i < stream.length; i += CHUNK) {
     for (let waited = 0; paused && waited < 5000; waited += 20) await sleep(20);
-    const chunk = stream.slice(i, i + CHUNK);
-    if (char.writeValueWithoutResponse) await char.writeValueWithoutResponse(chunk);
-    else await char.writeValue(chunk);
+    await write(char, stream.slice(i, i + CHUNK));
     await sleep(4);
   }
 }
@@ -209,14 +232,25 @@ async function send(char: BtCharacteristic, packets: Uint8Array[]) {
 /** Prints the flat's label; throws LabelPrintError. */
 export async function printLabel(name: string, alias: string | null, onConnecting: () => void = () => {}): Promise<void> {
   // pick the printer first: the browser allows the picker only right after the tap
-  const char = await connect(onConnecting);
-  const canvas = drawLabel(name, alias);
-  const img = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height);
+  let char: BtCharacteristic;
+  try {
+    char = await connect(onConnecting);
+  } catch (e) {
+    throw e instanceof LabelPrintError ? e : new LabelPrintError('failed', describe('pripojenie', e));
+  }
+  let packets: Uint8Array[];
+  try {
+    const canvas = drawLabel(name, alias);
+    const img = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height);
+    packets = printJob(toRows(img.data, img.width, img.height));
+  } catch (e) {
+    throw new LabelPrintError('failed', describe('kreslenie štítka', e));
+  }
   paused = false;
   try {
-    await send(char, printJob(toRows(img.data, img.width, img.height)));
+    await send(char, packets);
   } catch (e) {
     writer = null;
-    throw e instanceof LabelPrintError ? e : new LabelPrintError('failed');
+    throw new LabelPrintError('failed', describe('posielanie do tlačiarne', e));
   }
 }

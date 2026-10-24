@@ -6,7 +6,7 @@ import { hasBluetooth, LabelPrintError, printLabel } from './labelPrinter';
 
 /** "🖨️ Štítok" on a flat's card: prints the flat's name on the X6 label printer (Martina, 2026-10-24). */
 export function LabelButton({ name, alias }: { name: string; alias: string | null }) {
-  const [state, setState] = useState<{ text: string; error: boolean } | null>(null);
+  const [state, setState] = useState<{ text: string; error: boolean; detail?: string | null } | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function onPrint() {
@@ -21,7 +21,8 @@ export function LabelButton({ name, alias }: { name: string; alias: string | nul
       setState({ text: sk.label.done, error: false });
     } catch (e) {
       const code = e instanceof LabelPrintError ? e.code : 'failed';
-      setState({ text: sk.label[code], error: code !== 'cancelled' });
+      const detail = e instanceof LabelPrintError ? e.detail : String(e);
+      setState({ text: sk.label[code], error: code !== 'cancelled', detail });
     } finally {
       setBusy(false);
     }
@@ -35,6 +36,7 @@ export function LabelButton({ name, alias }: { name: string; alias: string | nul
       {state && (
         <div className={state.error ? 'warnTxt' : undefined} style={{ flexBasis: '100%', fontSize: 14 }} role="status">
           {state.text}
+          {state.detail && <div style={{ color: 'var(--muted)', fontSize: 12, fontWeight: 400, marginTop: 2 }}>{state.detail}</div>}
         </div>
       )}
     </>
