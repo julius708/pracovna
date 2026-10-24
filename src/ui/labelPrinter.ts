@@ -93,13 +93,14 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): st
   return lines;
 }
 
-/** The label: the flat's name large and bold, Angelika's name for it underneath when there is one. */
-export function drawLabel(name: string, alias: string | null): HTMLCanvasElement {
+/** The label: the flat's name large and bold, Angelika's name for it when there is one, then the flat's address. */
+export function drawLabel(name: string, alias: string | null, address: string | null = null): HTMLCanvasElement {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d')!;
   const blocks = [
-    { font: `bold 44px ${FONT}`, size: 44, text: name },
-    ...(alias ? [{ font: `600 32px ${FONT}`, size: 32, text: alias }] : []),
+    { font: `900 44px ${FONT}`, size: 44, text: name },
+    ...(alias ? [{ font: `800 32px ${FONT}`, size: 32, text: alias }] : []),
+    ...(address ? [{ font: `700 26px ${FONT}`, size: 26, text: address }] : []),
   ];
   const laid = blocks.map((b) => {
     ctx.font = b.font;
@@ -253,7 +254,7 @@ async function send(char: BtCharacteristic, packets: Uint8Array[]) {
 }
 
 /** Prints the flat's label; throws LabelPrintError. */
-export async function printLabel(name: string, alias: string | null, onConnecting: () => void = () => {}): Promise<void> {
+export async function printLabel(name: string, alias: string | null, address: string | null, onConnecting: () => void = () => {}): Promise<void> {
   // pick the printer first: the browser allows the picker only right after the tap
   let char: BtCharacteristic;
   try {
@@ -263,9 +264,9 @@ export async function printLabel(name: string, alias: string | null, onConnectin
   }
   let packets: Uint8Array[];
   try {
-    const canvas = drawLabel(name, alias);
+    const canvas = drawLabel(name, alias, address);
     const img = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height);
-    packets = printJob(toRows(img.data, img.width, img.height));
+    packets = printJob(toRows(img.data, img.width, img.height, 170));
   } catch (e) {
     throw new LabelPrintError('failed', describe('kreslenie štítka', e));
   }

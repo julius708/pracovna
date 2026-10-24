@@ -70,3 +70,12 @@ describe('label bitmap', () => {
     expect(job.every((p) => p[0] === 0x51 && p[1] === 0x78 && p[p.length - 1] === 0xff)).toBe(true);
   });
 });
+
+describe('label address', () => {
+  it('has the street address of a Bratislava flat and none for an unknown one', async () => {
+    const { flatAddress } = await import('@/core/printer/addresses');
+    expect(flatAddress('6859255a167a6d001324a29a')).toBe('Ventúrska 277/16, 811 01 Bratislava');
+    expect(flatAddress('unknown')).toBeNull();
+    expect(flatAddress(null)).toBeNull();
+  });
+});

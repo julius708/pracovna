@@ -79,8 +79,11 @@ export function toRows(rgba: ArrayLike<number>, width: number, height: number, t
   return rows;
 }
 
-/** The whole print job as packets: set up, one packet per row, feed the paper out, finish. */
-export function printJob(rows: Uint8Array[], { energy = 0x3000, feedLines = 90 } = {}): Uint8Array[] {
+/**
+ * The whole print job as packets: set up, one packet per row, feed the paper out, finish.
+ * `energy` is the print head's heat, darker when higher (0x3000 printed too pale, Martina 2026-10-24).
+ */
+export function printJob(rows: Uint8Array[], { energy = 0xc000, feedLines = 90 } = {}): Uint8Array[] {
   const u16 = (n: number) => [n & 0xff, (n >> 8) & 0xff];
   return [
     packet(CMD.deviceState, [0x00]),

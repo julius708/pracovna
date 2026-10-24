@@ -5,7 +5,7 @@ import { sk } from '@/core/i18n/sk';
 import { hasBluetooth, LabelPrintError, printLabel } from './labelPrinter';
 
 /** "🖨️ Štítok" on a flat's card: prints the flat's name on the X6 label printer (Martina, 2026-10-24). */
-export function LabelButton({ name, alias }: { name: string; alias: string | null }) {
+export function LabelButton({ name, alias, address }: { name: string; alias: string | null; address: string | null }) {
   const [state, setState] = useState<{ text: string; error: boolean; detail?: string | null } | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -17,7 +17,7 @@ export function LabelButton({ name, alias }: { name: string; alias: string | nul
     setBusy(true);
     setState(null);
     try {
-      await printLabel(name, alias, () => setState({ text: sk.label.printing, error: false }));
+      await printLabel(name, alias, address, () => setState({ text: sk.label.printing, error: false }));
       setState({ text: sk.label.done, error: false });
     } catch (e) {
       const code = e instanceof LabelPrintError ? e.code : 'failed';
