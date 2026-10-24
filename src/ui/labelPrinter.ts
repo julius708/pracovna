@@ -12,12 +12,12 @@ interface BtCharacteristic extends EventTarget {
   startNotifications: () => Promise<BtCharacteristic>;
 }
 interface BtService {
-  getCharacteristic: (uuid: number) => Promise<BtCharacteristic>;
+  getCharacteristic: (uuid: string) => Promise<BtCharacteristic>;
 }
 interface BtServer {
   connected: boolean;
   connect: () => Promise<BtServer>;
-  getPrimaryService: (uuid: number) => Promise<BtService>;
+  getPrimaryService: (uuid: string) => Promise<BtService>;
 }
 interface BtDevice {
   id: string;
@@ -131,16 +131,27 @@ let device: BtDevice | null = null;
 let writer: BtCharacteristic | null = null;
 let paused = false;
 
+/**
+ * The printer picker: printers of the family first; a browser that refuses those filters
+ * (Bluefy shows no picker at all, Martina 2026-10-24) gets the plain list of nearby devices.
+ */
 async function pick(bt: Bluetooth): Promise<BtDevice> {
-  try {
-    return await bt.requestDevice({
+  let first: unknown;
+  for (const options of [
+    {
       filters: [{ services: [PRINTER_SERVICE] }, { namePrefix: 'X6' }, { namePrefix: 'GB0' }, { namePrefix: 'GT0' }, { namePrefix: 'MX' }, { namePrefix: 'YT' }],
       optionalServices: [PRINTER_SERVICE],
-    });
-  } catch (e) {
-    if ((e as Error)?.name === 'NotFoundError') throw new LabelPrintError('cancelled');
-    throw new LabelPrintError('failed', describe('výber tlačiarne', e));
+    },
+    { acceptAllDevices: true, optionalServices: [PRINTER_SERVICE] },
+  ]) {
+    try {
+      return await bt.requestDevice(options);
+    } catch (e) {
+      if ((e as Error)?.name === 'NotFoundError') throw new LabelPrintError('cancelled');
+      first ??= e;
+    }
   }
+  throw new LabelPrintError('failed', describe('výber tlačiarne', first));
 }
 
 async function open(d: BtDevice): Promise<BtCharacteristic> {

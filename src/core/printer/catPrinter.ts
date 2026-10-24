@@ -7,11 +7,16 @@
  * least significant bit = leftmost dot.
  */
 
-export const PRINTER_SERVICE = 0xae30;
+/** Full 128-bit form of a 16-bit Bluetooth UUID; some browsers (Bluefy) do not take the short number. */
+export function bleUuid(short: number): string {
+  return `0000${short.toString(16).padStart(4, '0')}-0000-1000-8000-00805f9b34fb`;
+}
+
+export const PRINTER_SERVICE = bleUuid(0xae30);
 /** Commands are written here (write without response). */
-export const PRINTER_WRITE_CHAR = 0xae01;
+export const PRINTER_WRITE_CHAR = bleUuid(0xae01);
 /** The printer reports flow control here (0x51 0x78 0xAE … 0x01 = wait, 0x00 = go on). */
-export const PRINTER_NOTIFY_CHAR = 0xae02;
+export const PRINTER_NOTIFY_CHAR = bleUuid(0xae02);
 
 export const PRINT_WIDTH = 384;
 export const ROW_BYTES = PRINT_WIDTH / 8;

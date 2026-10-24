@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { crc8, flowControlPause, packet, printJob, PRINT_WIDTH, ROW_BYTES, toRows } from '@/core/printer/catPrinter';
+import { bleUuid, crc8, PRINTER_SERVICE, flowControlPause, packet, printJob, PRINT_WIDTH, ROW_BYTES, toRows } from '@/core/printer/catPrinter';
 
 const hex = (b: Uint8Array) => Array.from(b, (x) => x.toString(16).padStart(2, '0')).join(' ');
 
@@ -14,6 +14,11 @@ describe('cat printer packets', () => {
       '51 78 a6 00 0b 00 aa 55 17 38 44 5f 5f 5f 44 38 2c a1 ff',
     );
     expect(hex(packet(0xa6, [0xaa, 0x55, 0x17, 0, 0, 0, 0, 0, 0, 0, 0x17]))).toBe('51 78 a6 00 0b 00 aa 55 17 00 00 00 00 00 00 00 17 11 ff');
+  });
+
+  it('names the AE30 service in the full form every browser takes', () => {
+    expect(PRINTER_SERVICE).toBe('0000ae30-0000-1000-8000-00805f9b34fb');
+    expect(bleUuid(0xae01)).toBe('0000ae01-0000-1000-8000-00805f9b34fb');
   });
 
   it('crc8 of nothing is 0', () => {
