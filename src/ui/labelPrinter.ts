@@ -2,7 +2,7 @@
  * The X6 Bluetooth label printer in the browser (Martina, 2026-10-24): draws the label on a
  * canvas and sends it over Web Bluetooth. The bytes come from src/core/printer/catPrinter.ts.
  */
-import { flowControlPause, printJob, PRINT_WIDTH, PRINTER_NOTIFY_CHAR, PRINTER_SERVICE, PRINTER_WRITE_CHAR, toRows } from '@/core/printer/catPrinter';
+import { bleUuid, flowControlPause, printJob, PRINT_WIDTH, PRINTER_NOTIFY_CHAR, PRINTER_SERVICE, PRINTER_WRITE_CHAR, toRows } from '@/core/printer/catPrinter';
 
 /* The few Web Bluetooth types used here (TypeScript's DOM library has none). */
 interface BtCharacteristic extends EventTarget {
@@ -132,7 +132,8 @@ let writer: BtCharacteristic | null = null;
 let paused = false;
 
 const FAMILY = {
-  filters: [{ services: [PRINTER_SERVICE] }, { namePrefix: 'X6' }, { namePrefix: 'GB0' }, { namePrefix: 'GT0' }, { namePrefix: 'MX' }, { namePrefix: 'YT' }],
+  // AF30: the service many printers of the family announce while their commands live under AE30
+  filters: [{ services: [PRINTER_SERVICE] }, { services: [bleUuid(0xaf30)] }, { namePrefix: 'X6' }, { namePrefix: 'GB0' }, { namePrefix: 'GT0' }, { namePrefix: 'MX' }, { namePrefix: 'YT' }],
   optionalServices: [PRINTER_SERVICE],
 };
 const ALL = { acceptAllDevices: true, optionalServices: [PRINTER_SERVICE] };
