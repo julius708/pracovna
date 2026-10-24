@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { BoardPackage, EarlyArrival, EarlyDeparture } from '@/app/_lib/board';
 import type { Viewer } from '@/app/_lib/viewer';
 import { flatFacts, formatHM, NOTE_MAX_LENGTH, type PackingResult, type WarningCode } from '@/core/packing';
+import { LabelButton } from './LabelButton';
 import { bedSummary, capsuleLabel, cheerDone, childrenBannerParts, duvetText, nextArrivalParts, packedBy, peopleParts, sk, sofaText, warningLine, type TextPart } from '@/core/i18n/sk';
 
 const AV = '/assets/angelika.jpg';
@@ -294,6 +295,12 @@ export function PackageCard({
           <button className="btn ghost" type="button" onClick={() => setNoteOpen((o) => !o)}>
             {p.note ? sk.buttons.editNote : sk.buttons.note}
           </button>
+          <LabelButton name={p.listing_name} alias={facts?.alias ?? null} />
+        </div>
+      )}
+      {!canAct && (
+        <div className="actions">
+          <LabelButton name={p.listing_name} alias={facts?.alias ?? null} />
         </div>
       )}
     </article>

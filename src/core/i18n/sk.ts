@@ -219,6 +219,17 @@ export const sk = {
     line: (time: string) => `🚪 Skorý odchod o ${time}`,
     cardLine: (time: string) => `🚪 Skorý odchod hostí o ${time} – práčovňa môže ísť skôr`,
   },
+  /** "🖨️ Štítok": the flat's name on the X6 Bluetooth label printer (Martina, 2026-10-24). */
+  label: {
+    button: '🖨️ Štítok',
+    printing: 'Tlačím štítok…',
+    done: 'Štítok vytlačený ✓',
+    noBluetooth: 'Na tlač otvor Práčovňu v appke Bluefy.',
+    cancelled: 'Tlačiareň nebola vybraná.',
+    notConnected: 'Tlačiareň sa nepripojila – je zapnutá a nablízku? Klepni znova a vyber ju.',
+    wrongProtocol: 'Táto tlačiareň nepoužíva protokol X6 (služba AE30) – tlač zastavená. Daj vedieť Martine.',
+    failed: 'Štítok sa nepodarilo vytlačiť. Skús znova.',
+  },
   notices: {
     newArrival: (name: string, time: string, day: string) => `⏰ Skorý príchod: ${name} o ${time} · ${day}`,
     removedArrival: (name: string, day: string) => `Skorý príchod odstránený: ${name} · ${day}`,
