@@ -113,6 +113,10 @@ export function drawLabel(name: string, alias: string | null, address: string | 
   ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, PRINT_WIDTH, height);
   ctx.fillStyle = '#000';
+  // a thin outline around every letter makes the strokes thicker, so they print darker
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 1.5;
+  ctx.lineJoin = 'round';
   ctx.textBaseline = 'top';
   let y = PAD;
   laid.forEach((b, i) => {
@@ -120,6 +124,7 @@ export function drawLabel(name: string, alias: string | null, address: string | 
     ctx.font = b.font;
     for (const line of b.lines) {
       ctx.fillText(line, PAD, y);
+      ctx.strokeText(line, PAD, y);
       y += lineH(b.size);
     }
   });
