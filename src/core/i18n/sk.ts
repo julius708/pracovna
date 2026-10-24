@@ -226,6 +226,7 @@ export const sk = {
     done: 'Štítok vytlačený ✓',
     noBluetooth: 'Na tlač otvor Práčovňu v appke Bluefy.',
     cancelled: 'Tlačiareň nebola vybraná.',
+    showAll: 'Tlačiareň nebola vybraná. Klepni znova – ukážem všetky zariadenia v okolí.',
     notConnected: 'Tlačiareň sa nepripojila – je zapnutá a nablízku? Klepni znova a vyber ju.',
     wrongProtocol: 'Táto tlačiareň nepoužíva protokol X6 (služba AE30) – tlač zastavená. Daj vedieť Martine.',
     failed: 'Štítok sa nepodarilo vytlačiť. Skús znova.',

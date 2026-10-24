@@ -22,7 +22,7 @@ export function LabelButton({ name, alias }: { name: string; alias: string | nul
     } catch (e) {
       const code = e instanceof LabelPrintError ? e.code : 'failed';
       const detail = e instanceof LabelPrintError ? e.detail : String(e);
-      setState({ text: sk.label[code], error: code !== 'cancelled', detail });
+      setState({ text: sk.label[code], error: code !== 'cancelled' && code !== 'showAll', detail });
     } finally {
       setBusy(false);
     }

@@ -28,7 +28,7 @@ interface Bluetooth {
   getDevices?: () => Promise<BtDevice[]>;
 }
 
-export type LabelError = 'noBluetooth' | 'cancelled' | 'notConnected' | 'wrongProtocol' | 'failed';
+export type LabelError = 'noBluetooth' | 'cancelled' | 'showAll' | 'notConnected' | 'wrongProtocol' | 'failed';
 export class LabelPrintError extends Error {
   /** `detail`: the browser's own error ("NotSupportedError: …"), shown small so a failed print can be diagnosed. */
   constructor(
@@ -131,23 +131,34 @@ let device: BtDevice | null = null;
 let writer: BtCharacteristic | null = null;
 let paused = false;
 
+const FAMILY = {
+  filters: [{ services: [PRINTER_SERVICE] }, { namePrefix: 'X6' }, { namePrefix: 'GB0' }, { namePrefix: 'GT0' }, { namePrefix: 'MX' }, { namePrefix: 'YT' }],
+  optionalServices: [PRINTER_SERVICE],
+};
+const ALL = { acceptAllDevices: true, optionalServices: [PRINTER_SERVICE] };
+/** The family's picker was closed without a printer: the next tap lists every nearby device (Martina, 2026-10-24). */
+let showAll = false;
+
 /**
  * The printer picker: printers of the family first; a browser that refuses those filters
  * (Bluefy shows no picker at all, Martina 2026-10-24) gets the plain list of nearby devices.
  */
 async function pick(bt: Bluetooth): Promise<BtDevice> {
   let first: unknown;
-  for (const options of [
-    {
-      filters: [{ services: [PRINTER_SERVICE] }, { namePrefix: 'X6' }, { namePrefix: 'GB0' }, { namePrefix: 'GT0' }, { namePrefix: 'MX' }, { namePrefix: 'YT' }],
-      optionalServices: [PRINTER_SERVICE],
-    },
-    { acceptAllDevices: true, optionalServices: [PRINTER_SERVICE] },
-  ]) {
+  const all = showAll;
+  showAll = false;
+  for (const options of all ? [ALL] : [FAMILY, ALL]) {
     try {
       return await bt.requestDevice(options);
     } catch (e) {
-      if ((e as Error)?.name === 'NotFoundError') throw new LabelPrintError('cancelled');
+      if ((e as Error)?.name === 'NotFoundError') {
+        // closed (or nothing found) in the family's list: offer every device next time
+        if (options === FAMILY) {
+          showAll = true;
+          throw new LabelPrintError('showAll');
+        }
+        throw new LabelPrintError('cancelled');
+      }
       first ??= e;
     }
   }
