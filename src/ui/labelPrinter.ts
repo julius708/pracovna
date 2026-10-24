@@ -229,33 +229,32 @@ async function connect(onConnecting: () => void): Promise<BtCharacteristic> {
   return writer;
 }
 
-/**
- * Every packet (one label row) waits for the printer to confirm it: sent unconfirmed, Bluefy dropped
- * parts of rows and the label came out striped (Martina, 2026-10-24). A printer that refuses
- * confirmed writes gets small unconfirmed pieces with a pause instead.
- */
-let confirmed = true;
+/** Writes without response where the browser and printer allow it, else with response (some browsers have only that). */
+let withResponse = false;
 
-async function sendPacket(char: BtCharacteristic, packet: Uint8Array<ArrayBuffer>) {
-  if (confirmed) {
+async function write(char: BtCharacteristic, chunk: Uint8Array<ArrayBuffer>) {
+  if (!withResponse && char.writeValueWithoutResponse) {
     try {
-      await char.writeValue(packet);
+      await char.writeValueWithoutResponse(chunk);
       return;
-    } catch (e) {
-      if (!char.writeValueWithoutResponse) throw e;
-      confirmed = false;
+    } catch {
+      withResponse = true;
     }
   }
-  for (let i = 0; i < packet.length; i += CHUNK) {
-    await char.writeValueWithoutResponse!(packet.slice(i, i + CHUNK));
-    await sleep(12);
-  }
+  await char.writeValue(chunk);
 }
 
 async function send(char: BtCharacteristic, packets: Uint8Array[]) {
+  const stream = new Uint8Array(packets.reduce((n, p) => n + p.length, 0));
+  let at = 0;
   for (const p of packets) {
+    stream.set(p, at);
+    at += p.length;
+  }
+  for (let i = 0; i < stream.length; i += CHUNK) {
     for (let waited = 0; paused && waited < 5000; waited += 20) await sleep(20);
-    await sendPacket(char, p as Uint8Array<ArrayBuffer>);
+    await write(char, stream.slice(i, i + CHUNK));
+    await sleep(4);
   }
 }
 
