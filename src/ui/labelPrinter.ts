@@ -45,6 +45,8 @@ function describe(step: string, e: unknown): string {
 }
 
 const REMEMBER_KEY = 'pracovna.labelPrinter';
+/** Bytes per Bluetooth write: the smallest size every printer and phone accepts. */
+const CHUNK = 20;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 function bluetooth(): Bluetooth | null {
@@ -242,15 +244,17 @@ async function write(char: BtCharacteristic, chunk: Uint8Array<ArrayBuffer>) {
   await char.writeValue(chunk);
 }
 
-/**
- * One label row per write, no pause in between: fed in 20-byte pieces with pauses, the X6 printed
- * grey with light streaks, the paper creeping forward while the head cooled (photo, Martina
- * 2026-10-24). The printer's own "wait" notification still holds the stream back.
- */
 async function send(char: BtCharacteristic, packets: Uint8Array[]) {
+  const stream = new Uint8Array(packets.reduce((n, p) => n + p.length, 0));
+  let at = 0;
   for (const p of packets) {
+    stream.set(p, at);
+    at += p.length;
+  }
+  for (let i = 0; i < stream.length; i += CHUNK) {
     for (let waited = 0; paused && waited < 5000; waited += 20) await sleep(20);
-    await write(char, p as Uint8Array<ArrayBuffer>);
+    await write(char, stream.slice(i, i + CHUNK));
+    await sleep(4);
   }
 }
 
