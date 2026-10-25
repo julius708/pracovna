@@ -50,7 +50,7 @@ export function PushToggle() {
         return;
       }
       try {
-        const reg = await navigator.serviceWorker.getRegistration('/sw.js');
+        const reg = await navigator.serviceWorker.getRegistration('/pracovna/sw.js');
         const sub = reg ? await reg.pushManager.getSubscription() : null;
         if (!cancelled) setState(sub ? 'on' : 'off');
         // the push service may have rotated the subscription: keep the stored one current
@@ -76,7 +76,8 @@ export function PushToggle() {
         setState(permission === 'denied' ? 'blocked' : 'off');
         return;
       }
-      const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+      // staré registrácie so scope '/' (pred presunom pod /pracovna) ostávajú platné; nové sú pod /pracovna/
+      const reg = (await navigator.serviceWorker.getRegistration('/pracovna/sw.js')) ?? (await navigator.serviceWorker.register('/pracovna/sw.js', { scope: '/pracovna/' }));
       await navigator.serviceWorker.ready;
       const sub = (await reg.pushManager.getSubscription()) ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(PUBLIC_KEY) }));
       const json = sub.toJSON();
@@ -95,7 +96,7 @@ export function PushToggle() {
     setState('busy');
     setHint(null);
     try {
-      const reg = await navigator.serviceWorker.getRegistration('/sw.js');
+      const reg = await navigator.serviceWorker.getRegistration('/pracovna/sw.js');
       const sub = reg ? await reg.pushManager.getSubscription() : null;
       if (sub) {
         await removePushSubscriptionAction(sub.endpoint);

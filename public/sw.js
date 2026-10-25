@@ -16,11 +16,11 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'LIVE-IN Práčovňa';
   const options = {
     body: data.body || '',
-    icon: '/icons/icon-192.png',
-    badge: '/icons/badge-96.png',
+    icon: '/pracovna/icons/icon-192.png',
+    badge: '/pracovna/icons/badge-96.png',
     tag: data.tag || undefined,
     renotify: !!data.tag,
-    data: { url: data.url || '/' },
+    data: { url: data.url || '/pracovna/' },
     vibrate: [120, 60, 120],
   };
   event.waitUntil(self.registration.showNotification(title, options));
@@ -35,7 +35,7 @@ self.addEventListener('pushsubscriptionchange', (event) => {
       const sub = event.newSubscription || (key ? await self.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key }) : null);
       if (!sub) return;
       const json = sub.toJSON();
-      await fetch('/api/push/subscription', {
+      await fetch('/pracovna/api/push/subscription', {
         method: 'POST',
         credentials: 'include',
         headers: { 'content-type': 'application/json' },
@@ -47,7 +47,7 @@ self.addEventListener('pushsubscriptionchange', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = (event.notification.data && event.notification.data.url) || '/';
+  const url = (event.notification.data && event.notification.data.url) || '/pracovna/';
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
       for (const client of list) {

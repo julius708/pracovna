@@ -6,11 +6,11 @@
   ],
   "crons": [
     {
-      "path": "/api/cron/reconcile",
+      "path": "/pracovna/api/cron/reconcile",
       "schedule": "*/3 * * * *"
     },
     {
-      "path": "/api/cron/nightly",
+      "path": "/pracovna/api/cron/nightly",
       "schedule": "0 2 * * *"
     }
   ]

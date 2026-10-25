@@ -9,6 +9,8 @@ import { formatDM, formatHM, todayInTz } from '@/core/packing';
 import { sk } from '@/core/i18n/sk';
 import { syncState } from './board-model';
 import { PushToggle } from './PushToggle';
+import PullToRefresh, { RefreshButton } from './Refresh';
+import { BASE, HUB } from '@/lib/base';
 
 export function LogoMark() {
   return (
@@ -63,17 +65,18 @@ export function Header({
   const admin = viewer.role === 'admin';
   return (
     <>
+      <PullToRefresh />
       <div className="li-masthead"><div className="li-masthead-inner">
-        <a className="li-brand-link" href="https://app.live-in.international/">
+        <a className="li-brand-link" href={HUB}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/livein-logo.png" alt="LIVE-IN"/><span className="li-product">Práčovňa</span>
+          <img src={`${BASE}/livein-logo.png`} alt="LIVE-IN"/><span className="li-product">Práčovňa</span>
         </a>
         <nav className="li-nav" aria-label="Práčovňa">
           {(admin ? NAV : [NAV[0]]).map(n => <Link key={n.href} href={n.href} aria-current={path === n.href || (n.href !== '/' && path.startsWith(`${n.href}/`)) ? 'page' : undefined}>{n.label}</Link>)}
         </nav>
-        <form action={logoutAction} className="li-account"><span>{viewer.name}</span><button type="submit">{sk.buttons.logout}</button></form>
+        <div className="li-account"><a className="li-back" href={HUB}>← Späť</a><RefreshButton /><span>{viewer.name}</span><form action={logoutAction} style={{ display: 'contents' }}><button type="submit">{sk.buttons.logout}</button></form></div>
       </div></div>
-      <div className="li-trail"><a href="https://app.live-in.international/">LIVE-IN domov</a><span>Práčovňa</span></div>
+      <div className="li-trail"><a href={HUB}>LIVE-IN domov</a><span>Práčovňa</span></div>
       <section className="li-page-intro"><div><span className="li-eyebrow">Upratovanie a bielizeň</span><h2>{path === '/' || path === '/packing' ? 'Pripravené na ďalší pobyt.' : NAV.find(n => n.href !== '/' && path.startsWith(n.href))?.label || 'Práčovňa'}</h2><p>Príprava balíkov, zásoby a prehľad práce na jednom mieste.</p></div><div className="li-laundry-tools">{showSync && <SyncBadge lastOkSyncAt={lastOkSyncAt} now={now} connected={connected} />}<PushToggle /></div></section>
       {!viewer.dev && <UsageTracker />}
     </>

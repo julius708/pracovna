@@ -2,6 +2,10 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { isTransientAuthError } from '@/db/auth-errors';
 import { createRetryingFetch } from '@/db/fetch-retry';
+import { BASE } from '@/lib/base';
+
+/** Relatívne presmerovanie s prefixom /pracovna: funguje aj cez proxy z app.live-in.international. */
+const go = (path: string, status = 307) => new NextResponse(null, { status, headers: { Location: `${BASE}${path}` } });
 
 // the service worker, the web manifest and the app icons are fetched without the session (push, home-screen install)
 const PUBLIC = ['/login', '/nove-heslo', '/auth/', '/health', '/api/', '/sw.js', '/manifest.webmanifest', '/icons/'];
@@ -23,14 +27,13 @@ export async function proxy(request: NextRequest) {
   // an auth e-mail link that fell back to the Site URL (root or /login) is handed to the callback with its parameters
   const sp = request.nextUrl.searchParams;
   if ((path === '/' || path === '/login') && (sp.has('code') || (sp.has('token_hash') && sp.has('type')))) {
-    const cb = new URL('/auth/callback', request.url);
-    cb.search = request.nextUrl.search;
-    if (!cb.searchParams.has('next')) cb.searchParams.set('next', '/nove-heslo');
-    return NextResponse.redirect(cb);
+    const q = new URLSearchParams(request.nextUrl.search);
+    if (!q.has('next')) q.set('next', '/nove-heslo');
+    return go(`/auth/callback?${q.toString()}`);
   }
   // an expired or already used link reports its error as query parameters on the Site URL
   if ((path === '/' || path === '/login') && (sp.has('error_code') || sp.has('error_description'))) {
-    return NextResponse.redirect(new URL('/login?chyba=link', request.url));
+    return go('/login?chyba=link');
   }
 
   if (isPublic(path)) return NextResponse.next();
@@ -39,8 +42,8 @@ export async function proxy(request: NextRequest) {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) {
     const role = request.cookies.get(DEV_ROLE_COOKIE)?.value;
-    if (!role) return NextResponse.redirect(new URL('/login', request.url));
-    if (ADMIN.some((p) => path.startsWith(p)) && role !== 'admin') return NextResponse.redirect(new URL('/', request.url));
+    if (!role) return go('/login');
+    if (ADMIN.some((p) => path.startsWith(p)) && role !== 'admin') return go('/');
     return NextResponse.next();
   }
 
@@ -60,14 +63,13 @@ export async function proxy(request: NextRequest) {
   // an outage is not "signed out": let the page report the error instead of showing the login form over a valid session
   if (isTransientAuthError(error)) return response;
   if (!data?.claims?.sub) {
-    const login = new URL('/login', request.url);
-    return NextResponse.redirect(login);
+    return go('/login');
   }
   if (ADMIN.some((p) => path.startsWith(p))) {
     const { data: profile, error: profileError } = await supabase.from('profiles').select('role, active').eq('id', data.claims.sub).maybeSingle();
     if (profileError) return response;
     const p = profile as { role: string; active: boolean } | null;
-    if (!p || !p.active || p.role !== 'admin') return NextResponse.redirect(new URL('/', request.url));
+    if (!p || !p.active || p.role !== 'admin') return go('/');
   }
   return response;
 }

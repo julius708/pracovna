@@ -98,3 +98,15 @@ body{background-image:radial-gradient(ellipse 70% 700px at 0% 0%,#c4d9c9bf,trans
 @media(max-width:600px){.li-masthead{width:calc(100% - 16px);margin-top:8px;border-radius:24px}.top .li-masthead{width:calc(100vw - 16px);margin-left:-8px}.li-main-workspace .hero2{border-radius:28px}.li-main-workspace .tile:not(.soon){padding:20px}}
 @media(prefers-reduced-motion:reduce){.li-nav a,.li-nav button,.li-account button,.li-page-intro .li-shortcut,.li-main-workspace .tile:not(.soon),:is(.li-main-workspace,.li-cs,.li-ring-workspace,.li-economy-workspace,.li-laundry-board) :is(.btn,button[type=submit]){transition:none;transform:none!important}}
 @media(prefers-reduced-transparency:reduce),(prefers-contrast:more){:root{--li-glass-surface:#FFFEFB;--li-glass-green:#173E2C}.li-masthead,.tabbar,:is(.li-main-workspace,.li-cs,.li-ring-workspace,.li-economy-workspace) :is(.card,.panel,.search,.analysis-dock),.li-main-workspace :is(.bc,.tile:not(.soon),.ticker.band),.li-laundry-board :is(.sum,.li-package-controls,.days){-webkit-backdrop-filter:none;backdrop-filter:none}.tabbar{background:#FFFEFB}}
+
+/* spoločné prvky appiek LIVE-IN: Späť na hlavnú stránku, Obnoviť, potiahnutie na obnovenie */
+.li-back{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border:1px solid #ffffff40;border-radius:999px;color:#F6F2EA;text-decoration:none;font-size:13px;font-weight:700;white-space:nowrap}
+.li-back:hover{background:#ffffff14}
+.li-refresh{background:#ffffff14;border:1px solid #ffffff25;border-radius:999px;color:#F6F2EA;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;padding:0}
+.li-refresh.busy span{display:inline-block;animation:li-spin .9s linear infinite}
+@keyframes li-spin{to{transform:rotate(360deg)}}
+.ptr{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 86px);z-index:40;display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:999px;font-size:13px;font-weight:700;color:#173E2C;background:rgba(255,254,251,.85);border:1px solid #fff;box-shadow:0 14px 34px -14px rgba(23,62,44,.5);-webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);opacity:0;pointer-events:none;transition:opacity .25s ease,transform .25s ease}
+.ptr.show{opacity:1}
+.ptr-ic{display:inline-block;font-size:18px;line-height:1}
+.ptr.busy .ptr-ic{animation:li-spin .9s linear infinite}
+@media(max-width:600px){.li-back{padding:0 10px;font-size:12px}.li-refresh{display:none}}

@@ -32,7 +32,7 @@ const singletons = (g.__pracovna ??= {});
 export function webhookUrlFor(env: Env, extra: Record<string, string | undefined> = process.env): string | null {
   const host = extra.APP_URL ?? (extra.VERCEL_PROJECT_PRODUCTION_URL ? `https://${extra.VERCEL_PROJECT_PRODUCTION_URL}` : null);
   if (!host) return null;
-  return `${host.replace(/\/$/, '')}/api/guesty/webhook`;
+  return `${host.replace(/\/$/, '')}/pracovna/api/guesty/webhook`;
 }
 
 /** The database only: Supabase when configured, otherwise (seed mode) a process-wide memory repo. */

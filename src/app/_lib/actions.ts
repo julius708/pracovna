@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { BASE } from '@/lib/base';
 import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { isTransientAuthError, loginErrorKey } from '@/db/auth-errors';
@@ -223,7 +224,7 @@ export async function forgotPasswordAction(_prev: ForgotState, formData: FormDat
   if (!email) return { sent: false, error: 'email' };
   const db = await createServerSupabase();
   if (!db) return { sent: false, error: 'offline' };
-  const { error } = await db.auth.resetPasswordForEmail(email, { redirectTo: `${await requestOrigin()}/auth/callback?next=/nove-heslo` });
+  const { error } = await db.auth.resetPasswordForEmail(email, { redirectTo: `${await requestOrigin()}${BASE}/auth/callback?next=/nove-heslo` });
   if (!error) return { sent: true, error: null };
   createLogger({ level: env().LOG_LEVEL, bindings: { job: 'auth' } }).warn('auth.recover.failed', { code: error.code ?? null, status: error.status ?? null });
   if (error.code === 'over_email_send_rate_limit') return { sent: true, error: null };

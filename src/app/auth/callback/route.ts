@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { BASE } from '@/lib/base';
 import { createServerSupabase } from '@/db/server';
 import { safeNextPath } from '@/ui/recovery';
 
@@ -30,5 +31,6 @@ export async function GET(req: Request) {
     ok = !error;
     if (ok && (data as { redirectType?: string | null }).redirectType === 'recovery') next = '/nove-heslo';
   }
-  return NextResponse.redirect(new URL(ok ? next : '/login?chyba=link', url), { status: 303 });
+  // relatívne presmerovanie s prefixom: ostaneme na doméne, z ktorej odkaz prišiel
+  return new NextResponse(null, { status: 303, headers: { Location: `${BASE}${ok ? next : '/login?chyba=link'}` } });
 }

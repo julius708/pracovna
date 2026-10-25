@@ -34,7 +34,7 @@ export function earlyArrivalMessages(rows: EarlyArrivalInsert[], today: Ymd): Pu
       title: `⏰ Skorý príchod o ${r.arrival}`,
       body: `${r.listing_name}${alias ? ` (${alias})` : ''} · ${dayText(r.date, today)} – hosť môže byť v byte skôr`,
       tag: `early-arrival|${r.listing_id}|${r.date}`,
-      url: '/',
+      url: '/pracovna/',
     };
   });
 }
