@@ -1,0 +1,113 @@
+/* LIVE-IN liquid glass v4 — 2026-10-25. Jeden spoločný štýl pre všetky appky
+   (hlavná, Zákaznícky servis, Vstupy hostí, Práčovňa, Ekonomika). Priesvitné sklenené plochy
+   s lomom svetla na hranách, svetlo plávajúce za sklom, a každý klikateľný prvok reaguje na
+   myš aj dotyk. Text ostáva plný a čitateľný. Kópia tohto súboru je v každom repozitári. */
+:root{
+  --lg-blur:42px; --lg-sat:190%;
+  --lg-surface:rgba(255,254,251,.52);
+  --lg-rim:rgba(255,255,255,.98);
+  --lg-green:#173E2C; --lg-orange:#F46D16;
+  --lg-shadow:inset 0 1px 0 #ffffff,inset 1px 0 0 #ffffffc4,inset -1px 0 0 #ffffff5c,inset 0 -1px 0 #173e2c14,0 26px 64px -30px #173e2c5c,0 2px 8px #173e2c0a;
+  --lg-shadow-hover:inset 0 1px 0 #ffffff,inset 1px 0 0 #ffffffd9,inset 0 -1px 0 #173e2c14,0 34px 72px -30px #173e2c80,0 0 0 1px #ffffff99,0 0 44px -12px #f46d1640;
+  --lg-ease:cubic-bezier(.22,1,.36,1);
+}
+
+/* ---------- svetlo za sklom: tri pomaly plávajúce škvrny, aby mal blur čo rozmazať ---------- */
+html{background:#F3F1EA}
+body{position:relative;isolation:isolate;background-color:#F3F1EA}
+body::before,body::after,html::after{content:'';position:fixed;z-index:-1;pointer-events:none;border-radius:50%;filter:blur(52px);opacity:.78;will-change:transform}
+body::before{width:66vmax;height:66vmax;left:-26vmax;top:-20vmax;background:radial-gradient(circle at 40% 40%,#c3dcc6,#9fc3ad 45%,transparent 70%);animation:lg-float-a 46s ease-in-out infinite alternate}
+body::after{width:60vmax;height:60vmax;right:-28vmax;top:18vh;background:radial-gradient(circle at 50% 50%,#ffd6b5,#f5b086 42%,transparent 70%);animation:lg-float-b 56s ease-in-out infinite alternate}
+html::after{width:48vmax;height:48vmax;left:22vw;bottom:-30vmax;background:radial-gradient(circle at 50% 50%,#e4ead3,#c9d9c0 45%,transparent 70%);animation:lg-float-c 62s ease-in-out infinite alternate;opacity:.6}
+@keyframes lg-float-a{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(10vw,8vh,0) scale(1.1)}}
+@keyframes lg-float-b{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(-9vw,-10vh,0) scale(1.12)}}
+@keyframes lg-float-c{from{transform:translate3d(0,0,0)}to{transform:translate3d(-12vw,-6vh,0) scale(1.08)}}
+
+/* ---------- sklenené plochy (karty, panely, štatistiky, zoznamy) ---------- */
+.card,.panel,.bc,.tile:not(.soon),.ticker.band,.login-card,.metric,.li-metric,.kpi,.stat,.comparison-kpi,.search,.analysis-dock,.gcard,.item,.job,.sum,.days,.li-package-controls,.notice-board,.arrivals,.li-shift-info>section,.sheet,.range-card,.li-day-overview,.fold-h,.gchat,.cancelled-card,dialog{
+  background:linear-gradient(128deg,#ffffff96 0%,#ffffff24 42%,#ffffff08 60%,#ffffff3d 100%),var(--lg-surface);
+  border:1px solid var(--lg-rim);
+  box-shadow:var(--lg-shadow);
+  position:relative;isolation:isolate;
+  transition:transform .3s var(--lg-ease),box-shadow .35s var(--lg-ease),border-color .35s var(--lg-ease),background-color .3s ease;
+}
+/* lom svetla na hornej hrane: kreslí sa pod obsahom, nad pozadím plochy */
+.card::before,.panel::before,.bc::before,.tile:not(.soon)::before,.ticker.band::before,.login-card::before,.kpi::before,.stat::before,.metric::before,.li-metric::before,.comparison-kpi::before,.analysis-dock::before,.gcard::before,.item::before,.job::before,.sum::before,.notice-board::before,.arrivals::before,.li-day-overview::before,.gchat::before{
+  content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;
+  background:linear-gradient(180deg,#ffffffbf,transparent 20%),radial-gradient(120% 60% at 50% -10%,#ffffff80,transparent 60%);
+  mix-blend-mode:soft-light;
+}
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .card,.panel,.bc,.tile:not(.soon),.ticker.band,.login-card,.metric,.li-metric,.kpi,.stat,.comparison-kpi,.search,.analysis-dock,.gcard,.item,.job,.sum,.days,.li-package-controls,.notice-board,.arrivals,.li-shift-info>section,.sheet,.range-card,.li-day-overview,.fold-h,.gchat,.cancelled-card,dialog{-webkit-backdrop-filter:blur(var(--lg-blur)) saturate(var(--lg-sat));backdrop-filter:blur(var(--lg-blur)) saturate(var(--lg-sat))}
+  .li-masthead,.top .li-masthead{background:linear-gradient(115deg,#ffffff33,#ffffff08 50%,#ffffff1f),rgba(18,52,36,.7)!important;-webkit-backdrop-filter:blur(38px) saturate(165%);backdrop-filter:blur(38px) saturate(165%);border-color:#ffffff80;box-shadow:inset 0 1px 0 #ffffff8c,inset 0 -1px 0 #09201580,0 18px 44px -20px #173e2c8c}
+  .tabbar{background:rgba(255,254,251,.6);-webkit-backdrop-filter:blur(36px) saturate(175%);backdrop-filter:blur(36px) saturate(175%);border-top:1px solid #ffffffd9;box-shadow:0 -10px 30px -18px #173e2c40}
+  aside{background:linear-gradient(160deg,#ffffff1f,transparent 60%),rgba(23,62,44,.9)!important;-webkit-backdrop-filter:blur(30px) saturate(150%);backdrop-filter:blur(30px) saturate(150%)}
+  .tabs,.presets,.subnav{background:rgba(255,254,251,.55);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);border:1px solid #ffffffcc;box-shadow:inset 0 1px 0 #fff}
+}
+/* tmavé plochy (úvody, hrdinské bloky) dostanú sklenený lem */
+.hero2,.li-page-intro,.nums,.guru .gh,.admin-hero{border:1px solid #ffffffb3;box-shadow:inset 0 1px 0 #ffffff99,inset 0 0 0 1px #ffffff14,0 30px 64px -30px #173e2c8c}
+.hero2 .chip,.li-page-intro .li-shortcut,.op{background:#ffffff26;border:1px solid #ffffff59;box-shadow:inset 0 1px 0 #ffffff40;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+
+/* ---------- interakcia: každá plocha žije pod kurzorom ---------- */
+@media(hover:hover) and (pointer:fine){
+  .card:hover,.panel:hover,.bc:hover,.kpi:hover,.stat:hover,.metric:hover,.li-metric:hover,.comparison-kpi:hover,.analysis-dock:hover,.gcard:hover,.job:hover,.sum:hover,.notice-board:hover,.arrivals:hover,.li-day-overview:hover,.range-card:hover,.gchat:hover{border-color:#fff;box-shadow:var(--lg-shadow-hover);transform:translateY(-2px)}
+  .item:hover,.tasks li:hover,.notice-item:hover,.arrival-item:hover,.dvrow:hover,.map-peers button:hover{background-color:#ffffff73;transform:translateX(4px)}
+  tbody tr:hover>td{background:#ffffff8c}
+  a.tile:not(.soon):hover{transform:translateY(-3px);border-color:#fff;box-shadow:var(--lg-shadow-hover)}
+  a.tile:not(.soon):hover .ic{transform:translateY(-2px) scale(1.05)}
+  /* 3D dlaždice hlavnej appky: nakláňajú sa za kurzorom, svetlo ide za myšou */
+  a.tile.t3d:hover{transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(-8px) scale(1.015);border-color:#fff;box-shadow:inset 0 1px 0 #fff,0 36px 70px -28px #173e2c99,0 0 0 1px #ffffff80,0 0 40px -10px #f46d1655}
+  a.tile.t3d:hover .glow{opacity:1}
+  a.tile.t3d:hover .ic{transform:translateY(-5px) scale(1.14) rotate(-6deg);filter:drop-shadow(0 10px 14px #173e2c40)}
+  a.tile.t3d:hover .st{color:var(--lg-orange)}
+  a.tile.t3d:hover .st .arr{transform:translateX(6px)}
+  a.tile.t3d:hover::after{opacity:1;transform:scaleX(1)}
+  /* tlačidlá, pilulky, záložky, dni, odkazy */
+  button:not(:disabled):hover,.btn:hover,a.btn:hover,.cta:hover,.mini:hover,.more:hover,.tab:hover,.day:hover,.nav:hover,.presets button:hover,.li-filter-toggle:hover,.fold-h:hover,summary:hover,.push-btn:hover,.iconbtn:hover,.li-back:hover,.li-refresh:hover,.li-account button:hover,.li-nav a:hover,.g-memory button:hover,.gsug button:hover,.done:hover{transform:translateY(-2px);filter:brightness(1.06);box-shadow:inset 0 1px 0 #ffffff8c,0 12px 26px -12px #173e2c99,0 0 0 1px #ffffff66}
+  .li-nav a:hover,.li-nav button:hover{background:#ffffff1f;color:#fff}
+  .tile .ic,.kpi b,.stat .v{transition:transform .35s var(--lg-ease)}
+  .kpi:hover b,.stat:hover .v{transform:scale(1.04)}
+  a:not([class]):hover{text-decoration-color:var(--lg-orange);color:var(--lg-green)}
+}
+button,.btn,.cta,.mini,.more,.tab,.day,.nav,.fold-h,summary,.push-btn,.iconbtn,.li-back,.li-refresh,.li-nav a,.li-nav button,.li-account button,.item,.tasks li,.notice-item,.arrival-item,.dvrow,tbody tr>td,.map-peers button,.tile .ic,.tile .st,a:not([class]){transition:transform .2s var(--lg-ease),box-shadow .25s var(--lg-ease),background-color .22s ease,border-color .22s ease,color .2s ease,filter .2s ease,text-decoration-color .2s ease}
+a:not([class]){text-decoration-thickness:1.5px;text-underline-offset:3px;text-decoration-color:#173e2c40}
+button:not(:disabled):active,.btn:active,.cta:active,.mini:active,.tab:active,.day:active,.nav:active,.fold-h:active,summary:active,.push-btn:active,.iconbtn:active,.li-back:active,.li-nav a:active,.li-account button:active,.item:active,a.tile:not(.soon):active{transform:scale(.96);transition-duration:.1s;filter:brightness(.98)}
+a.tile.t3d:active{transform:perspective(900px) scale(.975)}
+a.tile.t3d:active .glow{opacity:1}
+/* sklenené tlačidlá: lesk na hornej hrane */
+.btn,button[type=submit],.cta,.primary,.tabs .tab.on,.day[aria-pressed=true],.li-nav .on,.li-nav [aria-current="page"]{background-image:linear-gradient(165deg,#ffffff38,transparent 55%);box-shadow:inset 0 1px 0 #ffffff66,0 6px 14px -8px #173e2c80}
+.tile .ic{transition:transform .35s var(--lg-ease),filter .35s var(--lg-ease)}
+.tile.t3d{transform:perspective(900px) rotateX(0deg) rotateY(0deg);transform-style:preserve-3d;transition:transform .22s var(--lg-ease),box-shadow .35s var(--lg-ease),border-color .35s var(--lg-ease);will-change:transform}
+.tile .glow{position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .3s ease;background:radial-gradient(240px circle at var(--mx,50%) var(--my,50%),#ffffffcc,transparent 62%);mix-blend-mode:soft-light}
+.tile.t3d::after{content:'';position:absolute;left:0;right:0;bottom:0;height:4px;background:linear-gradient(90deg,var(--lg-orange),#ffb27a);opacity:0;transform:scaleX(.3);transform-origin:left;transition:opacity .3s ease,transform .45s var(--lg-ease);border-radius:0 0 inherit inherit}
+.tile .st{transition:color .25s ease}
+.tile .st .arr{display:inline-block;transition:transform .3s var(--lg-ease)}
+
+/* ---------- polia: sklo a oranžová žiara pri písaní ---------- */
+input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea{background-color:#ffffffa6;border-color:#173e2c26;box-shadow:inset 0 2px 3px #173e2c08,0 1px 0 #fff;transition:box-shadow .25s var(--lg-ease),border-color .25s ease,background-color .25s ease,transform .2s var(--lg-ease)}
+input:not([type=checkbox]):not([type=radio]):not([type=range]):focus,select:focus,textarea:focus{outline:none;border-color:var(--lg-orange);background-color:#ffffffe6;box-shadow:0 0 0 4px #f46d1633,inset 0 1px 0 #fff,0 10px 24px -14px #173e2c66}
+input[type=checkbox],input[type=radio]{accent-color:var(--lg-green);transition:transform .15s var(--lg-ease)}
+input[type=checkbox]:active,input[type=radio]:active{transform:scale(.88)}
+:focus-visible{outline:3px solid var(--lg-orange);outline-offset:3px;border-radius:6px}
+
+/* ---------- vstup kariet: jemné vynorenie pri načítaní ---------- */
+@keyframes lg-rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.dash,.card.mt,.ticker.band,.tiles,.kpis,.stats,.li-metrics,.brief,.cards,.metrics,.li-day-overview,.jobs{animation:lg-rise .6s var(--lg-ease) both}
+.dash{animation-delay:.05s}.card.mt{animation-delay:.12s}.tiles{animation-delay:.18s}.stats,.kpis{animation-delay:.04s}
+
+/* ---------- potiahnutie na obnovenie + tlačidlo Obnoviť (rovnaké všade) ---------- */
+.ptr{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 86px);z-index:40;display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:999px;font-size:13px;font-weight:700;color:#173E2C;background:rgba(255,254,251,.78);border:1px solid #ffffffe6;box-shadow:inset 0 1px 0 #fff,0 14px 34px -14px #173e2c80;-webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);opacity:0;pointer-events:none;transition:opacity .25s ease,transform .25s var(--lg-ease);will-change:transform}
+.ptr.show{opacity:1}
+.ptr-ic{display:inline-block;font-size:18px;line-height:1;transition:transform .1s linear}
+.ptr.busy .ptr-ic{animation:lg-spin .9s linear infinite}
+@keyframes lg-spin{to{transform:rotate(360deg)}}
+.li-refresh{background:#ffffff14;border:1px solid #ffffff25;border-radius:999px;color:#F6F2EA;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;padding:0}
+.li-refresh.busy span{display:inline-block;animation:lg-spin .9s linear infinite}
+@media(max-width:600px){.li-refresh{display:none}}
+
+/* ---------- telefón: menší blur kvôli výkonu ---------- */
+@media(max-width:700px){:root{--lg-blur:26px;--lg-sat:170%}body::before,body::after,html::after{filter:blur(40px)}}
+
+/* ---------- prístupnosť: bez pohybu a bez priesvitnosti, keď si to používateľ praje ---------- */
+@media(prefers-reduced-motion:reduce){body::before,body::after,html::after,.dash,.card.mt,.ticker.band,.tiles,.kpis,.stats,.li-metrics,.brief,.cards,.metrics,.li-day-overview,.jobs{animation:none}*{transition:none!important}.card:hover,.panel:hover,.kpi:hover,.stat:hover,.job:hover,button:hover,.btn:hover{transform:none!important}}
+@media(prefers-reduced-transparency:reduce),(prefers-contrast:more){:root{--lg-surface:#FFFEFB}body::before,body::after,html::after{display:none}.card,.panel,.bc,.tile:not(.soon),.ticker.band,.login-card,.kpi,.stat,.metric,.item,.job,.li-masthead,.tabbar,aside,dialog{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}.card::before,.panel::before,.bc::before,.tile:not(.soon)::before,.kpi::before,.stat::before,.item::before,.job::before{display:none}}
