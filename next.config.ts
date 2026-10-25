@@ -7,6 +7,8 @@ const LEGACY = ['/sw.js', '/manifest.webmanifest', '/icons/:path*', '/api/:path*
 
 const nextConfig: NextConfig = {
   basePath: '/pracovna',
+  // serverové akcie (formuláre, tlačidlá) prichádzajú aj cez proxy z hlavnej appky: povolený pôvod
+  experimental: { serverActions: { allowedOrigins: ['app.live-in.international', 'pracovna.live-in.international'] } },
   async redirects() {
     return [
       { source: '/', destination: '/pracovna', basePath: false, permanent: false },
