@@ -1,9 +1,10 @@
 'use client';
 
 import { angelikaSentence, sk, type TextPart } from '@/core/i18n/sk';
+import { BASE } from '@/lib/base';
 import type { SummaryLine } from './board-model';
 
-const AV = '/assets/angelika.jpg';
+const AV = `${BASE}/assets/angelika.jpg`;
 
 export function AngelikaBlock({ parts }: { parts: TextPart[] }) {
   return (
@@ -85,7 +86,7 @@ export function Summary({
                   <li key={l.id} className={`${l.source === 'guesty' ? 'cust' : ''}${l.note ? ' miss' : ''}`}>
                     <span>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      {l.photo && <img className="capico" src={`/assets/${l.photo}`} alt="" />}
+                      {l.photo && <img className="capico" src={`${BASE}/assets/${l.photo}`} alt="" />}
                       {l.label}
                       {l.note && <small> {l.note}</small>}
                       {!l.note && l.size && <small> {l.size}</small>}

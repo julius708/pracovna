@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const SELF = 'https://pracovna.live-in.international';
 // Staré adresy (bez /pracovna), na ktoré sa odkazujú nainštalované appky na telefónoch,
 // zaregistrovaný service worker, Guesty webhook a odkazy v e-mailoch: fungujú ďalej.
-const LEGACY = ['/sw.js', '/manifest.webmanifest', '/icons/:path*', '/api/:path*', '/health', '/auth/callback'];
+const LEGACY = ['/sw.js', '/manifest.webmanifest', '/icons/:path*', '/assets/:path*', '/api/:path*', '/health', '/auth/callback'];
 
 const nextConfig: NextConfig = {
   basePath: '/pracovna',

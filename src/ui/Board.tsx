@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { BASE } from '@/lib/base';
 import { addBoardNoteAction, addBoardReplyAction, addEarlyArrivalAction, addEarlyDepartureAction, checkAction, editBoardNoteAction, noteAction, packAction, removeBoardNoteAction, removeEarlyArrivalAction, removeEarlyDepartureAction, unpackAction, type ActionResult } from '@/app/_lib/actions';
 import type { BoardData, BoardNote, BoardPackage, EarlyArrival, EarlyDeparture } from '@/app/_lib/board';
 import type { Viewer } from '@/app/_lib/viewer';
@@ -18,7 +19,7 @@ import { PackageCard, type CardHandlers } from './PackageCard';
 import { Summary } from './Summary';
 import { useLiveBoard } from './useLiveBoard';
 
-const AV = '/assets/angelika.jpg';
+const AV = `${BASE}/assets/angelika.jpg`;
 const CHEER_MS = 3500;
 const NOTICE_MS = 7000;
 /** How long a package this device changed itself is exempt from "someone else changed it" notices. */

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { BASE } from '@/lib/base';
 import type { BoardPackage, EarlyArrival, EarlyDeparture } from '@/app/_lib/board';
 import type { Viewer } from '@/app/_lib/viewer';
 import { flatFacts, formatHM, NOTE_MAX_LENGTH, type PackingResult, type WarningCode } from '@/core/packing';
@@ -8,7 +9,7 @@ import { flatAddress } from '@/core/printer/addresses';
 import { LabelButton } from './LabelButton';
 import { bedSummary, capsuleLabel, cheerDone, childrenBannerParts, duvetText, nextArrivalParts, packedBy, peopleParts, sk, sofaText, warningLine, type TextPart } from '@/core/i18n/sk';
 
-const AV = '/assets/angelika.jpg';
+const AV = `${BASE}/assets/angelika.jpg`;
 /** Warnings already shown inline (beds line, badge line), so they are not repeated in the red list. */
 const INLINE: WarningCode[] = ['bunk', 'no_duvet_info', 'min_nights_unknown'];
 /** Information for the packer, shown calmly instead of in red. */
@@ -178,7 +179,7 @@ export function PackageCard({
                 <li key={`${c.typeKey || c.state}-${i}`} className={`${c.fixed ? 'cust' : ''}${t.note ? ' miss' : ''}`}>
                   <span>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    {c.photo && <img className="capico" src={`/assets/${c.photo}`} alt="" />}
+                    {c.photo && <img className="capico" src={`${BASE}/assets/${c.photo}`} alt="" />}
                     {t.label}
                     {t.note && <small> {t.note}</small>}
                   </span>
