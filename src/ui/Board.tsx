@@ -11,7 +11,7 @@ import { dayLabel, dayWord, packedOf, sk } from '@/core/i18n/sk';
 import { useRouter } from 'next/navigation';
 import { newActionId } from './action-id';
 import { isRecoveryHash } from './recovery';
-import { angelikaNumbers, applyCleaner, arrivalFor, arrivalNotices, boardNotices, cleanerOptions, counts, dayJobs, FILTER_KEYS, noteNotices, departureFor, sortArrivals, sortDepartures, summaryLines, searchPackages, visibleJobs, type Filter } from './board-model';
+import { angelikaNumbers, applyCleaner, arrivalFor, arrivalNotices, boardNotices, cleanerOptions, counts, dayJobs, FILTER_KEYS, noteNotices, departureFor, sortArrivals, sortDepartures, summaryLines, visibleJobs, type Filter } from './board-model';
 import { CleaningInfo } from './CleaningInfo';
 import { EarlyArrivals } from './EarlyArrivals';
 import { EarlyDepartures } from './EarlyDepartures';
@@ -49,7 +49,6 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
   // the chosen filter is remembered per device below
   const [filter, setFilter] = useState<Filter>('all');
   const [cleaner, setCleaner] = useState('');
-  const [search, setSearch] = useState('');
   const [keep, setKeep] = useState<Set<string>>(() => new Set());
   const [busy, setBusy] = useState<Set<string>>(() => new Set());
   const [cheer, setCheer] = useState<{ id: string; msg: string } | null>(null);
@@ -143,7 +142,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
     () => summaryLines(jobs, { generic: sk.capsuleGeneric, typed: (t) => `Kapsule ${t}`, unsure: sk.capsuleUnsure, missing: sk.capsuleMissing }),
     [jobs],
   );
-  const list = useMemo(() => searchPackages(visibleJobs(jobs, filter, keep), search), [jobs, filter, keep, search]);
+  const list = useMemo(() => visibleJobs(jobs, filter, keep), [jobs, filter, keep]);
   const hasData = data.status.lastOkSyncAt !== null || data.packages.length > 0;
 
   const patch = (id: string, fn: (p: BoardPackage) => BoardPackage) => {
@@ -623,7 +622,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
       <Summary dayWord={dayWord(sel, date)} hasData={hasData} numbers={numbers} lines={lines} hasJobs={jobs.length > 0} />
 
       <section className="li-package-controls" aria-label="Výber balíkov">
-      <div className="li-package-heading"><div><span className="li-eyebrow">PRACOVNÝ ZOZNAM</span><h2>Balíky na {formatDM(date)}</h2></div><div className="li-package-search"><label className="sr-only" htmlFor="package-search">Hľadať byt podľa názvu</label><input id="package-search" type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Hľadať byt…" autoComplete="off"/>{search && <button type="button" onClick={() => setSearch('')}>Zrušiť hľadanie</button>}</div></div>
+      {/* no "Balíky na …" heading and no search over the cards (Martina, 2026-10-30) */}
       {cleaners.length > 0 && (
         <div className="filters" id="cleaners" role="toolbar" aria-label="Upratovacia služba">
           {cleaners.map((o) => (
@@ -643,7 +642,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
         ))}
       </div>
 
-      <p className="li-results-count" role="status">Zobrazené balíky: {list.length}{search.trim() ? ` · hľadanie „${search.trim()}“` : ''}</p>
+      <p className="li-results-count" role="status">Zobrazené balíky: {list.length}</p>
       </section>
       <main className="jobs" id="jobs">
         {list.map((p) => (
@@ -664,12 +663,12 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
 
       {jobs.length > 0 && list.length === 0 && (
         <div className="state" id="state">
-          {!search.trim() && filter === 'todo' && (
+          {filter === 'todo' && (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img className="av2" src={AV} alt="" />
           )}
-          <strong>{search.trim() ? 'Pre tento názov sme nenašli balík.' : filter === 'todo' ? sk.empty.allPacked : sk.empty.nothing}</strong>
-          {search.trim() ? 'Skús kratší názov alebo zruš hľadanie. Denné súčty zostávajú nezmenené.' : filter === 'todo' ? sk.empty.allPackedHint : sk.empty.nothingHint}
+          <strong>{filter === 'todo' ? sk.empty.allPacked : sk.empty.nothing}</strong>
+          {filter === 'todo' ? sk.empty.allPackedHint : sk.empty.nothingHint}
         </div>
       )}
 
