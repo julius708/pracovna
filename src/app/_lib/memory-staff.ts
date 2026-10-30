@@ -1,7 +1,8 @@
 import 'server-only';
 import { addDays, isYmd, NOTE_MAX_LENGTH, todayInTz, WINDOW_DAYS } from '@/core/packing';
 import type { MemoryRepo } from '@/db/memory-repo';
-import type { EarlyArrivalRow, EarlyDepartureRow, PackageEventInsert, PackageRow } from '@/db/types';
+import type { CleaningRequestRow, EarlyArrivalRow, EarlyDepartureRow, PackageEventInsert, PackageRow } from '@/db/types';
+import { cleaningRights } from './cleaning';
 import { randomUUID } from 'node:crypto';
 import { packSnapshot } from './packing-log';
 import type { Viewer } from './viewer';
@@ -252,6 +253,101 @@ export async function memoryRemoveEarlyDeparture(repo: MemoryRepo, viewer: Viewe
   d.removed_at = repo.now().toISOString();
   d.removed_by = viewer.id;
   d.removed_by_name = viewer.name;
+  return { ok: true };
+}
+
+/** Seed mode's app roles: the admin stand-in is an app admin, the staff stand-in has none. */
+const memoryRights = (viewer: Viewer) => cleaningRights(viewer.role === 'admin' ? ['admin'] : []);
+
+function cleaningRow(viewer: Viewer, now: Date, date: string, text: string, actionId: string | null, extra: Partial<CleaningRequestRow>): CleaningRequestRow {
+  return {
+    id: randomUUID(),
+    date,
+    listing_id: null,
+    listing_name: null,
+    text,
+    author: viewer.id,
+    author_name: viewer.name,
+    created_at: now.toISOString(),
+    parent_id: null,
+    done_at: null,
+    done_by: null,
+    done_by_name: null,
+    removed_at: null,
+    removed_by: null,
+    removed_by_name: null,
+    client_action_id: actionId,
+    ...extra,
+  };
+}
+
+/** add_cleaning_request as in Postgres (migration 0018): admin / customer_service, a near day, an optional flat in scope. */
+export async function memoryAddCleaningRequest(repo: MemoryRepo, viewer: Viewer, date: string, listingId: string | null, text: string, actionId: string | null): Promise<StaffResult> {
+  repo.cleaningRequests ??= [];
+  if (!memoryRights(viewer).write) return { ok: false, status: 'not_allowed' };
+  const existing = actionId ? repo.cleaningRequests.find((r) => r.client_action_id === actionId) : undefined;
+  if (existing) return { ok: true, replayed: true, id: existing.id };
+  const clean = text.trim().slice(0, 500);
+  if (!clean) return { ok: false, status: 'empty' };
+  const today = todayInTz(repo.now());
+  if (!isYmd(date) || date < addDays(today, -1) || date > addDays(today, 60)) return { ok: false, status: 'bad_date' };
+  let listingName: string | null = null;
+  if (listingId) {
+    const l = repo.listings.get(listingId);
+    if (!l || !l.in_scope) return { ok: false, status: 'bad_listing' };
+    listingName = l.name;
+  }
+  const row = cleaningRow(viewer, repo.now(), date, clean, actionId, { listing_id: listingId || null, listing_name: listingName });
+  repo.cleaningRequests.push(row);
+  return { ok: true, id: row.id };
+}
+
+/** add_cleaning_reply: everyone who sees the box; one level only. */
+export async function memoryAddCleaningReply(repo: MemoryRepo, viewer: Viewer, parentId: string, text: string, actionId: string | null): Promise<StaffResult> {
+  repo.cleaningRequests ??= [];
+  if (!memoryRights(viewer).read) return { ok: false, status: 'not_allowed' };
+  const existing = actionId ? repo.cleaningRequests.find((r) => r.client_action_id === actionId) : undefined;
+  if (existing) return { ok: true, replayed: true, id: existing.id };
+  const clean = text.trim().slice(0, 500);
+  if (!clean) return { ok: false, status: 'empty' };
+  const parent = repo.cleaningRequests.find((r) => r.id === parentId);
+  if (!parent || parent.removed_at) return { ok: false, status: 'removed' };
+  if (parent.parent_id) return { ok: false, status: 'nested' };
+  const row = cleaningRow(viewer, repo.now(), parent.date, clean, actionId, { listing_id: parent.listing_id, listing_name: parent.listing_name, parent_id: parent.id });
+  repo.cleaningRequests.push(row);
+  return { ok: true, id: row.id };
+}
+
+/** set_cleaning_request_done: cleaning / admin / customer_service tick a message or take the tick back. */
+export async function memorySetCleaningDone(repo: MemoryRepo, viewer: Viewer, id: string, done: boolean): Promise<StaffResult> {
+  repo.cleaningRequests ??= [];
+  if (!memoryRights(viewer).tick) return { ok: false, status: 'not_allowed' };
+  const r = repo.cleaningRequests.find((x) => x.id === id);
+  if (!r) throw new Error('request not found');
+  if (r.removed_at) return { ok: false, status: 'removed' };
+  if (done) {
+    if (r.done_at) return { ok: true, replayed: true };
+    r.done_at = repo.now().toISOString();
+    r.done_by = viewer.id;
+    r.done_by_name = viewer.name;
+  } else {
+    r.done_at = null;
+    r.done_by = null;
+    r.done_by_name = null;
+  }
+  return { ok: true };
+}
+
+/** remove_cleaning_request: its author, or an app admin. */
+export async function memoryRemoveCleaningRequest(repo: MemoryRepo, viewer: Viewer, id: string): Promise<StaffResult> {
+  repo.cleaningRequests ??= [];
+  const r = repo.cleaningRequests.find((x) => x.id === id);
+  if (!r) throw new Error('request not found');
+  if (r.removed_at) return { ok: true, replayed: true };
+  if (r.author !== viewer.id && !memoryRights(viewer).admin) return { ok: false, status: 'not_author' };
+  r.removed_at = repo.now().toISOString();
+  r.removed_by = viewer.id;
+  r.removed_by_name = viewer.name;
   return { ok: true };
 }
 

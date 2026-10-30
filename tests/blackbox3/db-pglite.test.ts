@@ -31,6 +31,15 @@ const MIG14 = readFileSync(new URL('../../supabase/migrations/0014_push_subscrip
 const MIG15 = readFileSync(new URL('../../supabase/migrations/0015_board_note_replies.sql', import.meta.url), 'utf8');
 const MIG16 = readFileSync(new URL('../../supabase/migrations/0016_manual_early_arrivals.sql', import.meta.url), 'utf8');
 const MIG17 = readFileSync(new URL('../../supabase/migrations/0017_early_departures.sql', import.meta.url), 'utf8');
+const MIG18 = readFileSync(new URL('../../supabase/migrations/0018_cleaning_info.sql', import.meta.url), 'utf8');
+/** The shared LIVE-IN users and their roles as they exist in LIVE-IN Core (not created by this app's migrations). */
+const APP_USERS_STUB = `
+create or replace function auth.jwt() returns jsonb language sql stable as
+  $$ select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb $$;
+create table if not exists public.app_users (email text primary key, name text not null, roles text[] not null default '{}', active boolean not null default true);
+create or replace function public.current_app_roles() returns text[] language sql stable security definer set search_path to 'public' as
+  $$ select coalesce((select roles from public.app_users where lower(email)=lower(auth.jwt()->>'email') and active), '{}') $$;
+`;
 
 const STUBS = `
 create role authenticated nologin;
@@ -113,6 +122,10 @@ describe('migrations', () => {
       expect(e17, `0017_early_departures.sql failed: ${e17?.code} ${e17?.message} (line ${lineOf(MIG17, e17?.position)})`).toBeNull();
       const dep = (await fresh.query<Row>("select proname from pg_proc where pronamespace = 'public'::regnamespace and proname in ('add_early_departure', 'remove_early_departure') order by 1")).rows.map((r) => r.proname);
       expect(dep).toEqual(['add_early_departure', 'remove_early_departure']);
+      await fresh.exec(APP_USERS_STUB);
+      const e18 = await pgError(fresh.exec(MIG18));
+      expect(e18, `0018_cleaning_info.sql failed: ${e18?.code} ${e18?.message} (line ${lineOf(MIG18, e18?.position)})`).toBeNull();
+      expect((await fresh.query<Row>("select column_name from information_schema.columns where table_schema = 'public' and table_name = 'listings' and column_name = 'cleaning_info'")).rows).toHaveLength(1);
       const fns =(await fresh.query<Row>("select proname from pg_proc where pronamespace = 'public'::regnamespace order by 1")).rows.map((r) => r.proname);
       expect(fns).toEqual(expect.arrayContaining(['today_ba', 'is_admin', 'is_active_user', 'handle_new_user', 'sync_upsert_package', 'sync_set_lifecycle', 'pack_package', 'unpack_package', 'set_note', 'toggle_check', 'save_settings', 'admin_set_profile', 'acquire_lock', 'run_retention', 'increment_not_found', 'add_board_note', 'remove_board_note', 'edit_board_note']));
     } finally {
@@ -193,6 +206,8 @@ beforeAll(async () => {
   await db.exec(MIG15);
   await db.exec(MIG16);
   await db.exec(MIG17);
+  await db.exec(APP_USERS_STUB);
+  await db.exec(MIG18);
   await db.exec('set check_function_bodies = on');
   todayBa = (await one('select public.today_ba()::text as d')).d as string;
 });
@@ -1061,5 +1076,80 @@ describe('early_departures (0017)', () => {
     expect((await one('select public.remove_early_departure($1, $2) as r', [r1.id, randomUUID()])).r).toEqual({ ok: true });
     await actAs(null);
     expect((await pgError(q('select public.add_early_departure($1, $2::date, $3, $4, $5)', ['ed-1', todayBa, '09:00', '', randomUUID()])))?.code).toBe('42501');
+  });
+});
+
+describe('cleaning_requests (0018): roles from the shared LIVE-IN users', () => {
+  /** A Práčovňa user who is also a LIVE-IN app user with the given roles; acting as them sets both the uid and the e-mail claim. */
+  async function teamUser(name: string, roles: string[]) {
+    const email = `${name.toLowerCase()}-${++seq}@live-in.test`;
+    const id = await newUser(name, { email });
+    await q('insert into public.app_users (email, name, roles) values ($1, $2, $3)', [email, name, roles]);
+    return { id, email };
+  }
+  async function as(u: { id: string; email: string } | null) {
+    await actAs(u?.id ?? null);
+    await q("select set_config('request.jwt.claims', $1, false)", [u ? JSON.stringify({ email: u.email }) : '']);
+  }
+  /** What the signed-in person reads through RLS (as the authenticated role, like the app). */
+  const visible = async () => {
+    await db.exec('set role authenticated');
+    try {
+      return (await q('select id from public.cleaning_requests')).map((r) => r.id);
+    } finally {
+      await db.exec('reset role');
+    }
+  };
+
+  it('customer service writes, a cleaner replies and ticks, operations reads only, others see nothing', async () => {
+    await q("insert into public.listings (guesty_id, name, in_scope, fetched_at, cleaning_info) values ('cl-1', 'E. Wenzla, Business', true, now(), 'Kúrenie max. na 3') on conflict do nothing");
+    const cs = await teamUser('Zuzana', ['customer_service']);
+    const cleaner = await teamUser('Mária', ['cleaning']);
+    const ops = await teamUser('Peter', ['operations']);
+    const mkt = await teamUser('Lea', ['marketing']);
+
+    await as(cs);
+    const action = randomUUID();
+    const m = (await one('select public.add_cleaning_request($1::date, $2, $3, $4) as r', [todayBa, 'cl-1', '  Vymeniť žiarovku v kúpeľni  ', action])).r;
+    expect(m.ok).toBe(true);
+    expect((await one('select public.add_cleaning_request($1::date, $2, $3, $4) as r', [todayBa, 'cl-1', 'x', action])).r).toMatchObject({ ok: true, replayed: true, id: m.id });
+    expect(await one('select listing_name, text, author_name from public.cleaning_requests where id = $1', [m.id])).toEqual({ listing_name: 'E. Wenzla, Business', text: 'Vymeniť žiarovku v kúpeľni', author_name: 'Zuzana' });
+    expect((await one('select public.add_cleaning_request($1::date, null, $2, $3) as r', [todayBa, '   ', randomUUID()])).r).toEqual({ ok: false, status: 'empty' });
+
+    // a cleaner may not write a message, but replies and ticks it
+    await as(cleaner);
+    expect((await pgError(q('select public.add_cleaning_request($1::date, null, $2, $3)', [todayBa, 'x', randomUUID()])))?.code).toBe('42501');
+    const rep = (await one('select public.add_cleaning_reply($1, $2, $3) as r', [m.id, 'Hotovo, vymenené', randomUUID()])).r;
+    expect(rep.ok).toBe(true);
+    expect((await one('select public.add_cleaning_reply($1, $2, $3) as r', [rep.id, 'Hlbšie', randomUUID()])).r).toEqual({ ok: false, status: 'nested' });
+    expect((await one('select public.set_cleaning_request_done($1, true) as r', [m.id])).r).toEqual({ ok: true });
+    expect(await one('select done_by_name from public.cleaning_requests where id = $1', [m.id])).toEqual({ done_by_name: 'Mária' });
+    expect(await visible()).toEqual(expect.arrayContaining([m.id, rep.id]));
+
+    // operations reads and replies but does not tick
+    await as(ops);
+    expect(await visible()).toEqual(expect.arrayContaining([m.id]));
+    expect((await pgError(q('select public.set_cleaning_request_done($1, false)', [m.id])))?.code).toBe('42501');
+
+    // someone without these roles sees nothing and writes nothing
+    await as(mkt);
+    expect(await visible()).toEqual([]);
+    expect((await pgError(q('select public.add_cleaning_reply($1, $2, $3)', [m.id, 'x', randomUUID()])))?.code).toBe('42501');
+
+    // only the author (or an app admin) removes
+    await as(cleaner);
+    expect((await one('select public.remove_cleaning_request($1) as r', [m.id])).r).toEqual({ ok: false, status: 'not_author' });
+    await as(cs);
+    expect((await one('select public.remove_cleaning_request($1) as r', [m.id])).r).toEqual({ ok: true });
+    expect(await visible()).not.toContain(m.id);
+
+    // the table takes no direct writes
+    await db.exec('set role authenticated');
+    try {
+      expect((await pgError(q("insert into public.cleaning_requests (date, text, author_name) values (current_date, 'x', 'x')")))?.code).toBe('42501');
+    } finally {
+      await db.exec('reset role');
+    }
+    await as(null);
   });
 });

@@ -47,6 +47,7 @@ function listingRow(id: string, over: Partial<ListingRow> = {}): ListingRow {
     laundry_raw: null,
     laundry: null,
     cleaner: null,
+    cleaning_info: null,
     owner_cleans: false,
     in_scope: true,
     exclusion_reason: null,

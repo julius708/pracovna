@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BASE } from '@/lib/base';
-import { addBoardNoteAction, addBoardReplyAction, addEarlyArrivalAction, addEarlyDepartureAction, checkAction, editBoardNoteAction, noteAction, packAction, removeBoardNoteAction, removeEarlyArrivalAction, removeEarlyDepartureAction, unpackAction, type ActionResult } from '@/app/_lib/actions';
+import { addBoardNoteAction, addBoardReplyAction, addCleaningReplyAction, addCleaningRequestAction, addEarlyArrivalAction, addEarlyDepartureAction, checkAction, editBoardNoteAction, noteAction, packAction, removeBoardNoteAction, removeCleaningRequestAction, removeEarlyArrivalAction, setCleaningDoneAction, removeEarlyDepartureAction, unpackAction, type ActionResult } from '@/app/_lib/actions';
 import type { BoardData, BoardNote, BoardPackage, EarlyArrival, EarlyDeparture } from '@/app/_lib/board';
+import { cleaningInfoFlats, type CleaningRequest } from '@/app/_lib/cleaning';
 import type { Viewer } from '@/app/_lib/viewer';
 import { formatDM } from '@/core/packing';
 import { dayLabel, dayWord, packedOf, sk } from '@/core/i18n/sk';
@@ -11,6 +12,7 @@ import { useRouter } from 'next/navigation';
 import { newActionId } from './action-id';
 import { isRecoveryHash } from './recovery';
 import { angelikaNumbers, applyCleaner, arrivalFor, arrivalNotices, boardNotices, cleanerOptions, counts, dayJobs, FILTER_KEYS, noteNotices, departureFor, sortArrivals, sortDepartures, summaryLines, searchPackages, visibleJobs, type Filter } from './board-model';
+import { CleaningInfo } from './CleaningInfo';
 import { EarlyArrivals } from './EarlyArrivals';
 import { EarlyDepartures } from './EarlyDepartures';
 import { Header } from './Header';
@@ -63,6 +65,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
   const [noteBusy, setNoteBusy] = useState(false);
   const [arrivalBusy, setArrivalBusy] = useState(false);
   const [departureBusy, setDepartureBusy] = useState(false);
+  const [cleaningBusy, setCleaningBusy] = useState(false);
   /** Early arrivals this device removed itself: no "odstránený" notice for them. */
   const ownArrivalIds = useRef(new Set<string>());
   const ownChanges = useRef(new Map<string, number>());
@@ -377,6 +380,91 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
     }
   };
 
+  /** "Info pre upratovačov": a message (or a reply) for the cleaners on the selected day; true when saved. */
+  const saveCleaning = async (temp: CleaningRequest, call: () => Promise<ActionResult>, failText: string): Promise<boolean> => {
+    setCleaningBusy(true);
+    setData((d) => ({ ...d, cleaning: { ...d.cleaning, requests: [...d.cleaning.requests, temp] } }));
+    let res: ActionResult;
+    try {
+      res = await track(call);
+    } catch {
+      res = { ok: false, error: 'failed' };
+    }
+    setCleaningBusy(false);
+    if (res.ok) {
+      if (res.id) setData((d) => ({ ...d, cleaning: { ...d.cleaning, requests: d.cleaning.requests.map((x) => (x.id === temp.id ? { ...x, id: res.id as string } : x)) } }));
+      void refresh();
+      return true;
+    }
+    setData((d) => ({ ...d, cleaning: { ...d.cleaning, requests: d.cleaning.requests.filter((x) => x.id !== temp.id) } }));
+    showToast(res.error === 'unauthorized' ? sk.toasts.noPermission : res.status === 'removed' ? sk.cleaning.gone : failText);
+    return false;
+  };
+
+  const cleaningTemp = (over: Partial<CleaningRequest>): CleaningRequest => ({
+    id: `temp-${newActionId()}`,
+    date,
+    listing_id: null,
+    listing_name: null,
+    text: '',
+    author: viewer.id,
+    author_name: viewer.name,
+    created_at: new Date().toISOString(),
+    parent_id: null,
+    done_at: null,
+    done_by_name: null,
+    ...over,
+  });
+
+  const addCleaning = (listingId: string | null, text: string) =>
+    saveCleaning(
+      cleaningTemp({ listing_id: listingId, listing_name: listingId ? (data.listings.find((l) => l.id === listingId)?.name ?? null) : null, text }),
+      () => addCleaningRequestAction(date, listingId, text, newActionId()),
+      sk.cleaning.notSaved,
+    );
+
+  const replyCleaning = (parent: CleaningRequest, text: string) =>
+    saveCleaning(cleaningTemp({ date: parent.date, listing_id: parent.listing_id, listing_name: parent.listing_name, parent_id: parent.id, text }), () => addCleaningReplyAction(parent.id, text, newActionId()), sk.cleaning.replyNotSaved);
+
+  /** Ticks a message as done (or takes it back); the change shows at once and is undone when it fails. */
+  const tickCleaning = async (r: CleaningRequest, done: boolean) => {
+    const before = data.cleaning.requests;
+    setCleaningBusy(true);
+    setData((d) => ({ ...d, cleaning: { ...d.cleaning, requests: d.cleaning.requests.map((x) => (x.id === r.id ? { ...x, done_at: done ? new Date().toISOString() : null, done_by_name: done ? viewer.name : null } : x)) } }));
+    let res: ActionResult;
+    try {
+      res = await track(() => setCleaningDoneAction(r.id, done));
+    } catch {
+      res = { ok: false, error: 'failed' };
+    }
+    setCleaningBusy(false);
+    if (res.ok) {
+      void refresh();
+    } else {
+      setData((d) => ({ ...d, cleaning: { ...d.cleaning, requests: before } }));
+      showToast(res.error === 'unauthorized' ? sk.toasts.noPermission : sk.cleaning.notDone);
+    }
+  };
+
+  const removeCleaning = async (r: CleaningRequest) => {
+    const before = data.cleaning.requests;
+    setCleaningBusy(true);
+    setData((d) => ({ ...d, cleaning: { ...d.cleaning, requests: d.cleaning.requests.filter((x) => x.id !== r.id && x.parent_id !== r.id) } }));
+    let res: ActionResult;
+    try {
+      res = await track(() => removeCleaningRequestAction(r.id));
+    } catch {
+      res = { ok: false, error: 'failed' };
+    }
+    setCleaningBusy(false);
+    if (res.ok) {
+      void refresh();
+    } else {
+      setData((d) => ({ ...d, cleaning: { ...d.cleaning, requests: before } }));
+      showToast(res.status === 'not_author' ? sk.cleaning.notAuthor : res.error === 'unauthorized' ? sk.toasts.noPermission : sk.cleaning.notRemoved);
+    }
+  };
+
   const editNote = async (note: BoardNote, text: string) => {
     const before = data.notes;
     setNoteBusy(true);
@@ -528,6 +616,24 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
       </div>
 
       </div>
+      {/* the cleaners' box sits right above the packing section, for the same day (Martina, 2026-10-30) */}
+      {data.cleaning.rights.read && (
+        <CleaningInfo
+          dayTitle={`${dayWord(sel, date)} ${formatDM(date)}`}
+          flats={cleaningInfoFlats(data.packages, data.cleaning.info, date)}
+          requests={data.cleaning.requests.filter((r) => r.date === date)}
+          dayFlats={[...new Map(allJobs.map((p) => [p.listing_id, { id: p.listing_id, name: p.listing_name }])).values()].sort((a, b) => a.name.localeCompare(b.name, 'sk'))}
+          rights={data.cleaning.rights}
+          viewer={viewer}
+          now={now}
+          busy={cleaningBusy}
+          onAdd={addCleaning}
+          onReply={replyCleaning}
+          onTick={(r, done) => void tickCleaning(r, done)}
+          onRemove={(r) => void removeCleaning(r)}
+        />
+      )}
+
       <Summary dayWord={dayWord(sel, date)} hasData={hasData} numbers={numbers} lines={lines} hasJobs={jobs.length > 0} />
 
       <section className="li-package-controls" aria-label="Výber balíkov">

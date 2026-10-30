@@ -22,6 +22,8 @@ export interface ListingRow {
   laundry_raw: string | null;
   laundry: ParsedLaundry | null;
   cleaner: string | null;
+  /** Guesty custom field "INFO PRE UPRATOVAČOV": the standing note for the cleaners (migration 0018). */
+  cleaning_info: string | null;
   owner_cleans: boolean;
   in_scope: boolean;
   exclusion_reason: string | null;
@@ -246,6 +248,26 @@ export interface EarlyDepartureRow {
   author: string | null;
   author_name: string;
   created_at: Instant;
+  removed_at: Instant | null;
+  removed_by: string | null;
+  removed_by_name: string | null;
+  client_action_id: string | null;
+}
+
+/** A message for the cleaners on a board day, or a reply to one (migration 0018). */
+export interface CleaningRequestRow {
+  id: string;
+  date: Ymd;
+  listing_id: string | null;
+  listing_name: string | null;
+  text: string;
+  author: string | null;
+  author_name: string;
+  created_at: Instant;
+  parent_id: string | null;
+  done_at: Instant | null;
+  done_by: string | null;
+  done_by_name: string | null;
   removed_at: Instant | null;
   removed_by: string | null;
   removed_by_name: string | null;

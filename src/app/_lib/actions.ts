@@ -16,6 +16,8 @@ import { loadBoard, type BoardData } from './board';
 import {
   memoryAddBoardNote,
   memoryAddBoardReply,
+  memoryAddCleaningReply,
+  memoryAddCleaningRequest,
   memoryAddEarlyArrival,
   memoryAddEarlyDeparture,
   memoryCheck,
@@ -23,8 +25,10 @@ import {
   memoryNote,
   memoryPack,
   memoryRemoveBoardNote,
+  memoryRemoveCleaningRequest,
   memoryRemoveEarlyArrival,
   memoryRemoveEarlyDeparture,
+  memorySetCleaningDone,
   memoryUnpack,
   type StaffResult,
 } from './memory-staff';
@@ -153,6 +157,38 @@ export async function removeEarlyDepartureAction(id: string, actionId: string): 
   return withViewer(async (viewer) => {
     if (supabaseConfigured()) return rpc('remove_early_departure', { p_id: id, p_action_id: actionId });
     return memoryRemoveEarlyDeparture(memoryRepo(), viewer, id);
+  });
+}
+
+/** "Info pre upratovačov" (Martina, 2026-10-30): a message for the cleaners on `date`, optionally about one flat. */
+export async function addCleaningRequestAction(date: string, listingId: string | null, text: string, actionId: string): Promise<ActionResult> {
+  return withViewer(async (viewer) => {
+    if (supabaseConfigured()) return rpc('add_cleaning_request', { p_date: date, p_listing_id: listingId, p_text: text, p_action_id: actionId });
+    return memoryAddCleaningRequest(memoryRepo(), viewer, date, listingId, text, actionId);
+  });
+}
+
+/** A reply under a message for the cleaners. */
+export async function addCleaningReplyAction(parentId: string, text: string, actionId: string): Promise<ActionResult> {
+  return withViewer(async (viewer) => {
+    if (supabaseConfigured()) return rpc('add_cleaning_reply', { p_parent: parentId, p_text: text, p_action_id: actionId });
+    return memoryAddCleaningReply(memoryRepo(), viewer, parentId, text, actionId);
+  });
+}
+
+/** Ticks a message for the cleaners as done (or takes the tick back). */
+export async function setCleaningDoneAction(id: string, done: boolean): Promise<ActionResult> {
+  return withViewer(async (viewer) => {
+    if (supabaseConfigured()) return rpc('set_cleaning_request_done', { p_id: id, p_done: done });
+    return memorySetCleaningDone(memoryRepo(), viewer, id, done);
+  });
+}
+
+/** Removes a message or reply for the cleaners (author or app admin). */
+export async function removeCleaningRequestAction(id: string): Promise<ActionResult> {
+  return withViewer(async (viewer) => {
+    if (supabaseConfigured()) return rpc('remove_cleaning_request', { p_id: id });
+    return memoryRemoveCleaningRequest(memoryRepo(), viewer, id);
   });
 }
 

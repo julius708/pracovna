@@ -5,6 +5,7 @@ import { createServerSupabase } from '@/db/server';
 import type { Checklist, PackageStatus } from '@/db/types';
 import { env } from '@/env';
 import { createRepoFromEnv } from '@/sync/context';
+import { CLEANING_REQUEST_COLUMNS, cleaningRights, type CleaningData, type CleaningRequest } from './cleaning';
 import { supabaseConfigured, type Viewer } from './viewer';
 
 /** The subset of a package the board renders. */
@@ -100,6 +101,8 @@ export interface BoardData {
   listings: { id: string; name: string }[];
   /** listing id -> cleaning company (null when none). */
   cleaners: Record<string, string | null>;
+  /** "Info pre upratovačov" for the viewer's app roles (empty when the viewer may not see it). */
+  cleaning: CleaningData;
   /** Flats whose Guesty laundry field says "Kapsule: nedávať" (Martina, 2026-10-19): the card says so in red. */
   noCapsules: string[];
   status: { lastOkSyncAt: string | null; consecutiveFailures: number };
@@ -135,6 +138,7 @@ export async function loadBoard(viewer: Viewer): Promise<BoardData> {
     const listingRows = (ls.data ?? []) as { guesty_id: string; name: string; cleaner: string | null; in_scope: boolean; capsules: unknown }[];
     for (const l of listingRows) cleaners[l.guesty_id] = l.cleaner;
     const status = (st.data ?? {}) as { last_ok_sync_at?: string | null; consecutive_failures?: number };
+    const cleaning = await loadCleaning(db, dates);
     return {
       today,
       dates,
@@ -145,6 +149,7 @@ export async function loadBoard(viewer: Viewer): Promise<BoardData> {
       listings: pickerListings(listingRows.map((l) => ({ guesty_id: l.guesty_id, name: l.name, in_scope: l.in_scope }))),
       cleaners,
       noCapsules: listingRows.filter((l) => capsulesRefused(l.capsules)).map((l) => l.guesty_id),
+      cleaning,
       status: { lastOkSyncAt: status.last_ok_sync_at ?? null, consecutiveFailures: status.consecutive_failures ?? 0 },
       loadedAt,
       live: true,
@@ -198,6 +203,7 @@ export async function loadBoard(viewer: Viewer): Promise<BoardData> {
     listings: pickerListings(listings),
     cleaners,
     noCapsules: listings.filter((l) => l.in_scope && capsulesRefused(l.laundry?.capsules)).map((l) => l.guesty_id),
+    cleaning: memoryCleaning(repo as MemoryRepo, listings, dates, viewer),
     status: { lastOkSyncAt: lastOk, consecutiveFailures: failures ?? 0 },
     loadedAt,
     live: false,
@@ -215,4 +221,35 @@ function pickerListings(rows: { guesty_id: string; name: string; in_scope: boole
 /** The parsed "Kapsule:" line is an explicit none ("nedávať", "žiadne"): an empty list, not a missing line (null). */
 function capsulesRefused(capsules: unknown): boolean {
   return Array.isArray(capsules) && capsules.length === 0;
+}
+
+type ServerDb = NonNullable<Awaited<ReturnType<typeof createServerSupabase>>>;
+
+/** "Info pre upratovačov": the viewer's app roles decide; nothing is read for anyone else (RLS checks the same). */
+async function loadCleaning(db: ServerDb, dates: readonly Ymd[]): Promise<CleaningData> {
+  const roles = await db.rpc('current_app_roles');
+  const rights = cleaningRights(Array.isArray(roles.data) ? (roles.data as string[]) : []);
+  if (!rights.read) return { rights, info: {}, requests: [] };
+  const [li, rq] = await Promise.all([
+    db.from('listings').select('guesty_id, cleaning_info').eq('in_scope', true).not('cleaning_info', 'is', null),
+    db.from('cleaning_requests').select(CLEANING_REQUEST_COLUMNS).in('date', dates as Ymd[]).is('removed_at', null).order('created_at'),
+  ]);
+  if (li.error) throw new Error(`listings.cleaning_info: ${li.error.message}`);
+  if (rq.error) throw new Error(`cleaning_requests: ${rq.error.message}`);
+  const info: Record<string, string> = {};
+  for (const l of (li.data ?? []) as { guesty_id: string; cleaning_info: string | null }[]) if (l.cleaning_info?.trim()) info[l.guesty_id] = l.cleaning_info;
+  return { rights, info, requests: ((rq.data ?? []) as CleaningRequest[]).map((r) => ({ ...r, date: String(r.date).slice(0, 10) })) };
+}
+
+/** Seed mode: the admin stand-in has the app role admin, the staff stand-in none. */
+function memoryCleaning(repo: MemoryRepo, listings: { guesty_id: string; in_scope: boolean; cleaning_info?: string | null }[], dates: readonly Ymd[], viewer: Viewer): CleaningData {
+  const rights = cleaningRights(viewer.role === 'admin' ? ['admin'] : []);
+  if (!rights.read) return { rights, info: {}, requests: [] };
+  const info: Record<string, string> = {};
+  for (const l of listings) if (l.in_scope && l.cleaning_info?.trim()) info[l.guesty_id] = l.cleaning_info;
+  const requests = (repo.cleaningRequests ?? [])
+    .filter((r) => !r.removed_at && (dates as readonly string[]).includes(r.date))
+    .sort((a, b) => a.created_at.localeCompare(b.created_at))
+    .map((r) => ({ id: r.id, date: r.date, listing_id: r.listing_id, listing_name: r.listing_name, text: r.text, author: r.author, author_name: r.author_name, created_at: r.created_at, parent_id: r.parent_id, done_at: r.done_at, done_by_name: r.done_by_name }));
+  return { rights, info, requests };
 }

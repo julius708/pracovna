@@ -8,7 +8,7 @@ import { GUESTY_AUTHOR, planEarlyArrivals, syncEarlyArrivals } from '@/sync/earl
 const DATES = ['2026-10-11', '2026-10-12', '2026-10-13', '2026-10-14', '2026-10-15', '2026-10-16', '2026-10-17'];
 
 function listing(id: string, name: string, inScope = true): ListingRow {
-  return { guesty_id: id, name, title: null, city: 'Bratislava', active: true, accommodates: 2, bedrooms: 1, bathrooms: 1, beds: { KING_BED: 1 }, beds_source: 'listingRooms', tags: [], laundry_raw: null, laundry: null, cleaner: null, owner_cleans: false, in_scope: inScope, exclusion_reason: null, fetched_at: '2026-10-11T06:00:00Z' };
+  return { guesty_id: id, name, title: null, city: 'Bratislava', active: true, accommodates: 2, bedrooms: 1, bathrooms: 1, beds: { KING_BED: 1 }, beds_source: 'listingRooms', tags: [], laundry_raw: null, laundry: null, cleaner: null, cleaning_info: null, owner_cleans: false, in_scope: inScope, exclusion_reason: null, fetched_at: '2026-10-11T06:00:00Z' };
 }
 
 function reservation(id: string, listingId: string, checkIn: string, arrival: string | null, over: Partial<ReservationRow> = {}): ReservationRow {

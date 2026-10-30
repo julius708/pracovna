@@ -65,11 +65,19 @@ export function mapListing(raw: ParsedListing, ctx: ListingMapContext): ListingR
   const values = entries.length ? entries : (ctx.customFieldValues ?? []).map((v) => ({ fieldId: v.fieldId ?? '', value: v.value, fullText: v.fullText }));
   let laundryRaw: string | null = null;
   let cleaner: string | null = null;
+  let cleaningInfo: string | null = null;
   for (const e of values) {
     const name = ctx.fieldNames?.[e.fieldId] ?? '';
     const isLaundry = e.fieldId === ctx.laundryFieldId || (!!name && norm(name).includes('pracovn'));
-    const isCleaner = (ctx.cleanerFieldId && e.fieldId === ctx.cleanerFieldId) || (!!name && norm(name).includes('upratov'));
-    if (isLaundry) {
+    // "INFO PRE UPRATOVAČOV" (key info_pre_upratovačov) is the standing note for the cleaners (Martina, 2026-10-30);
+    // it also says "upratov", so the cleaning-company field ("Upratovacia služba") must not be an "info" one
+    const isCleaningInfo = !!name && norm(name).includes('upratov') && norm(name).includes('info');
+    const isCleaner = (ctx.cleanerFieldId && e.fieldId === ctx.cleanerFieldId) || (!!name && norm(name).includes('upratov') && !isCleaningInfo);
+    if (isCleaningInfo) {
+      const full = fieldText(e.fullText);
+      const val = fieldText(e.value);
+      cleaningInfo = full && val ? (full.length >= val.length ? full : val) : (full ?? val);
+    } else if (isLaundry) {
       const full = fieldText(e.fullText);
       const val = fieldText(e.value);
       // prefer the longer of the two: one of them may be truncated (probe decides which)
@@ -115,6 +123,7 @@ export function mapListing(raw: ParsedListing, ctx: ListingMapContext): ListingR
     laundry_raw: laundryRaw,
     laundry,
     cleaner,
+    cleaning_info: cleaningInfo,
     owner_cleans: scope.reason === 'owner_id' || scope.reason === 'owner_tag' || scope.reason === 'owner_text',
     in_scope: scope.inScope,
     exclusion_reason: scope.reason,

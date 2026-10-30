@@ -22,7 +22,7 @@ function sub(endpoint: string, user = 'Angelika'): PushSubscriptionRow {
 describe('push notifications for early arrivals (owner, 2026-10-11)', () => {
   it('one message per arrival: the time in the title, the flat with its alias and the day in the body, one tag per flat and day', () => {
     const msgs = earlyArrivalMessages([row(), row({ listing_id: 'L9', listing_name: 'Mestská, Modern', date: '2026-10-11', arrival: '12:00' }), row({ listing_id: 'L8', listing_name: 'Vysoká, President', date: '2026-10-14' })], '2026-10-11');
-    expect(msgs[0]).toEqual({ title: '⏰ Skorý príchod o 13:00', body: 'Poštová, Heart (č. bytu 606) · zajtra 12.10. – hosť môže byť v byte skôr', tag: 'early-arrival|69e7584bd6397b001423638a|2026-10-12', url: '/' });
+    expect(msgs[0]).toEqual({ title: '⏰ Skorý príchod o 13:00', body: 'Poštová, Heart (č. bytu 606) · zajtra 12.10. – hosť môže byť v byte skôr', tag: 'early-arrival|69e7584bd6397b001423638a|2026-10-12', url: '/pracovna/' });
     expect(msgs[1].body).toBe('Mestská, Modern · dnes 11.10. – hosť môže byť v byte skôr');
     expect(msgs[2].body).toBe('Vysoká, President · st 14.10. – hosť môže byť v byte skôr');
   });

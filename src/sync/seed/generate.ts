@@ -43,6 +43,9 @@ export interface SeedScenarioCounts {
  * reservation, far next reservation, two check-outs of one flat on one day,
  * a multi-listing stay, a cancelled reservation.
  */
+/** The seed's id of the Guesty custom field "INFO PRE UPRATOVAČOV". */
+const SEED_CLEANING_INFO_FIELD = '5eed00000000000000c1ea01';
+
 export function generateSeedData(listings: ParsedListing[], opts: SeedOptions): { data: FakeGuestyData; counts: SeedScenarioCounts } {
   const rand = rng(opts.seed ?? Number(opts.today.replace(/-/g, '')));
   const perDay = opts.perDay ?? 20;
@@ -184,12 +187,23 @@ export function generateSeedData(listings: ParsedListing[], opts: SeedOptions): 
     calendar[l._id] = list;
   }
 
+  // "INFO PRE UPRATOVAČOV" on every 4th flat in scope, as Guesty sends it inline (Martina, 2026-10-30)
+  const withCleaningInfo = new Set(inScope.filter((_, i) => i % 4 === 0).map((l) => l._id));
+  const seeded = listings.map((l) =>
+    withCleaningInfo.has(l._id)
+      ? { ...l, customFields: [...(Array.isArray(l.customFields) ? l.customFields : []), { fieldId: SEED_CLEANING_INFO_FIELD, value: 'Kúrenie nastaviť max. na 3.\nKľúč od pivnice je v zásuvke pri dverách.' }] }
+      : l,
+  );
+
   return {
     data: {
-      listings,
+      listings: seeded,
       reservations,
       calendar,
-      customFieldDefs: [{ fieldId: '6ab385c5bcf98e0011a9419d', displayName: 'Informácie do práčovne', key: 'informacie_do_pracovne', object: 'listing', type: 'longtext' }],
+      customFieldDefs: [
+        { fieldId: '6ab385c5bcf98e0011a9419d', displayName: 'Informácie do práčovne', key: 'informacie_do_pracovne', object: 'listing', type: 'longtext' },
+        { fieldId: SEED_CLEANING_INFO_FIELD, displayName: 'INFO PRE UPRATOVAČOV', key: 'info_pre_upratovačov', object: 'listing', type: 'longtext' },
+      ],
       webhooks: [],
     },
     counts,

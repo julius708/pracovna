@@ -593,3 +593,22 @@ describe('syncListings', () => {
     expect(await repo.getListing('A')).toMatchObject({ in_scope: true, active: true });
   });
 });
+
+describe('mapListing – "INFO PRE UPRATOVAČOV" (Martina, 2026-10-30)', () => {
+  const INFO = 'f-info';
+  const COMPANY = 'f-company';
+  const names = { [INFO]: 'info_pre_upratovačov', [COMPANY]: 'Upratovacia služba' };
+  it('the note lands in cleaning_info, never in the cleaning company, and the laundry field is untouched', () => {
+    const row = mapListing(
+      listing({ _id: 'L1', customFields: [{ fieldId: LAUNDRY_FIELD_ID, value: LAUNDRY_TEXT }, { fieldId: INFO, value: 'Kúrenie max. na 3' }, { fieldId: COMPANY, value: 'Čisto s.r.o.' }] }),
+      ctx({ fieldNames: names }),
+    );
+    expect(row.cleaning_info).toBe('Kúrenie max. na 3');
+    expect(row.cleaner).toBe('Čisto s.r.o.');
+    expect(row.laundry_raw).toBe(LAUNDRY_TEXT);
+  });
+  it('no field or an empty one gives null', () => {
+    expect(mapListing(listing({ _id: 'L2', customFields: [{ fieldId: LAUNDRY_FIELD_ID, value: LAUNDRY_TEXT }] }), ctx({ fieldNames: names })).cleaning_info).toBeNull();
+    expect(mapListing(listing({ _id: 'L3', customFields: [{ fieldId: INFO, value: '  ' }] }), ctx({ fieldNames: names })).cleaning_info).toBeNull();
+  });
+});
