@@ -565,18 +565,6 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
       </section>
 
       <div className="li-shift-info">
-      <NoticeBoard
-        notes={data.notes.filter((n) => n.date === date)}
-        dayTitle={`${dayWord(sel, date)} ${formatDM(date)}`}
-        viewer={viewer}
-        now={now}
-        busy={noteBusy}
-        onAdd={(t) => void addNote(t)}
-        onReply={addReply}
-        onEdit={(n, t) => void editNote(n, t)}
-        onRemove={(n) => void removeNote(n)}
-      />
-
       {/* the day's departures above its arrivals: the departure comes first on a turnover day (Martina, 2026-10-22) */}
       <div className="early-grid">
         <EarlyDepartures
@@ -602,6 +590,19 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
       </div>
 
       </div>
+      {/* Dôležité info right above the cleaners' box (Martina, 2026-10-30) */}
+      <NoticeBoard
+        notes={data.notes.filter((n) => n.date === date)}
+        dayTitle={`${dayWord(sel, date)} ${formatDM(date)}`}
+        viewer={viewer}
+        now={now}
+        busy={noteBusy}
+        onAdd={(t) => void addNote(t)}
+        onReply={addReply}
+        onEdit={(n, t) => void editNote(n, t)}
+        onRemove={(n) => void removeNote(n)}
+      />
+
       {/* the cleaners' box sits right above the packing section, for the same day (Martina, 2026-10-30) */}
       {data.cleaning.rights.read && (
         <CleaningInfo
