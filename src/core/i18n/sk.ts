@@ -239,8 +239,6 @@ export const sk = {
     requestsLabel: 'Na tento deň',
     noRequests: 'Na tento deň zatiaľ nič.',
     placeholder: 'Napíš informáciu pre upratovačov…',
-    flat: 'Byt',
-    anyFlat: 'bez konkrétneho bytu',
     add: 'Pridať',
     reply: 'Odpovedať',
     replyPlaceholder: 'Napíš odpoveď…',

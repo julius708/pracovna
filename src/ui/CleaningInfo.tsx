@@ -13,15 +13,13 @@ export interface CleaningInfoProps {
   flats: { listing_id: string; listing_name: string; info: string }[];
   /** The day's messages and replies, oldest first. */
   requests: CleaningRequest[];
-  /** The day's check-out flats for the optional flat of a new message, by name. */
-  dayFlats: { id: string; name: string }[];
   rights: CleaningRights;
   viewer: Viewer;
   /** The board's clock (seeded from the server so SSR and client agree). */
   now: Date;
   busy: boolean;
   /** Resolve true when saved; the field then clears. */
-  onAdd: (listingId: string | null, text: string) => Promise<boolean>;
+  onAdd: (text: string) => Promise<boolean>;
   onReply: (parent: CleaningRequest, text: string) => Promise<boolean>;
   onTick: (request: CleaningRequest, done: boolean) => void;
   onRemove: (request: CleaningRequest) => void;
@@ -30,13 +28,12 @@ export interface CleaningInfoProps {
 /**
  * "🧹 Info pre upratovačov" (Martina, 2026-10-30): a grey box on the board above
  * the packing section, for the selected day. First the standing Guesty note of
- * the day's check-out flats that have one, then the day's messages: admin and
- * customer service write them, everyone who sees the box replies, cleaning /
+ * the day's check-out flats that have one, then the day's messages (plain
+ * text, no flat picker; Martina, 2026-10-30): admin and customer service write them, everyone who sees the box replies, cleaning /
  * admin / customer service tick them as done (who and when is kept).
  */
-export function CleaningInfo({ dayTitle, flats, requests, dayFlats, rights, viewer, now, busy, onAdd, onReply, onTick, onRemove }: CleaningInfoProps) {
+export function CleaningInfo({ dayTitle, flats, requests, rights, viewer, now, busy, onAdd, onReply, onTick, onRemove }: CleaningInfoProps) {
   const [text, setText] = useState('');
-  const [flat, setFlat] = useState('');
   const [replying, setReplying] = useState<{ id: string; text: string } | null>(null);
   const t = sk.cleaning;
   const top = requests.filter((r) => !r.parent_id);
@@ -46,10 +43,9 @@ export function CleaningInfo({ dayTitle, flats, requests, dayFlats, rights, view
     e.preventDefault();
     const clean = text.trim();
     if (!clean) return;
-    const ok = await onAdd(flat || null, clean);
+    const ok = await onAdd(clean);
     if (!ok) return; // keep what was typed so it can be sent again
     setText('');
-    setFlat('');
   };
 
   const sendReply = async (parent: CleaningRequest) => {
@@ -168,19 +164,6 @@ export function CleaningInfo({ dayTitle, flats, requests, dayFlats, rights, view
 
       {rights.write && (
         <form className="cleaning-form" onSubmit={(e) => void submit(e)}>
-          {dayFlats.length > 0 && (
-            <label className="arrival-field">
-              <span>{t.flat}</span>
-              <select value={flat} onChange={(e) => setFlat(e.target.value)} disabled={busy}>
-                <option value="">{t.anyFlat}</option>
-                {dayFlats.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {l.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
           <textarea aria-label={`${t.placeholder} (${dayTitle})`} value={text} onChange={(e) => setText(e.target.value)} placeholder={t.placeholder} maxLength={500} rows={2} disabled={busy} />
           <button className="btn primary" type="submit" disabled={busy || !text.trim()}>
             {t.add}

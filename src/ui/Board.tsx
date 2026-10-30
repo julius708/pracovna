@@ -416,12 +416,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
     ...over,
   });
 
-  const addCleaning = (listingId: string | null, text: string) =>
-    saveCleaning(
-      cleaningTemp({ listing_id: listingId, listing_name: listingId ? (data.listings.find((l) => l.id === listingId)?.name ?? null) : null, text }),
-      () => addCleaningRequestAction(date, listingId, text, newActionId()),
-      sk.cleaning.notSaved,
-    );
+  const addCleaning = (text: string) => saveCleaning(cleaningTemp({ text }), () => addCleaningRequestAction(date, null, text, newActionId()), sk.cleaning.notSaved);
 
   const replyCleaning = (parent: CleaningRequest, text: string) =>
     saveCleaning(cleaningTemp({ date: parent.date, listing_id: parent.listing_id, listing_name: parent.listing_name, parent_id: parent.id, text }), () => addCleaningReplyAction(parent.id, text, newActionId()), sk.cleaning.replyNotSaved);
@@ -622,7 +617,6 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
           dayTitle={`${dayWord(sel, date)} ${formatDM(date)}`}
           flats={cleaningInfoFlats(data.packages, data.cleaning.info, date)}
           requests={data.cleaning.requests.filter((r) => r.date === date)}
-          dayFlats={[...new Map(allJobs.map((p) => [p.listing_id, { id: p.listing_id, name: p.listing_name }])).values()].sort((a, b) => a.name.localeCompare(b.name, 'sk'))}
           rights={data.cleaning.rights}
           viewer={viewer}
           now={now}
