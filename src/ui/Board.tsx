@@ -551,17 +551,8 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
         </nav>
       </header>
 
-      <section className="li-day-overview" aria-label="Prehľad vybraného dňa">
-        <div className="li-day-heading"><div><span className="li-eyebrow">VYBRANÝ DEŇ · {formatDM(date)}</span><h2>{dayWord(sel, date)} v práčovni</h2></div><a href="#jobs">Prejsť na balíky ↓</a></div>
-        <div className="li-day-stats">
-          <div><span>Balíkov spolu</span><strong>{hasData ? c.total : '—'}</strong></div>
-          <div className="li-todo-stat"><span>Zostáva zabaliť</span><strong>{hasData ? c.todo : '—'}</strong></div>
-          <div><span>Už zabalené</span><strong>{hasData ? c.packed : '—'}</strong></div>
-          <div><span>Rýchle výmeny na balenie</span><strong>{hasData ? numbers.rush : '—'}</strong></div>
-        </div>
-        {hasData && c.total > 0 && <div className="li-day-progress"><progress value={c.packed} max={c.total} aria-label="Priebeh balenia"/><span>{Math.round(c.packed / c.total * 100)} % hotovo</span></div>}
-        {effectiveCleaner && <p className="li-selection-note">Prehľad je filtrovaný podľa vybranej upratovacej služby.</p>}
-      </section>
+      {/* no "Dnes v práčovni" overview (Martina, 2026-10-30); only the filter note stays */}
+      {effectiveCleaner && <p className="li-selection-note">Prehľad je filtrovaný podľa vybranej upratovacej služby.</p>}
       <section className="contact" aria-label={sk.contact.title}>
         <span className="contact-title">
           <span aria-hidden="true">📞</span> {sk.contact.title}
