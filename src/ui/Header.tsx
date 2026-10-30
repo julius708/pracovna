@@ -77,7 +77,8 @@ export function Header({
         <div className="li-account"><a className="li-back" href={HUB}>← Späť</a><RefreshButton /><span>{viewer.name}</span><form action={logoutAction} style={{ display: 'contents' }}><button type="submit">{sk.buttons.logout}</button></form></div>
       </div></div>
       <div className="li-trail"><a href={HUB}>LIVE-IN domov</a><span>Práčovňa</span></div>
-      <section className="li-page-intro"><div><span className="li-eyebrow">Upratovanie a bielizeň</span><h2>{path === '/' || path === '/packing' ? 'Pripravené na ďalší pobyt.' : NAV.find(n => n.href !== '/' && path.startsWith(n.href))?.label || 'Práčovňa'}</h2><p>Príprava balíkov, zásoby a prehľad práce na jednom mieste.</p></div><div className="li-laundry-tools">{showSync && <SyncBadge lastOkSyncAt={lastOkSyncAt} now={now} connected={connected} />}<PushToggle /></div></section>
+      {/* no intro frame (Martina, 2026-10-30): only the sync state and the notification switch stay, in a slim row */}
+      <div className="li-tools-bar">{showSync && <SyncBadge lastOkSyncAt={lastOkSyncAt} now={now} connected={connected} />}<PushToggle /></div>
       {!viewer.dev && <UsageTracker />}
     </>
   );
