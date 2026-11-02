@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import UsageTracker from './UsageTracker';
+import AppsMenu from './AppsMenu';
 import { usePathname } from 'next/navigation';
 import { logoutAction } from '@/app/_lib/actions';
 import type { Viewer } from '@/app/_lib/viewer';
@@ -71,6 +72,7 @@ export function Header({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={`${BASE}/livein-logo.png`} alt="LIVE-IN"/><span className="li-product">Práčovňa</span>
         </a>
+        <AppsMenu current="pracovna" roles={null} />
         <nav className="li-nav" aria-label="Práčovňa">
           {(admin ? NAV : [NAV[0]]).map(n => <Link key={n.href} href={n.href} aria-current={path === n.href || (n.href !== '/' && path.startsWith(`${n.href}/`)) ? 'page' : undefined}>{n.label}</Link>)}
         </nav>
