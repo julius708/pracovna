@@ -12,7 +12,8 @@ import { syncState } from './board-model';
 import { PushToggle } from './PushToggle';
 import PullToRefresh, { RefreshButton } from './Refresh';
 import { BASE, HUB } from '@/lib/base';
-import { GuruDock } from './GuruDock';
+import GuruWidget from './GuruWidget';
+import '@/app/guru-widget.css';
 
 export function LogoMark() {
   return (
@@ -82,7 +83,7 @@ export function Header({
         <div className="li-account"><a className="li-back" href={HUB}>← Späť</a><RefreshButton /><span>{viewer.name}</span><form action={logoutAction} style={{ display: 'contents' }}><button type="submit">{sk.buttons.logout}</button></form></div>
       </div></div>
       <div className="li-trail"><a href={HUB}>LIVE-IN domov</a><span>Práčovňa</span></div>
-      <GuruDock />
+      <GuruWidget name={viewer.name} app="pracovna" hub={HUB} />
       {/* no intro frame (Martina, 2026-10-30): only the sync state and the notification switch stay, in a slim row */}
       <div className="li-tools-bar">{showSync && <SyncBadge lastOkSyncAt={lastOkSyncAt} now={now} connected={connected} />}<PushToggle /></div>
       {!viewer.dev && <UsageTracker />}

@@ -1,0 +1,60 @@
+/* LIVE-IN Guru widget: postavička dole na každej stránke + čitateľné okno. Rovnaký typ ako Adam na webe. */
+.gw-host{position:fixed;z-index:2147483000;width:0;height:0}
+.gw-col{position:absolute;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;color:#233E31;animation:gw-wake .5s ease both}
+@keyframes gw-wake{from{opacity:0}to{opacity:1}}
+.gw-fig{position:relative;overflow:hidden;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;flex:0 0 auto;width:150px;height:195px}
+.gw-fig.in{cursor:default;touch-action:auto;width:178px;height:231px}
+.gw-bob{transform-origin:50% 100%;animation:gw-breathe 7s ease-in-out infinite}
+@keyframes gw-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.006)}}
+.gw-nod{position:relative;transform-origin:50% 100%}
+.gw-nod img{display:block;width:100%;height:auto;pointer-events:none;-webkit-user-drag:none}
+.gw-mouth{position:absolute;height:auto;pointer-events:none}
+.gw-fallback{width:100%;aspect-ratio:1;border-radius:50%;background:linear-gradient(145deg,#245742,#173E2C);display:grid;place-items:center;font-size:52px;box-shadow:inset 0 1px 0 #ffffff40,0 10px 26px -10px #173e2c99}
+.gw-pill{position:relative;z-index:2;margin-top:-16px;border:0;cursor:pointer;background:#173E2C;color:#fff;font:inherit;font-size:14px;font-weight:700;padding:9px 16px;border-radius:99px;box-shadow:inset 0 1px 0 #ffffff33,0 6px 18px rgba(23,62,44,.35);white-space:nowrap}
+.gw-hello{position:absolute;right:0;bottom:100%;margin-bottom:12px;width:230px;max-width:calc(100vw - 24px);background:#fff;border:2.5px solid #173E2C;border-radius:18px;padding:10px 14px;font:inherit;font-size:15px;line-height:1.45;text-align:left;color:#233E31;cursor:pointer;opacity:0;transform:translateY(6px) scale(.95);transition:opacity .3s,transform .3s;pointer-events:none;box-shadow:0 8px 24px rgba(23,62,44,.2)}
+.gw-hello.show{opacity:1;transform:none;pointer-events:auto}
+.gw-hello:after{content:"";position:absolute;bottom:-9px;right:40px;width:14px;height:14px;background:#fff;border-right:2.5px solid #173E2C;border-bottom:2.5px solid #173E2C;transform:rotate(45deg)}
+/* okno */
+.gw-win{position:fixed;right:16px;bottom:16px;z-index:2147483000;width:min(420px,calc(100vw - 16px));height:calc(100vh - 32px);max-height:660px;display:flex;flex-direction:column;background:#fff;border-radius:22px;overflow:hidden;color:#233E31;box-shadow:0 18px 60px rgba(23,62,44,.38),0 0 0 1px rgba(23,62,44,.1);animation:gw-pop .26s ease both}
+@keyframes gw-pop{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.gw-head{display:flex;align-items:flex-end;gap:12px;background:linear-gradient(#EEF3EA,#DCE8D6);padding:0 10px 0 8px;flex:0 0 auto;border-bottom:1px solid #cfdac9}
+.gw-ht{flex:1;align-self:center;min-width:0}.gw-ht b{display:block;font-size:19px;color:#173E2C;line-height:1.2}.gw-ht span{display:block;font-size:13px;color:#4f6657;line-height:1.35;margin-top:2px}
+.gw-hb{display:flex;gap:6px;align-self:flex-start;padding-top:10px}
+.gw-ib{flex:0 0 auto;width:38px;height:38px;border-radius:50%;border:0;display:grid;place-items:center;cursor:pointer;background:#fff;color:#173E2C;padding:0;box-shadow:0 0 0 1px rgba(23,62,44,.14)}
+.gw-ib svg{width:18px;height:18px}
+.gw-ib.send{background:#F46D16;color:#fff;box-shadow:none}.gw-ib.send:disabled{opacity:.5;cursor:wait}
+.gw-ib.rec{background:#F46D16;color:#fff;animation:gw-pulse 1.1s infinite;box-shadow:none}
+@keyframes gw-pulse{50%{box-shadow:0 0 0 7px rgba(244,109,22,.22)}}
+.gw-msgs{flex:1 1 auto;min-height:0;overflow-y:auto;padding:14px 12px 6px;display:flex;flex-direction:column;gap:10px;overscroll-behavior:contain}
+.gw-m{max-width:90%;padding:10px 14px;border-radius:18px;font-size:16px;line-height:1.5;overflow-wrap:anywhere;white-space:pre-wrap}
+.gw-m.a{align-self:flex-start;background:#F1F5EE;border-bottom-left-radius:5px}
+.gw-m.u{align-self:flex-end;background:#173E2C;color:#fff;border-bottom-right-radius:5px}
+.gw-w{transition:color .12s}.gw-w.off{color:transparent}
+.gw-dots i{display:inline-block;width:7px;height:7px;border-radius:50%;background:#173E2C;margin-right:4px;animation:gw-d 1s infinite}
+.gw-dots i:nth-child(2){animation-delay:.15s}.gw-dots i:nth-child(3){animation-delay:.3s}
+@keyframes gw-d{0%,100%{opacity:.25}50%{opacity:1}}
+.gw-chips{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:6px;padding:6px 12px 8px;max-height:112px;overflow-y:auto;scrollbar-width:thin}
+.gw-chips.row{flex-wrap:nowrap;overflow-y:hidden;overflow-x:auto}
+.gw-chip{flex:0 0 auto;border:1px solid #cfd8cb;background:#f6f8f3;color:#173E2C;font:inherit;font-size:14px;line-height:1.2;padding:8px 12px;border-radius:99px;cursor:pointer;text-align:left}
+.gw-chip:hover{background:#e9f0e4;border-color:#173E2C}.gw-chip:disabled{opacity:.5;cursor:default}
+.gw-chips.row .gw-chip{white-space:nowrap}
+.gw-form{flex:0 0 auto;display:flex;gap:6px;align-items:center;margin:0;padding:4px 12px 0}
+.gw-form input{flex:1;min-width:0;border:1px solid #cfd8cb;border-radius:99px;padding:10px 14px;font:inherit;font-size:16px;color:#233E31;background:#fff;outline:none}
+.gw-form input:focus{border-color:#173E2C}
+.gw-foot{flex:0 0 auto;font-size:11px;color:#8a9a8f;text-align:center;padding:6px 12px 10px;line-height:1.3}
+.gw-foot a{color:#4f6657}
+@media(max-width:699px){
+  .gw-fig{width:118px;height:153px}.gw-fig.in{width:118px;height:153px}
+  .gw-win{left:8px;right:8px;bottom:8px;width:auto;height:calc(100vh - 16px);height:calc(100dvh - 16px);max-height:none;border-radius:20px}
+}
+@media(prefers-reduced-motion:reduce){.gw-bob,.gw-col,.gw-win,.gw-dots i,.gw-ib.rec{animation:none}}
+/* brada: kópia spodnej časti tváre, pri reči sa jemne posúva dole (prirodzenejšie než kreslené ústa) */
+.gw-jaw{position:absolute;left:0;top:0;width:100%;height:auto;pointer-events:none;-webkit-user-drag:none;clip-path:inset(32.8% 33% 58.5% 33%);will-change:transform;transition:none}
+/* skutočné snímky úst: prelínanie podľa hlások, hlava sa jemne hýbe */
+.gw-vis{position:absolute;height:auto;pointer-events:none;-webkit-user-drag:none;opacity:0;will-change:opacity}
+.gw-nod{will-change:transform;transition:none}
+
+/* zaujímavosť dňa: širšia bublina, nadpis oranžový */
+.gw-hello.fact{width:300px;text-align:left;line-height:1.4;font-size:13.5px}
+.gw-hello.fact b{display:block;color:#F46D16;font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+@media(max-width:700px){.gw-hello.fact{width:min(300px,calc(100vw - 24px))}}
