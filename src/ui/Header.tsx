@@ -42,6 +42,8 @@ export function SyncBadge({ lastOkSyncAt, now, connected }: { lastOkSyncAt: stri
   );
 }
 
+/** Personál vidí históriu balenia (bez auditu udalostí a nastavení). */
+const STAFF_HISTORY = { href: '/historia/balenie', label: 'História' };
 const NAV: { href: string; label: string }[] = [
   { href: '/', label: 'Balenie' },
   { href: '/nastavenia', label: sk.buttons.settings },
@@ -74,7 +76,7 @@ export function Header({
         </a>
         <AppsMenu current="pracovna" roles={null} />
         <nav className="li-nav" aria-label="Práčovňa">
-          {(admin ? NAV : [NAV[0]]).map(n => <Link key={n.href} href={n.href} aria-current={path === n.href || (n.href !== '/' && path.startsWith(`${n.href}/`)) ? 'page' : undefined}>{n.label}</Link>)}
+          {(admin ? NAV : [NAV[0], STAFF_HISTORY]).map(n => <Link key={n.href} href={n.href} aria-current={path === n.href || (n.href !== '/' && path.startsWith(`${n.href}/`)) ? 'page' : undefined}>{n.label}</Link>)}
         </nav>
         <div className="li-account"><a className="li-back" href={HUB}>← Späť</a><RefreshButton /><span>{viewer.name}</span><form action={logoutAction} style={{ display: 'contents' }}><button type="submit">{sk.buttons.logout}</button></form></div>
       </div></div>

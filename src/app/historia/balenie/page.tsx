@@ -16,11 +16,12 @@ export const dynamic = 'force-dynamic';
 export default async function PackingLogPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const viewer = await getViewer();
   if (!viewer) redirect('/login');
-  if (viewer.role !== 'admin') redirect('/');
+  // Personál si môže pozrieť, ako sa balilo v minulých dňoch (nápad z tímového feedbacku); udalosti a CSV zostávajú pre správcu.
+  const admin = viewer.role === 'admin';
   const sp = await searchParams;
   // cards are packed up to a week ahead, so the default range runs from last week to the end of the board window
   const today = todayInTz(new Date());
-  const f = historyFilterFrom((k) => (typeof sp[k] === 'string' ? (sp[k] as string) : undefined), today, { to: addDays(today, WINDOW_DAYS - 1) });
+  const f = historyFilterFrom((k) => (typeof sp[k] === 'string' ? (sp[k] as string) : undefined), today, { to: addDays(today, admin ? WINDOW_DAYS - 1 : 0) });
   const view = await loadPackingLog(f);
   const qs = new URLSearchParams({ od: f.from, do: f.to, ...(f.listingId ? { byt: f.listingId } : {}), ...(f.actor ? { osoba: f.actor } : {}) });
 
@@ -28,7 +29,7 @@ export default async function PackingLogPage({ searchParams }: { searchParams: P
     <AdminShell viewer={viewer}>
       <section className="sheet">
         <h2>História</h2>
-        <HistoryNav current="packed" />
+        <HistoryNav current="packed" admin={admin} />
         <p style={{ color: 'var(--muted)', marginTop: 0 }}>
           Čo presne sa zabalilo: kto, kedy, na koľko osôb a koľko čoho – tak, ako to bolo na karte vo chvíli zabalenia. Pri každom dni je aj Dôležité info toho dňa; karta s poznámkou (niečo treba doniesť) je označená {BILLING_NOTE}.
         </p>
@@ -68,11 +69,13 @@ export default async function PackingLogPage({ searchParams }: { searchParams: P
               Filtrovať
             </button>
           </div>
-          <div className="form-row">
-            <a className="btn ghost" style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center' }} href={`/historia/balenie/export.csv?${qs.toString()}`}>
-              {sk.buttons.exportCsv}
-            </a>
-          </div>
+          {admin && (
+            <div className="form-row">
+              <a className="btn ghost" style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center' }} href={`/historia/balenie/export.csv?${qs.toString()}`}>
+                {sk.buttons.exportCsv}
+              </a>
+            </div>
+          )}
         </form>
         {view.rows.length === 0 ? (
           <div className="empty-note">Žiadne zabalené balíčky pre tento filter.</div>
