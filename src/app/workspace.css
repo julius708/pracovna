@@ -143,3 +143,18 @@ body{background-image:radial-gradient(ellipse 70% 700px at 0% 0%,#c4d9c9bf,trans
 @media (max-width:420px){.am-list{grid-template-columns:1fr}.am-tx small{display:block}}
 @media (prefers-reduced-motion:reduce){.am-panel{animation:none}.am-btn,.am-item,.am-ic,.am-grid{transition:none}}
 @media (prefers-reduced-transparency:reduce),(prefers-contrast:more){.am-panel{background:#FCFBF8;-webkit-backdrop-filter:none;backdrop-filter:none}}
+
+/* LIVE-IN Guru v Práčovni: postavička + okno s chatom (iframe z hlavnej appky) */
+.guru-dock{position:fixed;right:18px;bottom:16px;z-index:60;display:flex;flex-direction:column;align-items:center;gap:0;border:0;background:transparent;padding:0;cursor:pointer;font:inherit}
+.guru-dock img{width:96px;height:auto;display:block;filter:drop-shadow(0 10px 18px rgba(23,62,44,.35));transition:transform .2s}
+.guru-dock:hover img{transform:translateY(-3px)}
+.guru-dock span{margin-top:-14px;background:#173E2C;color:#fff;font-weight:800;font-size:13px;padding:8px 14px;border-radius:999px;box-shadow:0 6px 16px rgba(23,62,44,.3);border:1px solid #ffffff40}
+.guru-dock.on span{background:#F46D16}
+.guru-panel{position:fixed;right:18px;bottom:150px;z-index:59;width:min(420px,calc(100vw - 36px));height:min(620px,calc(100vh - 190px));border-radius:24px;overflow:hidden;background:rgba(255,254,251,.78);-webkit-backdrop-filter:blur(30px) saturate(160%);backdrop-filter:blur(30px) saturate(160%);border:1px solid #ffffffcc;box-shadow:0 30px 70px -28px rgba(23,62,44,.6);display:none;flex-direction:column}
+.guru-panel.open{display:flex;animation:guru-in .25s cubic-bezier(.2,.8,.2,1) both}
+@keyframes guru-in{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:none}}
+.guru-panel-head{display:flex;align-items:center;gap:10px;padding:12px 14px;background:#173E2C;color:#fff}
+.guru-panel-head b{font-size:15px}.guru-panel-head small{flex:1;color:#C8D6CB;font-size:12px}
+.guru-panel-head button{border:0;background:#ffffff22;color:#fff;width:32px;height:32px;border-radius:50%;font-size:20px;line-height:1;cursor:pointer}
+.guru-panel iframe{flex:1;width:100%;border:0;background:transparent}
+@media(max-width:820px){.guru-dock{right:10px;bottom:calc(70px + env(safe-area-inset-bottom))}.guru-dock img{width:72px}.guru-panel{right:8px;left:8px;width:auto;bottom:calc(150px + env(safe-area-inset-bottom));height:min(560px,calc(100vh - 230px))}}
