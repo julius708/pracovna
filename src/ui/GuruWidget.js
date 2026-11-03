@@ -69,9 +69,9 @@ export default function GuruWidget({ name = '', app = 'home', hub = '' }) {
     const t = setTimeout(() => { if (!sstore('guru-hello')) { sstore('guru-hello', '1'); setHello(true); setTimeout(() => setHello(false), 9000) } }, 1500)
     // pri každom otvorení appky (nový príchod alebo po 30 min): Guru pozdraví menom – bublina + hlas (hlas hneď, ak to prehliadač dovolí, inak po prvom kliknutí)
     const factTimer = setTimeout(() => {
-      const last = Number(store('guru-fact-at') || 0)
-      if (Date.now() - last < 30 * 60 * 1000 || !mountedRef.current) return
-      store('guru-fact-at', String(Date.now()))
+      // raz za otvorenie appky (nová karta alebo nové spustenie), nie pri každom prechode medzi stránkami
+      if (sstore('guru-greeted') || !mountedRef.current) return
+      sstore('guru-greeted', '1')
       setHello(false); setFact('hi')
       tellFact(`Ahoj${first ? ', ' + first : ''}!`)
     }, 2000)
