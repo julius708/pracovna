@@ -8,7 +8,7 @@ import { MOUTH, stripMarkdown, visAt, timelineFrom, clampPos } from '@/lib/guru-
 
 // Otázky a pozdrav podľa appky, v ktorej Guru práve je (rovnaký widget vo všetkých appkách, iný obsah).
 const APP_GURU = {
-  home: { hello: 'Ahoj, som LIVE-IN Guru. Opýtaj sa ma na byty, rezervácie alebo postupy.', chips: ['Čo dnes potrebuje moju pozornosť?', 'Koľko máme dnes príchodov a odchodov?', 'Aký je kód od dverí na byte…', 'Ako riešime neskorý check-in?', 'Napíš hosťovi odpoveď na sťažnosť na hluk'] },
+  home: { hello: 'Ahoj, som LIVE-IN Guru. Opýtaj sa ma na byty, rezervácie alebo postupy.', chips: ['Čo dnes potrebuje moju pozornosť?', 'Aké opravy sú v Asane otvorené?', 'Koľko máme dnes príchodov a odchodov?', 'Aký je kód od dverí na byte…', 'Napíš hosťovi odpoveď na sťažnosť na hluk'] },
   pracovna: { hello: 'Ahoj, som Guru. V Práčovni ti poradím s taškami, prádlom a kto čo balil.', chips: ['Koľko tašiek sa dnes balí a na koľko osôb?', 'Ktoré byty majú zajtra odchod aj príchod v jeden deň?', 'Ako sa počíta prádlo pre byt s deťmi?', 'Čo dať do tašky navyše pri dlhšom pobyte?', 'Kto včera balil tašky a bolo niečo zrušené?'] },
   ring: { hello: 'Ahoj, som Guru. Pomôžem s odkazmi pre hostí a vstupmi do budov.', chips: ['Ako vytvorím odkaz pre hosťa a čo mu napísať?', 'Ktoré budovy majú Ring offline?', 'Hosť nevie otvoriť dvere – čo skontrolovať?', 'Ako dlho platí odkaz a ako ho zruším?', 'Napíš hosťovi správu k vstupu do budovy'] },
   cs: { hello: 'Ahoj, som Guru. Pomôžem so zmenou, hosťami a odpoveďami.', chips: ['Čo dnes potrebuje moju pozornosť?', 'Koľko máme dnes príchodov a odchodov?', 'Ktoré byty sú dnes voľné?', 'Napíš hosťovi odpoveď na sťažnosť na hluk', 'Ako riešime neskorý check-in?'] },
