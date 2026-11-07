@@ -27,6 +27,17 @@ const SILENT = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAA
 function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v) } catch {} return null }
 function sstore(k, v) { try { if (v === undefined) return sessionStorage.getItem(k); sessionStorage.setItem(k, v) } catch {} return null }
 function uuid() { try { return crypto.randomUUID() } catch { return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => { const r = (Math.random() * 16) | 0; return (c === 'x' ? r : (r & 3) | 8).toString(16) }) } }
+// Prihlásenie tejto appky pre Guru: hlavná appka nemá náš cookie, preto jej pošleme krátkodobý token (Bearer).
+let tokenCache = { token: '', until: 0 }
+async function authHeaders() {
+  try {
+    if (tokenCache.token && Date.now() < tokenCache.until) return { authorization: 'Bearer ' + tokenCache.token }
+    const r = await fetch('/pracovna/api/guru-token', { cache: 'no-store', credentials: 'same-origin' })
+    const j = await r.json()
+    if (j && j.ok && j.token) { tokenCache = { token: j.token, until: Date.now() + 4 * 60 * 1000 }; return { authorization: 'Bearer ' + j.token } }
+  } catch {}
+  return {}
+}
 function b64blob(b64) { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new Blob([u], { type: 'audio/mpeg' }) }
 
 const ICON_ON = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z" /><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" /></svg>
@@ -222,7 +233,7 @@ export default function GuruWidget({ name = '', app = 'home', hub = '' }) {
     if (muted) { if (revealId.current) reveal(revealId.current, 1); return }
     let url = null, tl = null
     try {
-      const r = await fetch(`${API}/api/guru/tts`, { method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text }) })
+      const r = await fetch(`${API}/api/guru/tts`, { method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json', ...(await authHeaders()) }, body: JSON.stringify({ text }) })
       if (!r.ok) throw new Error('tts ' + r.status)
       const j = await r.json()
       if (!j.ok || !j.audio) throw new Error('tts')
@@ -256,7 +267,7 @@ export default function GuruWidget({ name = '', app = 'home', hub = '' }) {
     scrollEnd()
     let reply
     try {
-      const r = await fetch(`${API}/api/guru`, { method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ question, turnId: uuid(), mode: 'widget', app }), signal: AbortSignal.timeout(70000) })
+      const r = await fetch(`${API}/api/guru`, { method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json', ...(await authHeaders()) }, body: JSON.stringify({ question, turnId: uuid(), mode: 'widget', app }), signal: AbortSignal.timeout(70000) })
       const j = await r.json()
       if (!r.ok || !j.ok) throw new Error(j.error || 'chat')
       reply = stripMarkdown(j.text || '').trim() || ERR
@@ -305,7 +316,7 @@ export default function GuruWidget({ name = '', app = 'home', hub = '' }) {
   function note(text) { setMsgs((old) => [...old.filter((m) => !m.thinking), { id: uuid(), role: 'a', text }]); scrollEnd() }
   async function transcribe(blob) {
     const fd = new FormData(); fd.append('audio', blob, blob.type.includes('mp4') ? 'audio.mp4' : 'audio.webm')
-    const r = await fetch(`${API}/api/guru/stt`, { method: 'POST', credentials: 'include', body: fd, signal: AbortSignal.timeout(30000) })
+    const r = await fetch(`${API}/api/guru/stt`, { method: 'POST', credentials: 'include', headers: await authHeaders(), body: fd, signal: AbortSignal.timeout(30000) })
     const j = await r.json().catch(() => ({}))
     if (r.status === 503) throw new Error('nokey')
     if (!r.ok || !j.ok) throw new Error('stt')
