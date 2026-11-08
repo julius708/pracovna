@@ -233,7 +233,7 @@ export const sk = {
   },
   /** "USPORIADANIE KLUCOV": the folded key list above "Dôležité info" (Martina, 2026-11-08). */
   keys: {
-    title: 'USPORIADANIE KLUCOV',
+    title: 'USPORIADANIE KĽÚČOV',
     open: 'Zobraziť zoznam',
     close: 'Skryť zoznam',
     count: (n: number) => `${n} bytov`,
