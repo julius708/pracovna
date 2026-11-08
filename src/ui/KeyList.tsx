@@ -27,7 +27,10 @@ export function KeyList() {
         <ol id="keys-list" className="keys-list">
           {KEYS.map((k) => (
             <li key={`${k.code}-${k.name}`} className="keys-row">
-              <span className="keys-name">{k.name}</span>
+              <span className="keys-name">
+                {k.name}
+                {(k.address || k.detail) && <small className="keys-where">{[k.address, k.detail].filter(Boolean).join(' · ')}</small>}
+              </span>
               <span className="keys-dash" aria-hidden="true">
                 –
               </span>

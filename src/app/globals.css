@@ -356,6 +356,7 @@ td input.lbl{width:190px;text-align:left}
 .keys-row{display:flex;align-items:center;gap:8px;min-height:44px;padding:6px 4px;border-bottom:1px solid #DCE2D9;color:#233E31;font-size:16px}
 .keys-row:last-child{border-bottom:0}
 .keys-name{flex:1 1 auto;min-width:0;overflow-wrap:anywhere;font-weight:600}
+.keys-where{display:block;font-size:13px;font-weight:500;color:#5C6B61;margin-top:1px}
 .keys-dash{color:#7A867D}
 .keys-code{flex:0 0 auto;min-width:62px;text-align:center;padding:5px 10px;border-radius:999px;font-variant-numeric:tabular-nums;font-size:16px;font-weight:800;border:1px solid transparent}
 .keys-code.row-a{background:#D3F9D8;color:#1E6B30;border-color:#69DB7C}
