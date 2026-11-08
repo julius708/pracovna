@@ -28,3 +28,11 @@ describe('USPORIADANIE KĽÚČOV – Guesty names and addresses', () => {
     expect(KEYS.filter((k) => k.name.endsWith('?')).map((k) => k.name)).toEqual(['Jarabinková A, Pan.?', 'Jarabinková B,Bright?', 'Pionierska?']);
   });
 });
+
+describe('USPORIADANIE KĽÚČOV – Skypark towers (Martina, 2026-11-08)', () => {
+  it('each Skypark flat shows its tower, floor and apartment', () => {
+    expect(KEYS.find((k) => k.code === 'D61')).toMatchObject({ name: 'Skypark, Elegant', address: 'Čulenova 5', detail: 'Tower 1 · 10. poschodie · apartmán 089' });
+    expect(KEYS.find((k) => k.code === 'D62')?.detail).toBe('Tower 4 · 17. poschodie · apartmán 159');
+    expect(KEYS.filter((k) => k.name.startsWith('Skypark') && k.detail?.startsWith('Tower'))).toHaveLength(9);
+  });
+});
