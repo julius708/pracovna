@@ -23,7 +23,6 @@ export const KEYS: readonly KeySpot[] = [
   { name: 'Bernolákova, Sunny', code: 'A15', address: 'Bernolákova 3' },
   { name: 'Dobrovského, Spacious', code: 'B87', address: 'Dobrovského 4' },
   { name: 'Dohnanyho, Unique', code: 'A11', address: 'Dohnányho 12' },
-  { name: 'Dunajska 66', code: 'C105' },
   { name: 'Dunajská A, Danube', code: 'C102', address: 'Dunajská 66' },
   { name: 'Dunajská B, White', code: 'C103', address: 'Dunajská 64' },
   { name: 'Dunajská C, Sophisticated', code: 'C104', address: 'Dunajská 58' },

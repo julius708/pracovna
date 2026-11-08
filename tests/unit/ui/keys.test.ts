@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { KEYS, keyRow } from '@/core/keys';
 
 describe('USPORIADANIE KLUCOV (Martina, 2026-11-08)', () => {
-  it('holds the 97 flats in the office order, first and last as given', () => {
-    expect(KEYS).toHaveLength(97);
+  it('holds the 96 flats in the office order, first and last as given (Dunajska 66 = Dunajská A, removed 2026-11-08)', () => {
+    expect(KEYS).toHaveLength(96);
+    expect(KEYS.some((k) => k.code === 'C105')).toBe(false);
     expect(KEYS[0]).toMatchObject({ name: '29. Augusta, Grand', code: 'A10' });
-    expect(KEYS[21]).toMatchObject({ name: 'Ivanská, Airport', code: 'B93' });
-    expect(KEYS[96]).toMatchObject({ name: 'Zochova, Vintage', code: 'A138' });
+    expect(KEYS[20]).toMatchObject({ name: 'Ivanská, Airport', code: 'B93' });
+    expect(KEYS[95]).toMatchObject({ name: 'Zochova, Vintage', code: 'A138' });
   });
 
   it('every code is a hook row A-D with a number, and no code repeats', () => {
