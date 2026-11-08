@@ -16,6 +16,7 @@ import { CleaningInfo } from './CleaningInfo';
 import { EarlyArrivals } from './EarlyArrivals';
 import { EarlyDepartures } from './EarlyDepartures';
 import { Header } from './Header';
+import { KeyList } from './KeyList';
 import { NoticeBoard } from './NoticeBoard';
 import { PackageCard, type CardHandlers } from './PackageCard';
 import { Summary } from './Summary';
@@ -590,6 +591,9 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
 
       </div>
       {/* Dôležité info right above the cleaners' box (Martina, 2026-10-30) */}
+      {/* the key list sits right above Dôležité info (Martina, 2026-11-08) */}
+      <KeyList />
+
       <NoticeBoard
         notes={data.notes.filter((n) => n.date === date)}
         dayTitle={`${dayWord(sel, date)} ${formatDM(date)}`}

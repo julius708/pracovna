@@ -231,6 +231,13 @@ export const sk = {
     wrongProtocol: 'Táto tlačiareň nepoužíva protokol X6 (služba AE30) – tlač zastavená. Daj vedieť Martine.',
     failed: 'Štítok sa nepodarilo vytlačiť. Skús znova.',
   },
+  /** "USPORIADANIE KLUCOV": the folded key list above "Dôležité info" (Martina, 2026-11-08). */
+  keys: {
+    title: 'USPORIADANIE KLUCOV',
+    open: 'Zobraziť zoznam',
+    close: 'Skryť zoznam',
+    count: (n: number) => `${n} bytov`,
+  },
   /** "Info pre upratovačov": the grey box above the packing section (Martina, 2026-10-30). */
   cleaning: {
     title: 'Info pre upratovačov',
