@@ -25,7 +25,7 @@ describe('USPORIADANIE KĽÚČOV – Guesty names and addresses', () => {
     const by = (name: string) => KEYS.find((k) => k.name === name);
     expect(by('Poštová, Heart')).toEqual({ name: 'Poštová, Heart', code: 'B90', address: 'Poštová 1', detail: 'č. bytu 606' });
     expect(by('Obchodná B, Romantic')?.address).toBe('Obchodná 4');
-    expect(KEYS.filter((k) => k.name.endsWith('?')).map((k) => k.name)).toEqual(['Jarabinková A, Pan.?', 'Jarabinková B,Bright?', 'Pionierska?']);
+    expect(KEYS.filter((k) => k.name.endsWith('?')).map((k) => k.name)).toEqual(['Jarabinková B,Bright?', 'Pionierska?']);
   });
 });
 
@@ -60,5 +60,19 @@ describe('USPORIADANIE KĽÚČOV – Modrá Guľa in a row (Martina, 2026-11-09)
   it('floors 2-6 hang on D124-D128 in order', () => {
     expect(KEYS.filter((k) => k.name.startsWith('Modrá Guľa')).map((k) => k.code)).toEqual(['D124', 'D125', 'D126', 'D127', 'D128']);
     expect(KEYS.some((k) => k.code === 'D130' || k.code === 'D132')).toBe(false);
+  });
+});
+
+describe('USPORIADANIE KĽÚČOV – Obchodná 9 (Martina, 2026-11-09)', () => {
+  it('Obchodná A, Wooden hangs on A13, right before Obchodná B', () => {
+    const names = KEYS.map((k) => k.name);
+    expect(KEYS.find((k) => k.code === 'A13')).toEqual({ name: 'Obchodná A, Wooden', code: 'A13', address: 'Obchodná 9' });
+    expect(names[names.indexOf('Obchodná A, Wooden') + 1]).toBe('Obchodná B, Romantic');
+  });
+});
+
+describe('USPORIADANIE KĽÚČOV – Jarabinková A is gone (Martina, 2026-11-09)', () => {
+  it('the flat is no longer ours, its hook C113 is free', () => {
+    expect(KEYS.some((k) => k.name.startsWith('Jarabinková A') || k.code === 'C113')).toBe(false);
   });
 });
