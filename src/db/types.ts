@@ -278,8 +278,9 @@ export interface CleaningRequestRow {
 export interface DeliveryRequestRow {
   id: string;
   date: Ymd;
-  listing_id: string;
-  listing_name: string;
+  /** Optional since migration 0020: the flat is written into the text. */
+  listing_id: string | null;
+  listing_name: string | null;
   text: string;
   author: string | null;
   author_name: string;

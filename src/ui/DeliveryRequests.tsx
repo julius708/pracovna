@@ -10,36 +10,33 @@ export interface DeliveryRequestsProps {
   dayTitle: string;
   /** The day's requests, oldest first. */
   requests: DeliveryRequest[];
-  /** The day's check-out flats for the flat of a new request, by name. */
-  dayFlats: { id: string; name: string }[];
   viewer: Viewer;
   /** The board's clock (seeded from the server so SSR and client agree). */
   now: Date;
   busy: boolean;
   /** Resolves true when saved; the field then clears. */
-  onAdd: (listingId: string, text: string) => Promise<boolean>;
+  onAdd: (text: string) => Promise<boolean>;
   onTick: (request: DeliveryRequest, done: boolean) => void;
   onRemove: (request: DeliveryRequest) => void;
 }
 
 /**
  * "🛍️ Pre Angeliku – prosím dobaliť do tašiek a odkliknúť" (Martina, 2026-11-09):
- * above the packing section, for the selected day. Anyone writes what to bring
- * to a flat; once packed into its bags it is ticked "Dodané" (who and when),
+ * above the packing section, for the selected day. Anyone writes the flat and
+ * what to bring in one text field (no flat picker); once packed into its bags
+ * it is ticked "Dodané" (who and when),
  * which feeds the admin "Vyúčtovanie" page.
  */
-export function DeliveryRequests({ dayTitle, requests, dayFlats, viewer, now, busy, onAdd, onTick, onRemove }: DeliveryRequestsProps) {
-  const [flat, setFlat] = useState('');
+export function DeliveryRequests({ dayTitle, requests, viewer, now, busy, onAdd, onTick, onRemove }: DeliveryRequestsProps) {
   const [text, setText] = useState('');
   const t = sk.delivery;
 
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const clean = text.trim();
-    if (!flat || !clean) return;
-    if (!(await onAdd(flat, clean))) return; // keep what was typed so it can be sent again
+    if (!clean) return;
+    if (!(await onAdd(clean))) return; // keep what was typed so it can be sent again
     setText('');
-    setFlat('');
   };
 
   return (
@@ -56,7 +53,7 @@ export function DeliveryRequests({ dayTitle, requests, dayFlats, viewer, now, bu
             const temp = r.id.startsWith('temp-');
             return (
               <li key={r.id} className={`cleaning-item delivery-item${r.delivered_at ? ' is-delivered' : ''}`}>
-                <b className="cleaning-flat">{r.listing_name}</b>
+                {r.listing_name && <b className="cleaning-flat">{r.listing_name}</b>}
                 <div className="cleaning-text">{r.text}</div>
                 {r.delivered_at && <div className="cleaning-done">{t.doneBy(r.delivered_by_name ?? '—', noteTime(r.delivered_at, now))}</div>}
                 <div className="notice-meta">
@@ -80,19 +77,8 @@ export function DeliveryRequests({ dayTitle, requests, dayFlats, viewer, now, bu
         </ul>
       )}
       <form className="cleaning-form" onSubmit={(e) => void submit(e)}>
-        <label className="arrival-field">
-          <span>{t.flat}</span>
-          <select value={flat} onChange={(e) => setFlat(e.target.value)} disabled={busy} required>
-            <option value="">{t.pickFlat}</option>
-            {dayFlats.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.name}
-              </option>
-            ))}
-          </select>
-        </label>
         <textarea aria-label={`${t.placeholder} (${dayTitle})`} value={text} onChange={(e) => setText(e.target.value)} placeholder={t.placeholder} maxLength={500} rows={2} disabled={busy} />
-        <button className="btn primary" type="submit" disabled={busy || !flat || !text.trim()}>
+        <button className="btn primary" type="submit" disabled={busy || !text.trim()}>
           {t.add}
         </button>
       </form>

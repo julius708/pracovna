@@ -8,8 +8,9 @@ import type { Ymd } from '@/core/packing';
 export interface DeliveryRequest {
   id: string;
   date: Ymd;
-  listing_id: string;
-  listing_name: string;
+  /** Set only on requests written with the flat picker (before 2026-11-09 afternoon); now the flat is in the text. */
+  listing_id: string | null;
+  listing_name: string | null;
   text: string;
   author: string | null;
   author_name: string;
@@ -34,19 +35,12 @@ export function monthRange(ym: YearMonth): { from: Ymd; to: Ymd } {
   return { from: `${ym}-01` as Ymd, to: `${next}-01` as Ymd };
 }
 
-/** The delivered requests of a month grouped by flat (flats by name, items by delivery time). */
-export function billingByFlat(rows: DeliveryRequest[]): { listing_id: string; listing_name: string; items: DeliveryRequest[] }[] {
-  const by = new Map<string, { listing_id: string; listing_name: string; items: DeliveryRequest[] }>();
-  for (const r of rows) {
-    if (!r.delivered_at) continue;
-    let g = by.get(r.listing_id);
-    if (!g) {
-      g = { listing_id: r.listing_id, listing_name: r.listing_name, items: [] };
-      by.set(r.listing_id, g);
-    }
-    g.items.push(r);
-  }
-  const out = [...by.values()].sort((a, b) => a.listing_name.localeCompare(b.listing_name, 'sk'));
-  for (const g of out) g.items.sort((a, b) => (a.delivered_at ?? '').localeCompare(b.delivered_at ?? ''));
-  return out;
+/** The delivered requests in the order they were ticked; undelivered ones stay out (Martina, 2026-11-09: the flat is in the text). */
+export function deliveredInOrder(rows: DeliveryRequest[]): DeliveryRequest[] {
+  return rows.filter((r) => r.delivered_at).sort((a, b) => (a.delivered_at ?? '').localeCompare(b.delivered_at ?? ''));
+}
+
+/** What the request says, with the picked flat in front for the older rows that have one. */
+export function deliveryLine(r: Pick<DeliveryRequest, 'listing_name' | 'text'>): string {
+  return r.listing_name ? `${r.listing_name}: ${r.text}` : r.text;
 }

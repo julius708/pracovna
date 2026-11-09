@@ -234,9 +234,7 @@ export const sk = {
   /** "Pre Angeliku": items to pack into a flat's bags, ticked "Dodané" (Martina, 2026-11-09). */
   delivery: {
     title: 'Pre Angeliku – prosím dobaliť do tašiek a odkliknúť',
-    flat: 'Byt',
-    pickFlat: 'vyber byt…',
-    placeholder: 'Čo treba doniesť, napr. 2× osuška, 1× vankúš',
+    placeholder: 'Byt a čo treba doniesť, napr. Poštová Heart – 2× osuška, 1× vankúš',
     add: 'Pridať',
     empty: 'Na tento deň zatiaľ nič.',
     done: '✓ Dodané',
@@ -248,7 +246,6 @@ export const sk = {
     notDone: 'Zmena sa neuložila. Skús znova.',
     notRemoved: 'Zápis sa nepodarilo odstrániť.',
     notAuthor: 'Odstrániť môže len autor alebo admin.',
-    badListing: 'Vyber byt zo zoznamu.',
   },
   /** "USPORIADANIE KLUCOV": the folded key list above "Dôležité info" (Martina, 2026-11-08). */
   keys: {

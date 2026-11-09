@@ -445,13 +445,13 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
   };
 
   /** "Pre Angeliku": items for a flat on the selected day; true when saved. */
-  const addDelivery = async (listingId: string, text: string): Promise<boolean> => {
-    const temp: DeliveryRequest = { id: `temp-${newActionId()}`, date, listing_id: listingId, listing_name: data.listings.find((l) => l.id === listingId)?.name ?? listingId, text, author: viewer.id, author_name: viewer.name, created_at: new Date().toISOString(), delivered_at: null, delivered_by_name: null };
+  const addDelivery = async (text: string): Promise<boolean> => {
+    const temp: DeliveryRequest = { id: `temp-${newActionId()}`, date, listing_id: null, listing_name: null, text, author: viewer.id, author_name: viewer.name, created_at: new Date().toISOString(), delivered_at: null, delivered_by_name: null };
     setDeliveryBusy(true);
     setData((d) => ({ ...d, deliveries: [...d.deliveries, temp] }));
     let res: ActionResult;
     try {
-      res = await track(() => addDeliveryAction(date, listingId, text, newActionId()));
+      res = await track(() => addDeliveryAction(date, null, text, newActionId()));
     } catch {
       res = { ok: false, error: 'failed' };
     }
@@ -462,7 +462,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
       return true;
     }
     setData((d) => ({ ...d, deliveries: d.deliveries.filter((x) => x.id !== temp.id) }));
-    showToast(res.error === 'unauthorized' ? sk.toasts.noPermission : res.status === 'bad_listing' ? sk.delivery.badListing : sk.delivery.notSaved);
+    showToast(res.error === 'unauthorized' ? sk.toasts.noPermission : sk.delivery.notSaved);
     return false;
   };
 
@@ -687,11 +687,10 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
         />
       )}
 
-      {/* "Pre Angeliku" right above the packing section, for the same day (Martina, 2026-11-09) */}
+      {/* "Pre Angeliku" right above the packing section, for the same day; one text field, the flat written by hand (Martina, 2026-11-09) */}
       <DeliveryRequests
         dayTitle={`${dayWord(sel, date)} ${formatDM(date)}`}
         requests={data.deliveries.filter((r) => r.date === date)}
-        dayFlats={[...new Map(allJobs.map((p) => [p.listing_id, { id: p.listing_id, name: p.listing_name }])).values()].sort((a, b) => a.name.localeCompare(b.name, 'sk'))}
         viewer={viewer}
         now={now}
         busy={deliveryBusy}

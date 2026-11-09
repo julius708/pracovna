@@ -33,6 +33,7 @@ const MIG16 = readFileSync(new URL('../../supabase/migrations/0016_manual_early_
 const MIG17 = readFileSync(new URL('../../supabase/migrations/0017_early_departures.sql', import.meta.url), 'utf8');
 const MIG18 = readFileSync(new URL('../../supabase/migrations/0018_cleaning_info.sql', import.meta.url), 'utf8');
 const MIG19 = readFileSync(new URL('../../supabase/migrations/0019_delivery_requests.sql', import.meta.url), 'utf8');
+const MIG20 = readFileSync(new URL('../../supabase/migrations/0020_delivery_free_text.sql', import.meta.url), 'utf8');
 /** The shared LIVE-IN users and their roles as they exist in LIVE-IN Core (not created by this app's migrations). */
 const APP_USERS_STUB = `
 create or replace function auth.jwt() returns jsonb language sql stable as
@@ -129,6 +130,8 @@ describe('migrations', () => {
       expect((await fresh.query<Row>("select column_name from information_schema.columns where table_schema = 'public' and table_name = 'listings' and column_name = 'cleaning_info'")).rows).toHaveLength(1);
       const e19 = await pgError(fresh.exec(MIG19));
       expect(e19, `0019_delivery_requests.sql failed: ${e19?.code} ${e19?.message} (line ${lineOf(MIG19, e19?.position)})`).toBeNull();
+      const e20 = await pgError(fresh.exec(MIG20));
+      expect(e20, `0020_delivery_free_text.sql failed: ${e20?.code} ${e20?.message} (line ${lineOf(MIG20, e20?.position)})`).toBeNull();
       const fns =(await fresh.query<Row>("select proname from pg_proc where pronamespace = 'public'::regnamespace order by 1")).rows.map((r) => r.proname);
       expect(fns).toEqual(expect.arrayContaining(['today_ba', 'is_admin', 'is_active_user', 'handle_new_user', 'sync_upsert_package', 'sync_set_lifecycle', 'pack_package', 'unpack_package', 'set_note', 'toggle_check', 'save_settings', 'admin_set_profile', 'acquire_lock', 'run_retention', 'increment_not_found', 'add_board_note', 'remove_board_note', 'edit_board_note']));
     } finally {
@@ -212,6 +215,7 @@ beforeAll(async () => {
   await db.exec(APP_USERS_STUB);
   await db.exec(MIG18);
   await db.exec(MIG19);
+  await db.exec(MIG20);
   await db.exec('set check_function_bodies = on');
   todayBa = (await one('select public.today_ba()::text as d')).d as string;
 });
@@ -1193,5 +1197,17 @@ describe('delivery_requests (0019): Pre Angeliku and Vyúčtovanie', () => {
     } finally {
       await db.exec('reset role');
     }
+  });
+});
+
+describe('delivery_requests (0020): one text field, the flat written by hand', () => {
+  it('a request needs no flat; a given flat is still checked', async () => {
+    const eva = await newUser('Eva');
+    await actAs(eva);
+    const r = (await one('select public.add_delivery_request($1::date, null, $2, $3) as r', [todayBa, 'Poštová Heart – 2× osuška', randomUUID()])).r;
+    expect(r.ok).toBe(true);
+    expect(await one('select listing_id, listing_name, text from public.delivery_requests where id = $1', [r.id])).toEqual({ listing_id: null, listing_name: null, text: 'Poštová Heart – 2× osuška' });
+    expect((await one('select public.add_delivery_request($1::date, $2, $3, $4) as r', [todayBa, 'no-such-flat', 'x', randomUUID()])).r).toEqual({ ok: false, status: 'bad_listing' });
+    await actAs(null);
   });
 });

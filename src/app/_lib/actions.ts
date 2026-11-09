@@ -195,8 +195,8 @@ export async function removeCleaningRequestAction(id: string): Promise<ActionRes
   });
 }
 
-/** "Pre Angeliku" (Martina, 2026-11-09): items to bring to a flat on `date`. */
-export async function addDeliveryAction(date: string, listingId: string, text: string, actionId: string): Promise<ActionResult> {
+/** "Pre Angeliku" (Martina, 2026-11-09): what to bring, the flat written into the text, for `date`. */
+export async function addDeliveryAction(date: string, listingId: string | null, text: string, actionId: string): Promise<ActionResult> {
   return withViewer(async (viewer) => {
     if (supabaseConfigured()) return rpc('add_delivery_request', { p_date: date, p_listing_id: listingId, p_text: text, p_action_id: actionId });
     return memoryAddDelivery(memoryRepo(), viewer, date, listingId, text, actionId);

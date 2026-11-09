@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { billingByFlat, isYearMonth, monthRange, type DeliveryRequest } from '@/app/_lib/delivery';
+import { deliveredInOrder, deliveryLine, isYearMonth, monthRange, type DeliveryRequest } from '@/app/_lib/delivery';
 
-const r = (id: string, listing_name: string, delivered_at: string | null): DeliveryRequest => ({
+const r = (id: string, text: string, delivered_at: string | null, listing_name: string | null = null): DeliveryRequest => ({
   id,
   date: '2026-11-09',
   listing_id: listing_name,
   listing_name,
-  text: id,
+  text,
   author: null,
   author_name: 'Eva',
   created_at: '2026-11-09T07:00:00Z',
@@ -15,12 +15,14 @@ const r = (id: string, listing_name: string, delivered_at: string | null): Deliv
 });
 
 describe('Vyúčtovanie (Martina, 2026-11-09)', () => {
-  it('groups the delivered requests by flat, flats by name, items by delivery time; undelivered stay out', () => {
-    const groups = billingByFlat([r('b2', 'Žižkova', '2026-11-20T09:00:00Z'), r('a1', 'Antolská', '2026-11-05T09:00:00Z'), r('b1', 'Žižkova', '2026-11-03T09:00:00Z'), r('x', 'Antolská', null)]);
-    expect(groups.map((g) => [g.listing_name, g.items.map((i) => i.id)])).toEqual([
-      ['Antolská', ['a1']],
-      ['Žižkova', ['b1', 'b2']],
-    ]);
+  it('lists the delivered requests in the order they were ticked; undelivered stay out', () => {
+    const rows = deliveredInOrder([r('b', 'Žižkova – 1× vankúš', '2026-11-20T09:00:00Z'), r('a', 'Poštová Heart – 2× osuška', '2026-11-05T09:00:00Z'), r('x', 'nedodané', null)]);
+    expect(rows.map((x) => x.id)).toEqual(['a', 'b']);
+  });
+
+  it('the flat is in the text; older rows with a picked flat show it in front', () => {
+    expect(deliveryLine(r('a', 'Poštová Heart – 2× osuška', null))).toBe('Poštová Heart – 2× osuška');
+    expect(deliveryLine(r('b', '2× osuška', null, 'Bajkalská, Luxe'))).toBe('Bajkalská, Luxe: 2× osuška');
   });
 
   it('a month runs from its first day to the first day of the next, December into January', () => {

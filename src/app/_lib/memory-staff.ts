@@ -351,8 +351,8 @@ export async function memoryRemoveCleaningRequest(repo: MemoryRepo, viewer: View
   return { ok: true };
 }
 
-/** add_delivery_request as in Postgres (migration 0019): every active user, a near day, a flat in scope. */
-export async function memoryAddDelivery(repo: MemoryRepo, viewer: Viewer, date: string, listingId: string, text: string, actionId: string | null): Promise<StaffResult> {
+/** add_delivery_request as in Postgres (migrations 0019, 0020): every active user, a near day; a flat is optional (it is in the text). */
+export async function memoryAddDelivery(repo: MemoryRepo, viewer: Viewer, date: string, listingId: string | null, text: string, actionId: string | null): Promise<StaffResult> {
   repo.deliveryRequests ??= [];
   const existing = actionId ? repo.deliveryRequests.find((r) => r.client_action_id === actionId) : undefined;
   if (existing) return { ok: true, replayed: true, id: existing.id };
@@ -360,13 +360,17 @@ export async function memoryAddDelivery(repo: MemoryRepo, viewer: Viewer, date: 
   if (!clean) return { ok: false, status: 'empty' };
   const today = todayInTz(repo.now());
   if (!isYmd(date) || date < addDays(today, -1) || date > addDays(today, 60)) return { ok: false, status: 'bad_date' };
-  const l = repo.listings.get(listingId);
-  if (!l || !l.in_scope) return { ok: false, status: 'bad_listing' };
+  let listingName: string | null = null;
+  if (listingId) {
+    const l = repo.listings.get(listingId);
+    if (!l || !l.in_scope) return { ok: false, status: 'bad_listing' };
+    listingName = l.name;
+  }
   const row: DeliveryRequestRow = {
     id: randomUUID(),
     date,
-    listing_id: listingId,
-    listing_name: l.name,
+    listing_id: listingId || null,
+    listing_name: listingName,
     text: clean,
     author: viewer.id,
     author_name: viewer.name,
