@@ -51,7 +51,7 @@ export const KEYS: readonly KeySpot[] = [
   { name: 'Koceľova, Homely', code: 'A12', address: 'Koceľova 27' },
   { name: 'Konventna, Double', code: 'B96', address: 'Konventná 8' },
   { name: 'Krížna, Suites', code: 'B86', address: 'Krížna 14' },
-  { name: 'Landererova, Panorama', code: 'D67', address: 'Landererova 6', detail: 'veža 2 · 2/26/11' },
+  { name: 'Landererova, Panorama', code: 'D67', address: 'Landererova 6', detail: 'veža 2 · 26. poschodie · byt č. 11' },
   { name: 'Mestská, Modern', code: 'A141', address: 'Mestská 5' },
   { name: 'Mickiewiczova 4.poschodie', code: 'A14' },
   { name: 'Mickie. A, Modern', code: 'C111', address: 'Mickiewiczova 10' },

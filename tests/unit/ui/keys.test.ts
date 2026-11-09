@@ -50,7 +50,7 @@ describe('USPORIADANIE KĽÚČOV – Eurovea and Pribinová (Martina, 2026-11-09
 describe('USPORIADANIE KĽÚČOV – Landererova (Martina, 2026-11-09)', () => {
   it('D67 is Landererova, Panorama, once, in the alphabetical place', () => {
     const names = KEYS.map((k) => k.name);
-    expect(KEYS.filter((k) => k.code === 'D67')).toEqual([{ name: 'Landererova, Panorama', code: 'D67', address: 'Landererova 6', detail: 'veža 2 · 2/26/11' }]);
+    expect(KEYS.filter((k) => k.code === 'D67')).toEqual([{ name: 'Landererova, Panorama', code: 'D67', address: 'Landererova 6', detail: 'veža 2 · 26. poschodie · byt č. 11' }]);
     expect(names[names.indexOf('Krížna, Suites') + 1]).toBe('Landererova, Panorama');
     expect(names.some((n) => n.startsWith('Panorama veza'))).toBe(false);
   });
