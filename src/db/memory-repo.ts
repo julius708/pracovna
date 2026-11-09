@@ -6,6 +6,7 @@ import type {
   EarlyArrivalRow,
   EarlyDepartureRow,
   CleaningRequestRow,
+  DeliveryRequestRow,
   PushSubscriptionRow,
   AppStateKey,
   CalendarRow,
@@ -46,6 +47,8 @@ export class MemoryRepo implements SyncRepo {
   earlyDepartures: EarlyDepartureRow[] = [];
   /** "Info pre upratovačov" messages (migration 0018). */
   cleaningRequests: CleaningRequestRow[] = [];
+  /** "Pre Angeliku" requests (migration 0019). */
+  deliveryRequests: DeliveryRequestRow[] = [];
   pushSubscriptions: PushSubscriptionRow[] = [];
   readonly tokenStore: TokenStore = createMemoryTokenStore();
   now: () => Date = () => new Date();

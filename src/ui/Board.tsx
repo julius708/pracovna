@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BASE } from '@/lib/base';
-import { addBoardNoteAction, addBoardReplyAction, addCleaningReplyAction, addCleaningRequestAction, addEarlyArrivalAction, addEarlyDepartureAction, checkAction, editBoardNoteAction, noteAction, packAction, removeBoardNoteAction, removeCleaningRequestAction, removeEarlyArrivalAction, setCleaningDoneAction, removeEarlyDepartureAction, unpackAction, type ActionResult } from '@/app/_lib/actions';
+import { addBoardNoteAction, addBoardReplyAction, addCleaningReplyAction, addCleaningRequestAction, addDeliveryAction, removeDeliveryAction, setDeliveredAction, addEarlyArrivalAction, addEarlyDepartureAction, checkAction, editBoardNoteAction, noteAction, packAction, removeBoardNoteAction, removeCleaningRequestAction, removeEarlyArrivalAction, setCleaningDoneAction, removeEarlyDepartureAction, unpackAction, type ActionResult } from '@/app/_lib/actions';
 import type { BoardData, BoardNote, BoardPackage, EarlyArrival, EarlyDeparture } from '@/app/_lib/board';
 import { cleaningInfoFlats, type CleaningRequest } from '@/app/_lib/cleaning';
+import type { DeliveryRequest } from '@/app/_lib/delivery';
 import type { Viewer } from '@/app/_lib/viewer';
 import { formatDM } from '@/core/packing';
 import { dayLabel, dayWord, packedOf, sk } from '@/core/i18n/sk';
@@ -13,6 +14,7 @@ import { newActionId } from './action-id';
 import { isRecoveryHash } from './recovery';
 import { angelikaNumbers, applyCleaner, arrivalFor, arrivalNotices, boardNotices, cleanerOptions, counts, dayJobs, FILTER_KEYS, noteNotices, departureFor, sortArrivals, sortDepartures, summaryLines, visibleJobs, type Filter } from './board-model';
 import { CleaningInfo } from './CleaningInfo';
+import { DeliveryRequests } from './DeliveryRequests';
 import { EarlyArrivals } from './EarlyArrivals';
 import { EarlyDepartures } from './EarlyDepartures';
 import { Header } from './Header';
@@ -66,6 +68,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
   const [arrivalBusy, setArrivalBusy] = useState(false);
   const [departureBusy, setDepartureBusy] = useState(false);
   const [cleaningBusy, setCleaningBusy] = useState(false);
+  const [deliveryBusy, setDeliveryBusy] = useState(false);
   /** Early arrivals this device removed itself: no "odstránený" notice for them. */
   const ownArrivalIds = useRef(new Set<string>());
   const ownChanges = useRef(new Map<string, number>());
@@ -441,6 +444,67 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
     }
   };
 
+  /** "Pre Angeliku": items for a flat on the selected day; true when saved. */
+  const addDelivery = async (listingId: string, text: string): Promise<boolean> => {
+    const temp: DeliveryRequest = { id: `temp-${newActionId()}`, date, listing_id: listingId, listing_name: data.listings.find((l) => l.id === listingId)?.name ?? listingId, text, author: viewer.id, author_name: viewer.name, created_at: new Date().toISOString(), delivered_at: null, delivered_by_name: null };
+    setDeliveryBusy(true);
+    setData((d) => ({ ...d, deliveries: [...d.deliveries, temp] }));
+    let res: ActionResult;
+    try {
+      res = await track(() => addDeliveryAction(date, listingId, text, newActionId()));
+    } catch {
+      res = { ok: false, error: 'failed' };
+    }
+    setDeliveryBusy(false);
+    if (res.ok) {
+      if (res.id) setData((d) => ({ ...d, deliveries: d.deliveries.map((x) => (x.id === temp.id ? { ...x, id: res.id as string } : x)) }));
+      void refresh();
+      return true;
+    }
+    setData((d) => ({ ...d, deliveries: d.deliveries.filter((x) => x.id !== temp.id) }));
+    showToast(res.error === 'unauthorized' ? sk.toasts.noPermission : res.status === 'bad_listing' ? sk.delivery.badListing : sk.delivery.notSaved);
+    return false;
+  };
+
+  /** "Dodané" (or taken back): shows at once, undone when it fails. */
+  const tickDelivery = async (r: DeliveryRequest, done: boolean) => {
+    const before = data.deliveries;
+    setDeliveryBusy(true);
+    setData((d) => ({ ...d, deliveries: d.deliveries.map((x) => (x.id === r.id ? { ...x, delivered_at: done ? new Date().toISOString() : null, delivered_by_name: done ? viewer.name : null } : x)) }));
+    let res: ActionResult;
+    try {
+      res = await track(() => setDeliveredAction(r.id, done));
+    } catch {
+      res = { ok: false, error: 'failed' };
+    }
+    setDeliveryBusy(false);
+    if (res.ok) {
+      void refresh();
+    } else {
+      setData((d) => ({ ...d, deliveries: before }));
+      showToast(res.error === 'unauthorized' ? sk.toasts.noPermission : sk.delivery.notDone);
+    }
+  };
+
+  const removeDelivery = async (r: DeliveryRequest) => {
+    const before = data.deliveries;
+    setDeliveryBusy(true);
+    setData((d) => ({ ...d, deliveries: d.deliveries.filter((x) => x.id !== r.id) }));
+    let res: ActionResult;
+    try {
+      res = await track(() => removeDeliveryAction(r.id));
+    } catch {
+      res = { ok: false, error: 'failed' };
+    }
+    setDeliveryBusy(false);
+    if (res.ok) {
+      void refresh();
+    } else {
+      setData((d) => ({ ...d, deliveries: before }));
+      showToast(res.status === 'not_author' ? sk.delivery.notAuthor : res.error === 'unauthorized' ? sk.toasts.noPermission : sk.delivery.notRemoved);
+    }
+  };
+
   const removeCleaning = async (r: CleaningRequest) => {
     const before = data.cleaning.requests;
     setCleaningBusy(true);
@@ -622,6 +686,19 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
           onRemove={(r) => void removeCleaning(r)}
         />
       )}
+
+      {/* "Pre Angeliku" right above the packing section, for the same day (Martina, 2026-11-09) */}
+      <DeliveryRequests
+        dayTitle={`${dayWord(sel, date)} ${formatDM(date)}`}
+        requests={data.deliveries.filter((r) => r.date === date)}
+        dayFlats={[...new Map(allJobs.map((p) => [p.listing_id, { id: p.listing_id, name: p.listing_name }])).values()].sort((a, b) => a.name.localeCompare(b.name, 'sk'))}
+        viewer={viewer}
+        now={now}
+        busy={deliveryBusy}
+        onAdd={addDelivery}
+        onTick={(r, done) => void tickDelivery(r, done)}
+        onRemove={(r) => void removeDelivery(r)}
+      />
 
       <Summary dayWord={dayWord(sel, date)} hasData={hasData} numbers={numbers} lines={lines} hasJobs={jobs.length > 0} />
 

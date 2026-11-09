@@ -274,6 +274,25 @@ export interface CleaningRequestRow {
   client_action_id: string | null;
 }
 
+/** "Pre Angeliku": items to bring to a flat on a board day, ticked "Dodané" (migration 0019). */
+export interface DeliveryRequestRow {
+  id: string;
+  date: Ymd;
+  listing_id: string;
+  listing_name: string;
+  text: string;
+  author: string | null;
+  author_name: string;
+  created_at: Instant;
+  delivered_at: Instant | null;
+  delivered_by: string | null;
+  delivered_by_name: string | null;
+  removed_at: Instant | null;
+  removed_by: string | null;
+  removed_by_name: string | null;
+  client_action_id: string | null;
+}
+
 /** A device's Web Push subscription (migration 0014), stored under the signed-in user. */
 export interface PushSubscriptionRow {
   id: string;

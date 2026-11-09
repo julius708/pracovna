@@ -18,6 +18,7 @@ import {
   memoryAddBoardReply,
   memoryAddCleaningReply,
   memoryAddCleaningRequest,
+  memoryAddDelivery,
   memoryAddEarlyArrival,
   memoryAddEarlyDeparture,
   memoryCheck,
@@ -26,9 +27,11 @@ import {
   memoryPack,
   memoryRemoveBoardNote,
   memoryRemoveCleaningRequest,
+  memoryRemoveDelivery,
   memoryRemoveEarlyArrival,
   memoryRemoveEarlyDeparture,
   memorySetCleaningDone,
+  memorySetDelivered,
   memoryUnpack,
   type StaffResult,
 } from './memory-staff';
@@ -189,6 +192,30 @@ export async function removeCleaningRequestAction(id: string): Promise<ActionRes
   return withViewer(async (viewer) => {
     if (supabaseConfigured()) return rpc('remove_cleaning_request', { p_id: id });
     return memoryRemoveCleaningRequest(memoryRepo(), viewer, id);
+  });
+}
+
+/** "Pre Angeliku" (Martina, 2026-11-09): items to bring to a flat on `date`. */
+export async function addDeliveryAction(date: string, listingId: string, text: string, actionId: string): Promise<ActionResult> {
+  return withViewer(async (viewer) => {
+    if (supabaseConfigured()) return rpc('add_delivery_request', { p_date: date, p_listing_id: listingId, p_text: text, p_action_id: actionId });
+    return memoryAddDelivery(memoryRepo(), viewer, date, listingId, text, actionId);
+  });
+}
+
+/** Ticks "Dodané" (or takes it back); the tick feeds "Vyúčtovanie". */
+export async function setDeliveredAction(id: string, done: boolean): Promise<ActionResult> {
+  return withViewer(async (viewer) => {
+    if (supabaseConfigured()) return rpc('set_delivery_done', { p_id: id, p_done: done });
+    return memorySetDelivered(memoryRepo(), viewer, id, done);
+  });
+}
+
+/** Removes a "Pre Angeliku" request (author or admin). */
+export async function removeDeliveryAction(id: string): Promise<ActionResult> {
+  return withViewer(async (viewer) => {
+    if (supabaseConfigured()) return rpc('remove_delivery_request', { p_id: id });
+    return memoryRemoveDelivery(memoryRepo(), viewer, id);
   });
 }
 

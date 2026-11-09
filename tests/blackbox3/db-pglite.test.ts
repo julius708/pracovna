@@ -32,6 +32,7 @@ const MIG15 = readFileSync(new URL('../../supabase/migrations/0015_board_note_re
 const MIG16 = readFileSync(new URL('../../supabase/migrations/0016_manual_early_arrivals.sql', import.meta.url), 'utf8');
 const MIG17 = readFileSync(new URL('../../supabase/migrations/0017_early_departures.sql', import.meta.url), 'utf8');
 const MIG18 = readFileSync(new URL('../../supabase/migrations/0018_cleaning_info.sql', import.meta.url), 'utf8');
+const MIG19 = readFileSync(new URL('../../supabase/migrations/0019_delivery_requests.sql', import.meta.url), 'utf8');
 /** The shared LIVE-IN users and their roles as they exist in LIVE-IN Core (not created by this app's migrations). */
 const APP_USERS_STUB = `
 create or replace function auth.jwt() returns jsonb language sql stable as
@@ -126,6 +127,8 @@ describe('migrations', () => {
       const e18 = await pgError(fresh.exec(MIG18));
       expect(e18, `0018_cleaning_info.sql failed: ${e18?.code} ${e18?.message} (line ${lineOf(MIG18, e18?.position)})`).toBeNull();
       expect((await fresh.query<Row>("select column_name from information_schema.columns where table_schema = 'public' and table_name = 'listings' and column_name = 'cleaning_info'")).rows).toHaveLength(1);
+      const e19 = await pgError(fresh.exec(MIG19));
+      expect(e19, `0019_delivery_requests.sql failed: ${e19?.code} ${e19?.message} (line ${lineOf(MIG19, e19?.position)})`).toBeNull();
       const fns =(await fresh.query<Row>("select proname from pg_proc where pronamespace = 'public'::regnamespace order by 1")).rows.map((r) => r.proname);
       expect(fns).toEqual(expect.arrayContaining(['today_ba', 'is_admin', 'is_active_user', 'handle_new_user', 'sync_upsert_package', 'sync_set_lifecycle', 'pack_package', 'unpack_package', 'set_note', 'toggle_check', 'save_settings', 'admin_set_profile', 'acquire_lock', 'run_retention', 'increment_not_found', 'add_board_note', 'remove_board_note', 'edit_board_note']));
     } finally {
@@ -208,6 +211,7 @@ beforeAll(async () => {
   await db.exec(MIG17);
   await db.exec(APP_USERS_STUB);
   await db.exec(MIG18);
+  await db.exec(MIG19);
   await db.exec('set check_function_bodies = on');
   todayBa = (await one('select public.today_ba()::text as d')).d as string;
 });
@@ -1151,5 +1155,43 @@ describe('cleaning_requests (0018): roles from the shared LIVE-IN users', () => 
       await db.exec('reset role');
     }
     await as(null);
+  });
+});
+
+describe('delivery_requests (0019): Pre Angeliku and Vyúčtovanie', () => {
+  it('anyone active writes and ticks Dodané (who and when); only the author or an admin removes; no direct writes', async () => {
+    await q("insert into public.listings (guesty_id, name, in_scope, fetched_at) values ('dl-1', 'Poštová, Heart', true, now()), ('dl-out', 'Mimo', false, now()) on conflict do nothing");
+    const eva = await newUser('Eva');
+    const angelika = await newUser('Angelika');
+    const admin = await newUser('Julius', { role: 'admin' });
+    await actAs(eva);
+    const action = randomUUID();
+    const r1 = (await one('select public.add_delivery_request($1::date, $2, $3, $4) as r', [todayBa, 'dl-1', '  2× osuška, 1× vankúš  ', action])).r;
+    expect(r1.ok).toBe(true);
+    expect((await one('select public.add_delivery_request($1::date, $2, $3, $4) as r', [todayBa, 'dl-1', 'x', action])).r).toMatchObject({ ok: true, replayed: true, id: r1.id });
+    expect((await one('select public.add_delivery_request($1::date, $2, $3, $4) as r', [todayBa, 'dl-out', 'x', randomUUID()])).r).toEqual({ ok: false, status: 'bad_listing' });
+    expect((await one('select public.add_delivery_request($1::date, $2, $3, $4) as r', [todayBa, 'dl-1', '  ', randomUUID()])).r).toEqual({ ok: false, status: 'empty' });
+    expect(await one('select listing_name, text, author_name, delivered_at from public.delivery_requests where id = $1', [r1.id])).toEqual({ listing_name: 'Poštová, Heart', text: '2× osuška, 1× vankúš', author_name: 'Eva', delivered_at: null });
+
+    await actAs(angelika);
+    expect((await one('select public.set_delivery_done($1, true) as r', [r1.id])).r).toEqual({ ok: true });
+    expect((await one('select public.set_delivery_done($1, true) as r', [r1.id])).r).toMatchObject({ ok: true, replayed: true });
+    const done = await one('select delivered_by_name, delivered_at from public.delivery_requests where id = $1', [r1.id]);
+    expect(done.delivered_by_name).toBe('Angelika');
+    expect(done.delivered_at).not.toBeNull();
+    expect((await one('select public.remove_delivery_request($1) as r', [r1.id])).r).toEqual({ ok: false, status: 'not_author' });
+
+    await actAs(admin);
+    expect((await one('select public.remove_delivery_request($1) as r', [r1.id])).r).toEqual({ ok: true });
+    expect((await one('select public.set_delivery_done($1, false) as r', [r1.id])).r).toEqual({ ok: false, status: 'removed' });
+
+    await actAs(null);
+    expect((await pgError(q('select public.add_delivery_request($1::date, $2, $3, $4)', [todayBa, 'dl-1', 'x', randomUUID()])))?.code).toBe('42501');
+    await db.exec('set role authenticated');
+    try {
+      expect((await pgError(q("insert into public.delivery_requests (date, listing_id, listing_name, text, author_name) values (current_date, 'dl-1', 'x', 'x', 'x')")))?.code).toBe('42501');
+    } finally {
+      await db.exec('reset role');
+    }
   });
 });

@@ -363,3 +363,7 @@ td input.lbl{width:190px;text-align:left}
 .keys-code.row-b{background:#D0EBFF;color:#1C5C99;border-color:#74C0FC}
 .keys-code.row-c{background:#FFF3BF;color:#7A5A00;border-color:#FFD43B}
 .keys-code.row-d{background:#FFDEEB;color:#A61E4D;border-color:#F783AC}
+
+/* "Pre Angeliku" (Martina, 2026-11-09): delivered requests turn green */
+.delivery-box{margin:14px 0 4px;gap:8px;align-items:stretch}
+.delivery-item.is-delivered{background:#EBFBEE;border-color:#69DB7C}

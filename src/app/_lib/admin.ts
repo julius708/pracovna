@@ -6,6 +6,7 @@ import { createServerSupabase } from '@/db/server';
 import type { PackageEventRow, PackageStatus, ProfileRow, SyncRunRow, WebhookEventRow } from '@/db/types';
 import { env } from '@/env';
 import { createRepoFromEnv } from '@/sync/context';
+import { DELIVERY_COLUMNS, monthRange, type DeliveryRequest, type YearMonth } from './delivery';
 import { HISTORY_PAGE, type HistoryFilter } from './history-filter';
 import { hasSnapshot, isSuperseded, snapshotOf, type PackingDayNote, type PackingLogRow } from './packing-log';
 import { DEV_VIEWERS, supabaseConfigured } from './viewer';
@@ -310,4 +311,27 @@ export async function loadStatus(): Promise<StatusView> {
     packagesInWindow: packages.filter((p) => p.status !== 'cancelled').length,
     loadedAt,
   };
+}
+
+/* ---------------- vyúčtovanie ---------------- */
+
+/**
+ * "Vyúčtovanie" (Martina, 2026-11-09): the "Pre Angeliku" requests ticked
+ * "Dodané" within a calendar month (Bratislava time), for the billing at the
+ * month's end. Removed requests stay out.
+ */
+export async function loadDelivered(ym: YearMonth): Promise<DeliveryRequest[]> {
+  const { from, to } = monthRange(ym);
+  const start = zonedMidnight(from).toISOString();
+  const end = zonedMidnight(to).toISOString();
+  if (supabaseConfigured()) {
+    const c = await db();
+    const r = await c.from('delivery_requests').select(DELIVERY_COLUMNS).is('removed_at', null).gte('delivered_at', start).lt('delivered_at', end).order('delivered_at');
+    if (r.error) throw new Error(`delivery_requests: ${r.error.message}`);
+    return ((r.data ?? []) as DeliveryRequest[]).map((x) => ({ ...x, date: String(x.date).slice(0, 10) }));
+  }
+  return (memory().deliveryRequests ?? [])
+    .filter((x) => !x.removed_at && x.delivered_at && x.delivered_at >= start && x.delivered_at < end)
+    .sort((a, b) => (a.delivered_at ?? '').localeCompare(b.delivered_at ?? ''))
+    .map((x) => ({ id: x.id, date: x.date, listing_id: x.listing_id, listing_name: x.listing_name, text: x.text, author: x.author, author_name: x.author_name, created_at: x.created_at, delivered_at: x.delivered_at, delivered_by_name: x.delivered_by_name }));
 }

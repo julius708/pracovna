@@ -1,7 +1,7 @@
 import 'server-only';
 import { addDays, isYmd, NOTE_MAX_LENGTH, todayInTz, WINDOW_DAYS } from '@/core/packing';
 import type { MemoryRepo } from '@/db/memory-repo';
-import type { CleaningRequestRow, EarlyArrivalRow, EarlyDepartureRow, PackageEventInsert, PackageRow } from '@/db/types';
+import type { CleaningRequestRow, DeliveryRequestRow, EarlyArrivalRow, EarlyDepartureRow, PackageEventInsert, PackageRow } from '@/db/types';
 import { cleaningRights } from './cleaning';
 import { randomUUID } from 'node:crypto';
 import { packSnapshot } from './packing-log';
@@ -345,6 +345,70 @@ export async function memoryRemoveCleaningRequest(repo: MemoryRepo, viewer: View
   if (!r) throw new Error('request not found');
   if (r.removed_at) return { ok: true, replayed: true };
   if (r.author !== viewer.id && !memoryRights(viewer).admin) return { ok: false, status: 'not_author' };
+  r.removed_at = repo.now().toISOString();
+  r.removed_by = viewer.id;
+  r.removed_by_name = viewer.name;
+  return { ok: true };
+}
+
+/** add_delivery_request as in Postgres (migration 0019): every active user, a near day, a flat in scope. */
+export async function memoryAddDelivery(repo: MemoryRepo, viewer: Viewer, date: string, listingId: string, text: string, actionId: string | null): Promise<StaffResult> {
+  repo.deliveryRequests ??= [];
+  const existing = actionId ? repo.deliveryRequests.find((r) => r.client_action_id === actionId) : undefined;
+  if (existing) return { ok: true, replayed: true, id: existing.id };
+  const clean = text.trim().slice(0, 500);
+  if (!clean) return { ok: false, status: 'empty' };
+  const today = todayInTz(repo.now());
+  if (!isYmd(date) || date < addDays(today, -1) || date > addDays(today, 60)) return { ok: false, status: 'bad_date' };
+  const l = repo.listings.get(listingId);
+  if (!l || !l.in_scope) return { ok: false, status: 'bad_listing' };
+  const row: DeliveryRequestRow = {
+    id: randomUUID(),
+    date,
+    listing_id: listingId,
+    listing_name: l.name,
+    text: clean,
+    author: viewer.id,
+    author_name: viewer.name,
+    created_at: repo.now().toISOString(),
+    delivered_at: null,
+    delivered_by: null,
+    delivered_by_name: null,
+    removed_at: null,
+    removed_by: null,
+    removed_by_name: null,
+    client_action_id: actionId,
+  };
+  repo.deliveryRequests.push(row);
+  return { ok: true, id: row.id };
+}
+
+/** set_delivery_done: "Dodané" (who and when) or taken back. */
+export async function memorySetDelivered(repo: MemoryRepo, viewer: Viewer, id: string, done: boolean): Promise<StaffResult> {
+  repo.deliveryRequests ??= [];
+  const r = repo.deliveryRequests.find((x) => x.id === id);
+  if (!r) throw new Error('request not found');
+  if (r.removed_at) return { ok: false, status: 'removed' };
+  if (done) {
+    if (r.delivered_at) return { ok: true, replayed: true };
+    r.delivered_at = repo.now().toISOString();
+    r.delivered_by = viewer.id;
+    r.delivered_by_name = viewer.name;
+  } else {
+    r.delivered_at = null;
+    r.delivered_by = null;
+    r.delivered_by_name = null;
+  }
+  return { ok: true };
+}
+
+/** remove_delivery_request: its author, or an admin. */
+export async function memoryRemoveDelivery(repo: MemoryRepo, viewer: Viewer, id: string): Promise<StaffResult> {
+  repo.deliveryRequests ??= [];
+  const r = repo.deliveryRequests.find((x) => x.id === id);
+  if (!r) throw new Error('request not found');
+  if (r.removed_at) return { ok: true, replayed: true };
+  if (r.author !== viewer.id && viewer.role !== 'admin') return { ok: false, status: 'not_author' };
   r.removed_at = repo.now().toISOString();
   r.removed_by = viewer.id;
   r.removed_by_name = viewer.name;

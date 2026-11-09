@@ -5,6 +5,7 @@ import { createServerSupabase } from '@/db/server';
 import type { Checklist, PackageStatus } from '@/db/types';
 import { env } from '@/env';
 import { createRepoFromEnv } from '@/sync/context';
+import { DELIVERY_COLUMNS, type DeliveryRequest } from './delivery';
 import { CLEANING_REQUEST_COLUMNS, cleaningRights, type CleaningData, type CleaningRequest } from './cleaning';
 import { supabaseConfigured, type Viewer } from './viewer';
 
@@ -103,6 +104,8 @@ export interface BoardData {
   cleaners: Record<string, string | null>;
   /** "Info pre upratovačov" for the viewer's app roles (empty when the viewer may not see it). */
   cleaning: CleaningData;
+  /** "Pre Angeliku" requests of the board days, oldest first (migration 0019). */
+  deliveries: DeliveryRequest[];
   /** Flats whose Guesty laundry field says "Kapsule: nedávať" (Martina, 2026-10-19): the card says so in red. */
   noCapsules: string[];
   status: { lastOkSyncAt: string | null; consecutiveFailures: number };
@@ -139,6 +142,8 @@ export async function loadBoard(viewer: Viewer): Promise<BoardData> {
     for (const l of listingRows) cleaners[l.guesty_id] = l.cleaner;
     const status = (st.data ?? {}) as { last_ok_sync_at?: string | null; consecutive_failures?: number };
     const cleaning = await loadCleaning(db, dates);
+    const dv = await db.from('delivery_requests').select(DELIVERY_COLUMNS).in('date', dates as Ymd[]).is('removed_at', null).order('created_at');
+    if (dv.error) throw new Error(`delivery_requests: ${dv.error.message}`);
     return {
       today,
       dates,
@@ -150,6 +155,7 @@ export async function loadBoard(viewer: Viewer): Promise<BoardData> {
       cleaners,
       noCapsules: listingRows.filter((l) => capsulesRefused(l.capsules)).map((l) => l.guesty_id),
       cleaning,
+      deliveries: ((dv.data ?? []) as DeliveryRequest[]).map((r) => ({ ...r, date: String(r.date).slice(0, 10) })),
       status: { lastOkSyncAt: status.last_ok_sync_at ?? null, consecutiveFailures: status.consecutive_failures ?? 0 },
       loadedAt,
       live: true,
@@ -204,6 +210,10 @@ export async function loadBoard(viewer: Viewer): Promise<BoardData> {
     cleaners,
     noCapsules: listings.filter((l) => l.in_scope && capsulesRefused(l.laundry?.capsules)).map((l) => l.guesty_id),
     cleaning: memoryCleaning(repo as MemoryRepo, listings, dates, viewer),
+    deliveries: ((repo as MemoryRepo).deliveryRequests ?? [])
+      .filter((r) => !r.removed_at && (dates as readonly string[]).includes(r.date))
+      .sort((a, b) => a.created_at.localeCompare(b.created_at))
+      .map((r) => ({ id: r.id, date: r.date, listing_id: r.listing_id, listing_name: r.listing_name, text: r.text, author: r.author, author_name: r.author_name, created_at: r.created_at, delivered_at: r.delivered_at, delivered_by_name: r.delivered_by_name })),
     status: { lastOkSyncAt: lastOk, consecutiveFailures: failures ?? 0 },
     loadedAt,
     live: false,
