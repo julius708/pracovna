@@ -25,7 +25,7 @@ describe('USPORIADANIE KĽÚČOV – Guesty names and addresses', () => {
     const by = (name: string) => KEYS.find((k) => k.name === name);
     expect(by('Poštová, Heart')).toEqual({ name: 'Poštová, Heart', code: 'B90', address: 'Poštová 1', detail: 'č. bytu 606' });
     expect(by('Obchodná B, Romantic')?.address).toBe('Obchodná 4');
-    expect(KEYS.filter((k) => k.name.endsWith('?')).map((k) => k.name)).toEqual(['Jarabinková B,Bright?', 'Pionierska?']);
+    expect(KEYS.filter((k) => k.name.endsWith('?')).map((k) => k.name)).toEqual(['Pionierska?']);
   });
 });
 
@@ -74,5 +74,11 @@ describe('USPORIADANIE KĽÚČOV – Obchodná 9 (Martina, 2026-11-09)', () => {
 describe('USPORIADANIE KĽÚČOV – Jarabinková A is gone (Martina, 2026-11-09)', () => {
   it('the flat is no longer ours, its hook C113 is free', () => {
     expect(KEYS.some((k) => k.name.startsWith('Jarabinková A') || k.code === 'C113')).toBe(false);
+  });
+});
+
+describe('USPORIADANIE KĽÚČOV – Jarabinková B confirmed (Martina, 2026-11-09)', () => {
+  it('C114 carries the Guesty name without the question mark', () => {
+    expect(KEYS.find((k) => k.code === 'C114')).toEqual({ name: 'Jarabinková B,Bright', code: 'C114', address: 'Jarabinková 2c' });
   });
 });
