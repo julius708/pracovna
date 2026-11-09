@@ -1,4 +1,3 @@
-/* eslint-disable */
 'use client'
 // LIVE-IN Guru ako živý asistent na každej stránke (rovnaký typ widgetu ako Adam na webe):
 // malá postavička dole, po kliknutí čitateľné okno, dá sa presúvať a zbaliť. Hlas ElevenLabs
@@ -9,6 +8,8 @@ import { MOUTH, stripMarkdown, visAt, timelineFrom, clampPos } from '@/lib/guru-
 // Otázky a pozdrav podľa appky, v ktorej Guru práve je (rovnaký widget vo všetkých appkách, iný obsah).
 const APP_GURU = {
   home: { hello: 'Ahoj, som LIVE-IN Guru. Opýtaj sa ma na byty, rezervácie alebo postupy.', chips: ['Čo dnes potrebuje moju pozornosť?', 'Aké opravy sú v Asane otvorené?', 'Koľko máme dnes príchodov a odchodov?', 'Aký je kód od dverí na byte…', 'Napíš hosťovi odpoveď na sťažnosť na hluk'] },
+  crm: { hello: 'Ahoj, som Guru. Pomôžem s leadmi: kto čaká, čo sľúbiť, ako napísať správu.', chips: ['Ktoré leady sú po lehote?', 'Koľko leadov prišlo tento týždeň a odkiaľ?', 'Napíš krátku správu majiteľovi, ktorý nedvíha', 'Čo povedať majiteľovi pri prvom hovore?', 'Ktorí klienti sú z Košíc?'] },
+  newsletter: { hello: 'Ahoj, som Guru. Pomôžem s témami a textom newslettera.', chips: ['Navrhni 5 tém na newsletter pre majiteľov', 'Napíš predmet e-mailu, ktorý sa otvorí', 'Aký tón má mať newsletter LIVE-IN?'] },
   pracovna: { hello: 'Ahoj, som Guru. V Práčovni ti poradím s taškami, prádlom a kto čo balil.', chips: ['Koľko tašiek sa dnes balí a na koľko osôb?', 'Ktoré byty majú zajtra odchod aj príchod v jeden deň?', 'Ako sa počíta prádlo pre byt s deťmi?', 'Čo dať do tašky navyše pri dlhšom pobyte?', 'Kto včera balil tašky a bolo niečo zrušené?'] },
   ring: { hello: 'Ahoj, som Guru. Pomôžem s odkazmi pre hostí a vstupmi do budov.', chips: ['Ako vytvorím odkaz pre hosťa a čo mu napísať?', 'Ktoré budovy majú Ring offline?', 'Hosť nevie otvoriť dvere – čo skontrolovať?', 'Ako dlho platí odkaz a ako ho zruším?', 'Napíš hosťovi správu k vstupu do budovy'] },
   cs: { hello: 'Ahoj, som Guru. Pomôžem so zmenou, hosťami a odpoveďami.', chips: ['Čo dnes potrebuje moju pozornosť?', 'Koľko máme dnes príchodov a odchodov?', 'Ktoré byty sú dnes voľné?', 'Napíš hosťovi odpoveď na sťažnosť na hluk', 'Ako riešime neskorý check-in?'] },
@@ -27,6 +28,12 @@ const SILENT = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAA
 function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v) } catch {} return null }
 function sstore(k, v) { try { if (v === undefined) return sessionStorage.getItem(k); sessionStorage.setItem(k, v) } catch {} return null }
 function uuid() { try { return crypto.randomUUID() } catch { return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => { const r = (Math.random() * 16) | 0; return (c === 'x' ? r : (r & 3) | 8).toString(16) }) } }
+function b64blob(b64) { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new Blob([u], { type: 'audio/mpeg' }) }
+
+const ICON_ON = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z" /><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" /></svg>
+const ICON_OFF = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z" /><path d="M17 9l5 6M22 9l-5 6" /></svg>
+
+
 // Prihlásenie tejto appky pre Guru: hlavná appka nemá náš cookie, preto jej pošleme krátkodobý token (Bearer).
 let tokenCache = { token: '', until: 0 }
 async function authHeaders() {
@@ -38,10 +45,6 @@ async function authHeaders() {
   } catch {}
   return {}
 }
-function b64blob(b64) { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new Blob([u], { type: 'audio/mpeg' }) }
-
-const ICON_ON = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z" /><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" /></svg>
-const ICON_OFF = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z" /><path d="M17 9l5 6M22 9l-5 6" /></svg>
 
 export default function GuruWidget({ name = '', app = 'home', hub = '' }) {
   const API = (hub || '').replace(/\/$/, '')
@@ -51,9 +54,12 @@ export default function GuruWidget({ name = '', app = 'home', hub = '' }) {
   const [open, setOpen] = useState(false)
   const [msgs, setMsgs] = useState([])           // {id, role:'u'|'a', text, words?, shown?}
   const [busy, setBusy] = useState(false)
-  const [muted, setMuted] = useState(false)
-  const [hello, setHello] = useState(false)
-  const [fact, setFact] = useState('')          // zaujímavosť dňa: Guru ju povie sám pri otvorení appky, raz za deň
+  const [muted, setMutedState] = useState(true)   // hlas je predvolene vypnutý, voľba sa pamätá
+  const setMuted = (m) => { setMutedState(m); store('guru-muted', m ? '1' : '0') }
+  const [mode, setModeState] = useState('full')   // 'full' postavička (predvolené) · 'mini' gulička s tvárou · 'hidden' nič (zapne sa na stránke Guru)
+  const setMode = (m) => { setModeState(m); store('guru-mode', m) }
+  const [hello] = useState(false)
+  const [fact, setFact] = useState('')
   const [imgOk, setImgOk] = useState(true)
   const [q, setQ] = useState('')
   const [rec, setRec] = useState(false)
@@ -71,23 +77,17 @@ export default function GuruWidget({ name = '', app = 'home', hub = '' }) {
     mountedRef.current = true
     const m = () => window.innerWidth < 700
     setMobile(m())
+    const sm = store('guru-muted'); if (sm === '0') setMutedState(false)
+    const md = store('guru-mode'); if (md === 'full' || md === 'mini' || (md === 'hidden' && app === 'home')) setModeState(md); else if (md === 'hidden') setModeState('mini')
     let saved = null
     try { saved = JSON.parse(store('guru-pos') || 'null') } catch {}
     const base = saved && typeof saved.r === 'number' ? saved : (m() ? { r: 8, b: 78 } : { r: 22, b: 14 })
     setPos(clampPos(base.r, base.b, { w: window.innerWidth, h: window.innerHeight }, { w: 130, h: 200 }))
     const onResize = () => { setMobile(m()); setPos((p) => clampPos(p.r, p.b, { w: window.innerWidth, h: window.innerHeight }, { w: 130, h: 200 })) }
     window.addEventListener('resize', onResize)
-    const t = setTimeout(() => { if (!sstore('guru-hello')) { sstore('guru-hello', '1'); setHello(true); setTimeout(() => setHello(false), 9000) } }, 1500)
-    // pri každom otvorení appky (nový príchod alebo po 30 min): Guru pozdraví menom – bublina + hlas (hlas hneď, ak to prehliadač dovolí, inak po prvom kliknutí)
-    const factTimer = setTimeout(() => {
-      // raz za otvorenie appky (nová karta alebo nové spustenie), nie pri každom prechode medzi stránkami
-      if (sstore('guru-greeted') || !mountedRef.current) return
-      sstore('guru-greeted', '1')
-      setHello(false); setFact('hi')
-      tellFact(`Ahoj${first ? ', ' + first : ''}!`)
-    }, 2000)
+    // Pozdrav pri otvorení appky je vypnutý (rozhodnutie Július 9. 11. 2026): Guru sa ozve až po kliknutí.
     const A = new Audio(); A.preload = 'auto'; A.playsInline = true; audio.current = A
-    return () => { mountedRef.current = false; window.removeEventListener('resize', onResize); clearTimeout(t); clearTimeout(factTimer); try { A.pause() } catch {} try { speechSynthesis.cancel() } catch {} }
+    return () => { mountedRef.current = false; window.removeEventListener('resize', onResize); try { A.pause() } catch {} try { speechSynthesis.cancel() } catch {} }
   }, [])
 
   /* ---------- ústa: kreslenie v slučke, plynulé (lerp), bez trasenia ---------- */
@@ -247,16 +247,6 @@ export default function GuruWidget({ name = '', app = 'home', hub = '' }) {
     TL.current = null; await speechFallback(text)
   }
 
-  /* ---------- zaujímavosť dňa: ústa sa hýbu aj bez zvuku (prehliadač bez kliknutia zvuk nepustí) ---------- */
-  const factTimer2 = useRef(null)
-  function tellFact(text) {
-    sim.current = true; speaking.current = true
-    clearTimeout(factTimer2.current)
-    factTimer2.current = setTimeout(() => { if (sim.current) { speaking.current = false; sim.current = false } }, 2500)
-    setTimeout(() => setFact((f) => (f === 'hi' ? '' : f)), 9000)
-    speak(text, true)
-  }
-
   /* ---------- chat ---------- */
   async function ask(text) {
     const question = (text || '').trim()
@@ -279,11 +269,10 @@ export default function GuruWidget({ name = '', app = 'home', hub = '' }) {
   }
 
   function openWin() {
-    unlock(); setHello(false); setOpen(true); store('guru-open', '1')
+    unlock(); setOpen(true); store('guru-open', '1')
     if (!greeted.current) {
       greeted.current = true
-      const id = addGuru(GREETING)
-      if (!sstore('guru-g')) { sstore('guru-g', '1'); speak(GREETING) } else reveal(id, 1)
+      const id = addGuru(GREETING); reveal(id, 1)
     }
     if (!mobile) setTimeout(() => inputRef.current && inputRef.current.focus(), 80)
   }
@@ -381,11 +370,18 @@ export default function GuruWidget({ name = '', app = 'home', hub = '' }) {
     </div>
   )
 
+  if (mode === 'hidden' && !open) return null
   return (
     <>
-      {!open && (
+      {!open && mode === 'mini' && (
+        <button type="button" className="gw-mini" style={{ right: Math.max(12, pos.r), bottom: Math.max(12, pos.b) }} onClick={() => setMode('full')} title="LIVE-IN Guru – klikni a zväčši" aria-label="Zväčšiť LIVE-IN Guru">
+          {imgOk ? <img src={`${API}/guru-v3.png`} alt="" draggable="false" /> : <span aria-hidden="true">🧠</span>}
+        </button>
+      )}
+      {!open && mode === 'full' && (
         <div className="gw-host" ref={hostRef} style={{ right: pos.r, bottom: pos.b }}>
           <div className="gw-col">
+            <button type="button" className="gw-minbtn" aria-label="Zmenšiť Guru do guličky" title="Zmenšiť do guličky" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); setMode('mini') }}>–</button>
             <button type="button" className={'gw-hello' + (fact ? ' fact show' : hello ? ' show' : '')} onClick={() => { if (fact) { const f = fact; setFact(''); speaking.current = false; sim.current = false; openWin(); setTimeout(() => addGuru(`Ahoj${first ? ', ' + first : ''}! ${GREETING}`), 50) } else openWin() }}>{fact ? <><b>Ahoj{first ? `, ${first}` : ''} 👋</b>{HELLO}</> : HELLO}</button>
             {figure}
             <button type="button" className="gw-pill" onClick={openWin}>Opýtať sa LIVE-IN Guru</button>
@@ -399,6 +395,8 @@ export default function GuruWidget({ name = '', app = 'home', hub = '' }) {
             <div className="gw-ht"><b>LIVE-IN Guru</b><span>Interný asistent tímu{first ? ` · ${first}` : ''}</span></div>
             <div className="gw-hb">
               <button type="button" className="gw-ib" aria-label={muted ? 'Zapnúť hlas' : 'Vypnúť hlas'} onClick={() => { const m = !muted; setMuted(m); if (m) stopSpeech(true) }}>{muted ? ICON_OFF : ICON_ON}</button>
+              <button type="button" className="gw-ib" aria-label={mode === 'full' ? 'Zmenšiť do guličky' : 'Zobraziť postavičku'} title={mode === 'full' ? 'Po zavretí ostane len gulička s tvárou' : 'Po zavretí sa ukáže postavička'} onClick={() => setMode(mode === 'full' ? 'mini' : 'full')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M5 12h14" />{mode !== 'full' && <path d="M12 5v14" />}</svg></button>
+              {app === 'home' && <button type="button" className="gw-ib" aria-label="Skryť Guru zo stránok" title="Skryť zo stránok (zapneš na stránke Guru)" onClick={() => { closeWin(); setMode('hidden') }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.1A10.4 10.4 0 0 1 12 5c5 0 9 4 10 7-.4 1.2-1.2 2.5-2.3 3.6M6.3 6.3C4.2 7.7 2.7 9.6 2 12c1 3 5 7 10 7 1.5 0 2.9-.3 4.2-.9" /></svg></button>}
               <button type="button" className="gw-ib" aria-label="Zbaliť" onClick={closeWin}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 9l6 6 6-6" /></svg></button>
             </div>
           </div>
@@ -415,7 +413,7 @@ export default function GuruWidget({ name = '', app = 'home', hub = '' }) {
             {micOk && <button type="button" className={'gw-ib' + (rec ? ' rec' : '')} aria-label={rec ? 'Zastaviť a odoslať' : 'Hovoriť'} title={rec ? 'Klikni, keď dopovieš' : 'Klikni a hovor, potom klikni znova'} onClick={mic}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></svg></button>}
             <button type="submit" className="gw-ib send" aria-label="Odoslať" disabled={busy}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg></button>
           </form>
-          <div className="gw-foot">Len pre tím LIVE-IN. Celá história a nastavenia: <a href={`${API}/guru`}>stránka Guru</a>.</div>
+          <div className="gw-foot">Len pre tím LIVE-IN. História a nastavenia (zobrazenie, hlas): <a href={`${API}/guru`}>stránka Guru</a>.</div>
         </div>
       )}
     </>

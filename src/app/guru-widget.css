@@ -54,7 +54,14 @@
 .gw-vis{position:absolute;height:auto;pointer-events:none;-webkit-user-drag:none;opacity:0;will-change:opacity}
 .gw-nod{will-change:transform;transition:none}
 
-/* zaujímavosť dňa: širšia bublina, nadpis oranžový */
+/* pozdrav menom pri otvorení appky: širšia bublina, nadpis oranžový */
 .gw-hello.fact{width:300px;text-align:left;line-height:1.4;font-size:13.5px}
 .gw-hello.fact b{display:block;color:#F46D16;font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
 @media(max-width:700px){.gw-hello.fact{width:min(300px,calc(100vw - 24px))}}
+/* tichý režim: malé koliesko namiesto postavičky, zmenšovacie tlačidlo na postavičke */
+.gw-mini{position:fixed;z-index:2147483000;width:60px;height:60px;border-radius:50%;border:2.5px solid #173E2C;background:#EEF3EA;padding:0;cursor:pointer;box-shadow:0 8px 22px -8px rgba(23,62,44,.55);overflow:hidden;display:grid;place-items:center;font-size:26px;transition:transform .2s;animation:gw-wake .4s ease both}
+.gw-mini:hover{transform:scale(1.08)}
+/* výrez tváre z postavy (obrázok 400×711): tvár vyplní celú guličku */
+.gw-mini img{position:absolute;width:200%;height:auto;left:-50%;top:-12%;pointer-events:none;-webkit-user-drag:none}
+.gw-minbtn{position:absolute;top:6px;right:6px;z-index:3;width:26px;height:26px;border-radius:50%;border:1px solid #cfdac9;background:#fff;color:#173E2C;font:700 16px/1 inherit;cursor:pointer;opacity:.85}
+.gw-minbtn:hover{opacity:1}
