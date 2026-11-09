@@ -271,6 +271,9 @@ export const sk = {
     send: 'Odoslať',
     cancel: 'Zrušiť',
     remove: 'Odstrániť',
+    edit: 'Upraviť',
+    save: 'Uložiť',
+    edited: 'upravené',
     done: '✓ Vybavené',
     undo: 'Vrátiť',
     doneBy: (who: string, time: string) => `✓ Vybavené · ${who} · ${time}`,
@@ -280,6 +283,8 @@ export const sk = {
     notDone: 'Zmena sa neuložila. Skús znova.',
     notRemoved: 'Informáciu sa nepodarilo odstrániť.',
     notAuthor: 'Odstrániť môže len autor alebo admin.',
+    notEdited: 'Úprava sa neuložila. Skús znova.',
+    notAuthorEdit: 'Upraviť môže len ten, kto to napísal.',
     gone: 'Táto informácia už bola odstránená.',
   },
   notices: {

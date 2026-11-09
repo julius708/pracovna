@@ -272,6 +272,8 @@ export interface CleaningRequestRow {
   removed_by: string | null;
   removed_by_name: string | null;
   client_action_id: string | null;
+  /** Set when the author edited the text (migration 0020). */
+  edited_at?: Instant | null;
 }
 
 /** "Pre Angeliku": items to bring to a flat on a board day, ticked "Dodané" (migration 0019). */

@@ -21,6 +21,8 @@ export interface CleaningInfoProps {
   /** Resolve true when saved; the field then clears. */
   onAdd: (text: string) => Promise<boolean>;
   onReply: (parent: CleaningRequest, text: string) => Promise<boolean>;
+  /** The author saves a corrected text. */
+  onEdit: (request: CleaningRequest, text: string) => void;
   onTick: (request: CleaningRequest, done: boolean) => void;
   onRemove: (request: CleaningRequest) => void;
 }
@@ -30,11 +32,13 @@ export interface CleaningInfoProps {
  * the packing section, for the selected day. First the standing Guesty note of
  * the day's check-out flats that have one, then the day's messages (plain
  * text, no flat picker; Martina, 2026-10-30): admin and customer service write them, everyone who sees the box replies, cleaning /
- * admin / customer service tick them as done (who and when is kept).
+ * admin / customer service tick them as done (who and when is kept). The author
+ * edits their own message or reply (Martina, 2026-11-09).
  */
-export function CleaningInfo({ dayTitle, flats, requests, rights, viewer, now, busy, onAdd, onReply, onTick, onRemove }: CleaningInfoProps) {
+export function CleaningInfo({ dayTitle, flats, requests, rights, viewer, now, busy, onAdd, onReply, onEdit, onTick, onRemove }: CleaningInfoProps) {
   const [text, setText] = useState('');
   const [replying, setReplying] = useState<{ id: string; text: string } | null>(null);
+  const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
   const t = sk.cleaning;
   const top = requests.filter((r) => !r.parent_id);
   const repliesOf = (id: string) => requests.filter((r) => r.parent_id === id);
@@ -54,15 +58,54 @@ export function CleaningInfo({ dayTitle, flats, requests, rights, viewer, now, b
     if (await onReply(parent, clean)) setReplying(null);
   };
 
+  const saveEdit = (r: CleaningRequest) => {
+    if (!editing) return;
+    const clean = editing.text.trim();
+    setEditing(null);
+    if (!clean || clean === r.text) return;
+    onEdit(r, clean);
+  };
+
+  /** The text, or the edit field while its author corrects it. */
+  const body = (r: CleaningRequest, className: string) =>
+    editing?.id === r.id ? (
+      <div className="notice-edit">
+        <textarea aria-label={t.edit} value={editing.text} onChange={(e) => setEditing({ id: r.id, text: e.target.value })} maxLength={500} rows={3} autoFocus disabled={busy} />
+        <div className="notice-edit-actions">
+          <button type="button" className="btn ghost" onClick={() => setEditing(null)}>
+            {t.cancel}
+          </button>
+          <button type="button" className="btn primary" disabled={busy || !editing.text.trim()} onClick={() => saveEdit(r)}>
+            {t.save}
+          </button>
+        </div>
+      </div>
+    ) : (
+      <div className={className}>{r.text}</div>
+    );
+
   const meta = (r: CleaningRequest) => {
     const own = r.author === viewer.id;
+    const temp = r.id.startsWith('temp-');
     return (
       <div className="notice-meta">
-        <span>{t.by(r.author_name, noteTime(r.created_at, now))}</span>
-        {(own || rights.admin) && !r.id.startsWith('temp-') && (
-          <button type="button" className="notice-remove" disabled={busy} onClick={() => onRemove(r)}>
-            {t.remove}
-          </button>
+        <span>
+          {t.by(r.author_name, noteTime(r.created_at, now))}
+          {r.edited_at && <> · {t.edited}</>}
+        </span>
+        {!temp && editing?.id !== r.id && (
+          <span className="notice-actions">
+            {own && (
+              <button type="button" className="notice-remove" disabled={busy} onClick={() => setEditing({ id: r.id, text: r.text })}>
+                {t.edit}
+              </button>
+            )}
+            {(own || rights.admin) && (
+              <button type="button" className="notice-remove" disabled={busy} onClick={() => onRemove(r)}>
+                {t.remove}
+              </button>
+            )}
+          </span>
         )}
       </div>
     );
@@ -108,7 +151,7 @@ export function CleaningInfo({ dayTitle, flats, requests, rights, viewer, now, b
               return (
                 <li key={r.id} className={`cleaning-item${r.done_at ? ' is-done' : ''}`}>
                   {r.listing_name && <b className="cleaning-flat">{r.listing_name}</b>}
-                  <div className="cleaning-text">{r.text}</div>
+                  {body(r, 'cleaning-text')}
                   {r.done_at && <div className="cleaning-done">{t.doneBy(r.done_by_name ?? '—', noteTime(r.done_at, now))}</div>}
                   {meta(r)}
                   {!temp && (
@@ -127,7 +170,7 @@ export function CleaningInfo({ dayTitle, flats, requests, rights, viewer, now, b
                     <ul className="notice-replies">
                       {replies.map((x) => (
                         <li key={x.id} className="notice-reply">
-                          <div className="notice-text">{x.text}</div>
+                          {body(x, 'notice-text')}
                           {meta(x)}
                         </li>
                       ))}

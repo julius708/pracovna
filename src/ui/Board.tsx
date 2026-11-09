@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BASE } from '@/lib/base';
-import { addBoardNoteAction, addBoardReplyAction, addCleaningReplyAction, addCleaningRequestAction, addDeliveryAction, removeDeliveryAction, setDeliveredAction, addEarlyArrivalAction, addEarlyDepartureAction, checkAction, editBoardNoteAction, noteAction, packAction, removeBoardNoteAction, removeCleaningRequestAction, removeEarlyArrivalAction, setCleaningDoneAction, removeEarlyDepartureAction, unpackAction, type ActionResult } from '@/app/_lib/actions';
+import { addBoardNoteAction, addBoardReplyAction, addCleaningReplyAction, addCleaningRequestAction, addDeliveryAction, removeDeliveryAction, setDeliveredAction, addEarlyArrivalAction, addEarlyDepartureAction, checkAction, editBoardNoteAction, noteAction, packAction, removeBoardNoteAction, removeCleaningRequestAction, editCleaningRequestAction, removeEarlyArrivalAction, setCleaningDoneAction, removeEarlyDepartureAction, unpackAction, type ActionResult } from '@/app/_lib/actions';
 import type { BoardData, BoardNote, BoardPackage, EarlyArrival, EarlyDeparture } from '@/app/_lib/board';
 import { cleaningInfoFlats, type CleaningRequest } from '@/app/_lib/cleaning';
 import type { DeliveryRequest } from '@/app/_lib/delivery';
@@ -524,6 +524,25 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
     }
   };
 
+  const editCleaning = async (r: CleaningRequest, text: string) => {
+    const before = data.cleaning.requests;
+    setCleaningBusy(true);
+    setData((d) => ({ ...d, cleaning: { ...d.cleaning, requests: d.cleaning.requests.map((x) => (x.id === r.id ? { ...x, text, edited_at: new Date().toISOString() } : x)) } }));
+    let res: ActionResult;
+    try {
+      res = await track(() => editCleaningRequestAction(r.id, text));
+    } catch {
+      res = { ok: false, error: 'failed' };
+    }
+    setCleaningBusy(false);
+    if (res.ok) {
+      void refresh();
+    } else {
+      setData((d) => ({ ...d, cleaning: { ...d.cleaning, requests: before } }));
+      showToast(res.status === 'not_author' ? sk.cleaning.notAuthorEdit : res.status === 'removed' ? sk.cleaning.gone : res.error === 'unauthorized' ? sk.toasts.noPermission : sk.cleaning.notEdited);
+    }
+  };
+
   const editNote = async (note: BoardNote, text: string) => {
     const before = data.notes;
     setNoteBusy(true);
@@ -682,6 +701,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
           busy={cleaningBusy}
           onAdd={addCleaning}
           onReply={replyCleaning}
+          onEdit={(r, t) => void editCleaning(r, t)}
           onTick={(r, done) => void tickCleaning(r, done)}
           onRemove={(r) => void removeCleaning(r)}
         />

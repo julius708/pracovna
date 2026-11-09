@@ -38,9 +38,11 @@ export interface CleaningRequest {
   parent_id: string | null;
   done_at: string | null;
   done_by_name: string | null;
+  /** When the author last edited the text (migration 0020). */
+  edited_at?: string | null;
 }
 
-export const CLEANING_REQUEST_COLUMNS = 'id, date, listing_id, listing_name, text, author, author_name, created_at, parent_id, done_at, done_by_name';
+export const CLEANING_REQUEST_COLUMNS = 'id, date, listing_id, listing_name, text, author, author_name, created_at, parent_id, done_at, done_by_name, edited_at';
 
 export interface CleaningData {
   rights: CleaningRights;

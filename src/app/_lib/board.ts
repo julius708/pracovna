@@ -260,6 +260,6 @@ function memoryCleaning(repo: MemoryRepo, listings: { guesty_id: string; in_scop
   const requests = (repo.cleaningRequests ?? [])
     .filter((r) => !r.removed_at && (dates as readonly string[]).includes(r.date))
     .sort((a, b) => a.created_at.localeCompare(b.created_at))
-    .map((r) => ({ id: r.id, date: r.date, listing_id: r.listing_id, listing_name: r.listing_name, text: r.text, author: r.author, author_name: r.author_name, created_at: r.created_at, parent_id: r.parent_id, done_at: r.done_at, done_by_name: r.done_by_name }));
+    .map((r) => ({ id: r.id, date: r.date, listing_id: r.listing_id, listing_name: r.listing_name, text: r.text, author: r.author, author_name: r.author_name, created_at: r.created_at, parent_id: r.parent_id, done_at: r.done_at, done_by_name: r.done_by_name, edited_at: r.edited_at ?? null }));
   return { rights, info, requests };
 }

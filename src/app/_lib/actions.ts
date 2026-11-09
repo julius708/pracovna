@@ -27,6 +27,7 @@ import {
   memoryPack,
   memoryRemoveBoardNote,
   memoryRemoveCleaningRequest,
+  memoryEditCleaningRequest,
   memoryRemoveDelivery,
   memoryRemoveEarlyArrival,
   memoryRemoveEarlyDeparture,
@@ -188,6 +189,14 @@ export async function setCleaningDoneAction(id: string, done: boolean): Promise<
 }
 
 /** Removes a message or reply for the cleaners (author or app admin). */
+/** Edits a message or reply in "Info pre upratovačov" (its author only). */
+export async function editCleaningRequestAction(id: string, text: string): Promise<ActionResult> {
+  return withViewer(async (viewer) => {
+    if (supabaseConfigured()) return rpc('edit_cleaning_request', { p_id: id, p_text: text });
+    return memoryEditCleaningRequest(memoryRepo(), viewer, id, text);
+  });
+}
+
 export async function removeCleaningRequestAction(id: string): Promise<ActionResult> {
   return withViewer(async (viewer) => {
     if (supabaseConfigured()) return rpc('remove_cleaning_request', { p_id: id });

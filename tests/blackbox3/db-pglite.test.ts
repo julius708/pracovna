@@ -33,6 +33,7 @@ const MIG16 = readFileSync(new URL('../../supabase/migrations/0016_manual_early_
 const MIG17 = readFileSync(new URL('../../supabase/migrations/0017_early_departures.sql', import.meta.url), 'utf8');
 const MIG18 = readFileSync(new URL('../../supabase/migrations/0018_cleaning_info.sql', import.meta.url), 'utf8');
 const MIG19 = readFileSync(new URL('../../supabase/migrations/0019_delivery_requests.sql', import.meta.url), 'utf8');
+const MIG20 = readFileSync(new URL('../../supabase/migrations/0020_cleaning_edit.sql', import.meta.url), 'utf8');
 /** The shared LIVE-IN users and their roles as they exist in LIVE-IN Core (not created by this app's migrations). */
 const APP_USERS_STUB = `
 create or replace function auth.jwt() returns jsonb language sql stable as
@@ -129,6 +130,8 @@ describe('migrations', () => {
       expect((await fresh.query<Row>("select column_name from information_schema.columns where table_schema = 'public' and table_name = 'listings' and column_name = 'cleaning_info'")).rows).toHaveLength(1);
       const e19 = await pgError(fresh.exec(MIG19));
       expect(e19, `0019_delivery_requests.sql failed: ${e19?.code} ${e19?.message} (line ${lineOf(MIG19, e19?.position)})`).toBeNull();
+      const e20 = await pgError(fresh.exec(MIG20));
+      expect(e20, `0020_cleaning_edit.sql failed: ${e20?.code} ${e20?.message} (line ${lineOf(MIG20, e20?.position)})`).toBeNull();
       const fns =(await fresh.query<Row>("select proname from pg_proc where pronamespace = 'public'::regnamespace order by 1")).rows.map((r) => r.proname);
       expect(fns).toEqual(expect.arrayContaining(['today_ba', 'is_admin', 'is_active_user', 'handle_new_user', 'sync_upsert_package', 'sync_set_lifecycle', 'pack_package', 'unpack_package', 'set_note', 'toggle_check', 'save_settings', 'admin_set_profile', 'acquire_lock', 'run_retention', 'increment_not_found', 'add_board_note', 'remove_board_note', 'edit_board_note']));
     } finally {
@@ -212,6 +215,7 @@ beforeAll(async () => {
   await db.exec(APP_USERS_STUB);
   await db.exec(MIG18);
   await db.exec(MIG19);
+  await db.exec(MIG20);
   await db.exec('set check_function_bodies = on');
   todayBa = (await one('select public.today_ba()::text as d')).d as string;
 });
@@ -1139,6 +1143,21 @@ describe('cleaning_requests (0018): roles from the shared LIVE-IN users', () => 
     await as(mkt);
     expect(await visible()).toEqual([]);
     expect((await pgError(q('select public.add_cleaning_reply($1, $2, $3)', [m.id, 'x', randomUUID()])))?.code).toBe('42501');
+
+    // only the author edits their own message or reply (0020); nobody rewrites another's words
+    await as(cs);
+    expect((await one('select public.edit_cleaning_request($1, $2) as r', [m.id, 'Vymeniť žiarovku v kúpeľni'])).r).toEqual({ ok: true, unchanged: true });
+    expect((await one('select public.edit_cleaning_request($1, $2) as r', [m.id, '  '])).r).toEqual({ ok: false, status: 'empty' });
+    expect((await one('select public.edit_cleaning_request($1, $2) as r', [m.id, '  Vymeniť žiarovku v kuchyni  '])).r).toEqual({ ok: true });
+    const ed = await one('select text, edited_at from public.cleaning_requests where id = $1', [m.id]);
+    expect(ed.text).toBe('Vymeniť žiarovku v kuchyni');
+    expect(ed.edited_at).not.toBeNull();
+    expect((await one('select public.edit_cleaning_request($1, $2) as r', [rep.id, 'Cudzí zásah'])).r).toEqual({ ok: false, status: 'not_author' });
+    await as(cleaner);
+    expect((await one('select public.edit_cleaning_request($1, $2) as r', [rep.id, 'Hotovo, vymenené aj v kuchyni'])).r).toEqual({ ok: true });
+    expect((await one('select public.edit_cleaning_request($1, $2) as r', [m.id, 'Cudzí zásah'])).r).toEqual({ ok: false, status: 'not_author' });
+    await as(mkt);
+    expect((await pgError(q('select public.edit_cleaning_request($1, $2)', [m.id, 'x'])))?.code).toBe('42501');
 
     // only the author (or an app admin) removes
     await as(cleaner);

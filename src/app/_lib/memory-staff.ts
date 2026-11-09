@@ -351,6 +351,21 @@ export async function memoryRemoveCleaningRequest(repo: MemoryRepo, viewer: View
   return { ok: true };
 }
 
+/** edit_cleaning_request as in Postgres (migration 0020): the author only. */
+export async function memoryEditCleaningRequest(repo: MemoryRepo, viewer: Viewer, id: string, text: string): Promise<StaffResult> {
+  repo.cleaningRequests ??= [];
+  const r = repo.cleaningRequests.find((x) => x.id === id);
+  if (!r) throw new Error('request not found');
+  if (r.removed_at) return { ok: false, status: 'removed' };
+  if (r.author !== viewer.id) return { ok: false, status: 'not_author' };
+  const clean = text.trim().slice(0, 500);
+  if (!clean) return { ok: false, status: 'empty' };
+  if (clean === r.text) return { ok: true };
+  r.text = clean;
+  r.edited_at = repo.now().toISOString();
+  return { ok: true };
+}
+
 /** add_delivery_request as in Postgres (migration 0019): every active user, a near day, a flat in scope. */
 export async function memoryAddDelivery(repo: MemoryRepo, viewer: Viewer, date: string, listingId: string, text: string, actionId: string | null): Promise<StaffResult> {
   repo.deliveryRequests ??= [];
