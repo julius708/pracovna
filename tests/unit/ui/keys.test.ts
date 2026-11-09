@@ -55,3 +55,10 @@ describe('USPORIADANIE KĽÚČOV – Landererova (Martina, 2026-11-09)', () => {
     expect(names.some((n) => n.startsWith('Panorama veza'))).toBe(false);
   });
 });
+
+describe('USPORIADANIE KĽÚČOV – Modrá Guľa in a row (Martina, 2026-11-09)', () => {
+  it('floors 2-6 hang on D124-D128 in order', () => {
+    expect(KEYS.filter((k) => k.name.startsWith('Modrá Guľa')).map((k) => k.code)).toEqual(['D124', 'D125', 'D126', 'D127', 'D128']);
+    expect(KEYS.some((k) => k.code === 'D130' || k.code === 'D132')).toBe(false);
+  });
+});
