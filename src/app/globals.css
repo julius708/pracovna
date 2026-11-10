@@ -346,23 +346,6 @@ td input.lbl{width:190px;text-align:left}
 .li-tools-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:10px;margin:0 0 12px}
 .li-tools-bar:empty{display:none}
 
-/* "USPORIADANIE KLUCOV" (Martina, 2026-11-08): folded key list above Dôležité info; code colour = hook row */
-.keys-box{margin:14px 0 4px;border:2px solid #173E2C;border-radius:16px;background:#F4F5F0;overflow:hidden}
-.keys-toggle{width:100%;min-height:56px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;background:#F4F5F0;color:#233E31;border:0;font:inherit;cursor:pointer;text-align:left}
-.keys-toggle[aria-expanded=true]{background:#173E2C;color:#F4F5F0}
-.keys-title{font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:.04em;display:inline-flex;align-items:center;gap:8px}
-.keys-hint{font-size:14px;font-weight:700;white-space:nowrap}
-.keys-list{list-style:none;margin:0;padding:6px 12px 12px;display:flex;flex-direction:column}
-.keys-row{display:flex;align-items:center;gap:8px;min-height:44px;padding:6px 4px;border-bottom:1px solid #DCE2D9;color:#233E31;font-size:16px}
-.keys-row:last-child{border-bottom:0}
-.keys-name{flex:1 1 auto;min-width:0;overflow-wrap:anywhere;font-weight:600}
-.keys-where{display:block;font-size:13px;font-weight:500;color:#5C6B61;margin-top:1px}
-.keys-dash{color:#7A867D}
-.keys-code{flex:0 0 auto;min-width:62px;text-align:center;padding:5px 10px;border-radius:999px;font-variant-numeric:tabular-nums;font-size:16px;font-weight:800;border:1px solid transparent}
-.keys-code.row-a{background:#D3F9D8;color:#1E6B30;border-color:#69DB7C}
-.keys-code.row-b{background:#D0EBFF;color:#1C5C99;border-color:#74C0FC}
-.keys-code.row-c{background:#FFF3BF;color:#7A5A00;border-color:#FFD43B}
-.keys-code.row-d{background:#FFDEEB;color:#A61E4D;border-color:#F783AC}
 
 /* "Pre Angeliku" (Martina, 2026-11-09): delivered requests turn green */
 .delivery-box{margin:14px 0 4px;gap:8px;align-items:stretch}

@@ -250,13 +250,6 @@ export const sk = {
     notAuthor: 'Odstrániť môže len autor alebo admin.',
     badListing: 'Vyber byt zo zoznamu.',
   },
-  /** "USPORIADANIE KLUCOV": the folded key list above "Dôležité info" (Martina, 2026-11-08). */
-  keys: {
-    title: 'USPORIADANIE KĽÚČOV',
-    open: 'Zobraziť zoznam',
-    close: 'Skryť zoznam',
-    count: (n: number) => `${n} bytov`,
-  },
   /** "Info pre upratovačov": the grey box above the packing section (Martina, 2026-10-30). */
   cleaning: {
     title: 'Info pre upratovačov',
