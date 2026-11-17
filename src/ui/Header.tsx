@@ -46,10 +46,13 @@ export function SyncBadge({ lastOkSyncAt, now, connected }: { lastOkSyncAt: stri
 
 /** Personál vidí históriu balenia (bez auditu udalostí a nastavení). */
 const STAFF_HISTORY = { href: '/historia/balenie', label: 'História' };
+/** "Sklad" stays out of the menu until NEXT_PUBLIC_SKLAD_NAV=1 (the screens answer at /sklad for admins either way). */
+const SKLAD_NAV = process.env.NEXT_PUBLIC_SKLAD_NAV === '1';
 const NAV: { href: string; label: string }[] = [
   { href: '/', label: 'Balenie' },
   { href: '/nastavenia', label: sk.buttons.settings },
   { href: '/historia', label: 'História' },
+  ...(SKLAD_NAV ? [{ href: '/sklad', label: 'Sklad' }] : []),
   { href: '/stav', label: 'Stav' },
 ];
 
@@ -78,7 +81,7 @@ export function Header({
         </a>
         <AppsMenu current="pracovna" roles={null} />
         <nav className="li-nav" aria-label="Práčovňa">
-          {(admin ? NAV : [NAV[0], STAFF_HISTORY]).map(n => <Link key={n.href} href={n.href} aria-current={path === n.href || (n.href !== '/' && path.startsWith(`${n.href}/`)) ? 'page' : undefined}>{n.label}</Link>)}
+          {(admin ? NAV : [NAV[0], STAFF_HISTORY, ...(SKLAD_NAV ? [{ href: '/sklad/pohyby', label: 'Sklad' }] : [])]).map(n => <Link key={n.href} href={n.href} aria-current={path === n.href || (n.href !== '/' && path.startsWith(`${n.href}/`)) ? 'page' : undefined}>{n.label}</Link>)}
         </nav>
         <div className="li-account"><a className="li-back" href={HUB}>← Späť</a><RefreshButton /><span>{viewer.name}</span><form action={logoutAction} style={{ display: 'contents' }}><button type="submit">{sk.buttons.logout}</button></form></div>
       </div></div>
