@@ -80,4 +80,10 @@ const SK_CSS = `
 .sk-wrap td input.wide{width:150px;text-align:left}
 .sk-wrap td select{max-width:190px}
 .sk-sub{color:var(--muted);font-size:12px}
+.sk-steps{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:8px}
+.sk-steps li{display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.sk-steps .n{flex:0 0 26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:13px;border:2px solid var(--line);background:var(--surface)}
+.sk-steps li.done .n{background:var(--ok);border-color:var(--ok);color:var(--ok-ink)}
+.sk-steps li.done a{opacity:.7}
+.sk-steps a{font-weight:700;color:var(--ink)}
 `;

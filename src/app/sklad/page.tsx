@@ -4,6 +4,7 @@ import { loadStock } from '@/app/_lib/sklad';
 import { DISCREPANCY_LABEL, itemLabel } from '@/app/_lib/sklad-ui';
 import { addDays, formatDM, formatHM } from '@/core/packing';
 import { knownDemand, packInfo, skuAt } from '@/core/stock';
+import Link from 'next/link';
 import { SkladShell } from '@/ui/sklad/SkladShell';
 
 export const dynamic = 'force-dynamic';
@@ -41,6 +42,26 @@ export default async function SkladStav({ searchParams }: { searchParams: Promis
 
   return (
     <SkladShell viewer={viewer} view={v} current="stav" m={qp(sp, 'm')} title="Stav zásob">
+      {v.mode !== 'demo' && !v.config.deductionEnabled && (
+        <div className="sk-card" style={{ marginBottom: 14 }}>
+          <b style={{ fontSize: 16 }}>Postup spustenia skladu</b>
+          <ol className="sk-steps">
+            {[
+              { done: v.warehouses.length > 0 && v.items.length > 0, text: 'Karty a sklady', href: '/sklad/katalog', hint: 'Základné karty sa vytvoria jedným tlačidlom, sklad priradíš kartám v katalógu.' },
+              { done: v.skus.some((s) => packInfo(s).verified), text: 'Ponuky dodávateľov s overeným balením', href: '/sklad/katalog', hint: 'Len overené údaje: kusov v balení, zdroj a dátum overenia.' },
+              { done: v.aliases.length > 0 && v.unmapped.length === 0, text: 'Priradenie riadkov z balenia ku kartám', href: '/sklad/katalog', hint: 'Kávové systémy zvlášť; neurčené riadky sa nehádajú.' },
+              { done: v.inventories.some((i) => i.status !== 'draft'), text: 'Začiatočná inventúra uzavretá v presnom čase', href: '/sklad/inventura', hint: 'Dátum určí správca; prázdne pole nie je nula.' },
+              { done: !!v.config.baselineInventoryId, text: 'Inventúra schválená = začiatočný stav', href: '/sklad/inventura', hint: 'Schvaľuje oprávnená osoba.' },
+              { done: v.config.deductionEnabled, text: 'Zapnúť odpočty pri zabalení', href: '/sklad/katalog', hint: 'Dostupné až po schválenej inventúre; doplnia sa len balenia po uzávierke.' },
+            ].map((st, i) => (
+              <li key={i} className={st.done ? 'done' : ''}>
+                <span className="n">{st.done ? '✓' : i + 1}</span>
+                <span><Link href={st.href}>{st.text}</Link><small className="sk-sub"> {st.hint}</small></span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
       <div className="sk-grid">
         <div className="sk-card"><b>{rows.length - unknown}</b><span>kariet so známym stavom z {rows.length}</span></div>
         <div className="sk-card"><b>{unknown}</b><span>bez začiatočného stavu (neznámy, nie 0)</span></div>

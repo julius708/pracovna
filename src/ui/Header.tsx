@@ -46,13 +46,13 @@ export function SyncBadge({ lastOkSyncAt, now, connected }: { lastOkSyncAt: stri
 
 /** Personál vidí históriu balenia (bez auditu udalostí a nastavení). */
 const STAFF_HISTORY = { href: '/historia/balenie', label: 'História' };
-/** "Sklad" stays out of the menu until NEXT_PUBLIC_SKLAD_NAV=1 (the screens answer at /sklad for admins either way). */
+/** "Sklad" je v menu správcu vždy (obrazovky vidí len správca); pre personál (zápis ručného pohybu) až s NEXT_PUBLIC_SKLAD_NAV=1. */
 const SKLAD_NAV = process.env.NEXT_PUBLIC_SKLAD_NAV === '1';
 const NAV: { href: string; label: string }[] = [
   { href: '/', label: 'Balenie' },
   { href: '/nastavenia', label: sk.buttons.settings },
   { href: '/historia', label: 'História' },
-  ...(SKLAD_NAV ? [{ href: '/sklad', label: 'Sklad' }] : []),
+  { href: '/sklad', label: 'Sklad' },
   { href: '/stav', label: 'Stav' },
 ];
 
