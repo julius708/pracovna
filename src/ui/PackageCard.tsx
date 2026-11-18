@@ -7,6 +7,8 @@ import type { Viewer } from '@/app/_lib/viewer';
 import { flatFacts, formatHM, NOTE_MAX_LENGTH, type PackingResult, type WarningCode } from '@/core/packing';
 import { flatAddress } from '@/core/printer/addresses';
 import { LabelButton } from './LabelButton';
+import { countTicked, isTicked } from './ticks';
+import { useTicks } from './useTicks';
 import { bedSummary, capsuleLabel, cheerDone, childrenBannerParts, duvetText, nextArrivalParts, packedBy, peopleParts, sk, sofaText, warningLine, type TextPart } from '@/core/i18n/sk';
 
 const AV = `${BASE}/assets/angelika.jpg`;
@@ -51,6 +53,7 @@ export function PackageCard({
   handlers: CardHandlers;
 }) {
   const r = p.computed_items as PackingResult;
+  const { ticks, toggle: toggleTick } = useTicks(p.id);
   const [noteOpen, setNoteOpen] = useState(false);
   const noteRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -69,6 +72,20 @@ export function PackageCard({
   const done = checklist.filter((x) => checked[x]).length;
   const otherWarnings = (r.warnings as WarningCode[]).filter((w) => !INLINE.includes(w));
   const canAct = viewer.active && !cancelled;
+  // odfajkávanie "čo treba zbaliť" (feedback #18): len v prehliadači, kým je karta nezabalená
+  const tickable = canAct && p.status === 'todo';
+  const tickItems = [
+    ...r.linen.map((l) => ({ id: `l:${l.key}`, n: l.n })),
+    ...r.consumables.map((l) => ({ id: `c:${l.key}`, n: l.n })),
+    ...r.capsules.map((c, i) => ({ id: `k:${c.typeKey || c.state}-${i}`, n: c.n })),
+  ];
+  const ticked = countTicked(ticks, tickItems);
+  const TickBtn = ({ id, n, label }: { id: string; n: number; label: string }) =>
+    tickable ? (
+      <button type="button" className="tk" aria-pressed={isTicked(ticks, id, n)} aria-label={`${sk.ticks.aria}: ${label}`} onClick={() => toggleTick(id, n)}>
+        <i aria-hidden="true" />
+      </button>
+    ) : null;
   // Angelika's name for the flat and her facts about it (src/core/packing/flats.ts)
   const facts = flatFacts(p.listing_id);
 
@@ -155,10 +172,16 @@ export function PackageCard({
           <b>{sk.guestyNoteLabel}</b> {r.guestyNote}
         </div>
       )}
+      {tickable && tickItems.length > 0 && (
+        <div className="tick-h" aria-live="polite">
+          {ticked === tickItems.length ? sk.ticks.all : sk.ticks.count(ticked, tickItems.length)}
+        </div>
+      )}
       {r.linen.length > 0 && (
         <ul className="items">
           {r.linen.map((l) => (
-            <li key={l.key} className={l.source === 'guesty' ? 'cust' : undefined}>
+            <li key={l.key} className={`${l.source === 'guesty' ? 'cust' : ''}${tickable && isTicked(ticks, `l:${l.key}`, l.n) ? ' ticked' : ''}`.trim() || undefined}>
+              <TickBtn id={`l:${l.key}`} n={l.n} label={l.label} />
               <b>{l.n}</b>
               <span>{l.label}</span>
               <small>{l.size}</small>
@@ -172,7 +195,8 @@ export function PackageCard({
           {noCapsules && <div className="caps-refused">⛔ {sk.capsulesRefused}</div>}
           <ul>
             {r.consumables.map((l) => (
-              <li key={l.key} className={l.source === 'guesty' ? 'cust' : undefined}>
+              <li key={l.key} className={`${l.source === 'guesty' ? 'cust' : ''}${tickable && isTicked(ticks, `c:${l.key}`, l.n) ? ' ticked' : ''}`.trim() || undefined}>
+                <TickBtn id={`c:${l.key}`} n={l.n} label={l.label} />
                 <span>
                   {l.label}
                   {l.size ? <small> {l.size}</small> : null}
@@ -183,7 +207,8 @@ export function PackageCard({
             {r.capsules.map((c, i) => {
               const t = capsuleLabel(c);
               return (
-                <li key={`${c.typeKey || c.state}-${i}`} className={`${c.fixed ? 'cust' : ''}${t.note ? ' miss' : ''}`}>
+                <li key={`${c.typeKey || c.state}-${i}`} className={`${c.fixed ? 'cust' : ''}${t.note ? ' miss' : ''}${tickable && isTicked(ticks, `k:${c.typeKey || c.state}-${i}`, c.n) ? ' ticked' : ''}`}>
+                  <TickBtn id={`k:${c.typeKey || c.state}-${i}`} n={c.n} label={t.label} />
                   <span>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     {c.photo && <img className="capico" src={`${BASE}/assets/${c.photo}`} alt="" />}

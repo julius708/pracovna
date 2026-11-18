@@ -352,3 +352,13 @@ td input.lbl{width:190px;text-align:left}
 /* "Pre Angeliku" (Martina, 2026-11-09): delivered requests turn green */
 .delivery-box{margin:14px 0 4px;gap:8px;align-items:stretch}
 .delivery-item.is-delivered{background:#EBFBEE;border-color:#69DB7C}
+
+/* odfajkávanie "čo treba zbaliť" (feedback #18): značky len v prehliadači */
+.tick-h{margin-top:12px;font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--muted)}
+.tk{flex:0 0 auto;width:34px;height:34px;display:grid;place-items:center;border:0;background:transparent;padding:0;cursor:pointer;border-radius:8px}
+.tk i{width:22px;height:22px;border-radius:7px;border:2px solid var(--line);background:var(--surface);display:block;position:relative}
+.tk[aria-pressed="true"] i{background:var(--ok);border-color:var(--ok)}
+.tk[aria-pressed="true"] i::after{content:"";position:absolute;left:6px;top:2px;width:5px;height:10px;border:solid var(--ok-ink);border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
+.items li.ticked,.cons li.ticked{opacity:.55}
+.items li.ticked span,.cons li.ticked span{text-decoration:line-through}
+.cons li .tk{align-self:center;margin-right:-2px}

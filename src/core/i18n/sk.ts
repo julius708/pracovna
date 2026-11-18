@@ -90,6 +90,12 @@ export const sk = {
   duvetsLabel: 'Paplóny:',
   coffeeLabel: 'Kávovar:',
   checklistTitle: 'Checklist',
+  /** Odfajkávanie "čo treba zbaliť" (feedback #18); značky ostávajú len v tomto zariadení. */
+  ticks: {
+    aria: 'Zabalené do tašky',
+    count: (n: number, total: number) => `Odfajknuté ${n}/${total} (len v tomto zariadení)`,
+    all: 'Všetko odfajknuté. Môžeš dať Zabalené.',
+  },
   changedAfterPacking: 'Zmenené po zabalení',
   minNightsUnknown: 'min. pobyt neznámy – over kalendár',
   capsuleGeneric: 'Kapsule do kávy',
