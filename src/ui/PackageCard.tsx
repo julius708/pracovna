@@ -105,7 +105,9 @@ export function PackageCard({
       )}
       {/* spec §5 order: badges, then banners (children, private linen) */}
       <div className="meta">
-        {next ? (
+        {r.extra ? (
+          <span className="tag rush">{sk.extra.tag}</span>
+        ) : next ? (
           r.sameDay ? (
             <span className="tag rush">{sk.rushTag}</span>
           ) : (
@@ -125,6 +127,11 @@ export function PackageCard({
       {kid && (
         <div className="kids">
           <Parts parts={kid} />
+        </div>
+      )}
+      {r.extra && (
+        <div className="lnote">
+          <b>{sk.extra.from}</b> {r.extra.texts.join(' · ')}
         </div>
       )}
       {r.private && <div className="privbar">{sk.privateBanner}</div>}

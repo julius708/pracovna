@@ -72,6 +72,16 @@ export const sk = {
   rushTag: 'Rýchla výmena · príchod v ten istý deň',
   noNextTag: 'Bez ďalšej rezervácie',
   privateBanner: 'Súkromné prádlo – nebaliť z našej bielizne',
+  /** Extra cleanings asked for in a board message (Martina, 2026-11-18). */
+  extra: {
+    tag: '🧹 Extra upratovanie',
+    from: 'Zo správy:',
+    /** Under a message the app read as an extra cleaning. */
+    chip: (flat: string, day: string) => `🧹 Karta na balenie: ${flat} · ${day}`,
+    chipOutside: (flat: string, day: string) => `🧹 Extra upratovanie: ${flat} · ${day} (mimo zobrazených dní)`,
+    unclear: (names: string) => `⚠️ Extra upratovanie – neviem, ktorý byt: ${names}. Dopíšte presný názov (napr. písmeno bytu).`,
+    noFlat: '⚠️ Extra upratovanie – nenašla som názov bytu. Dopíšte ho, aby sa zobrazila karta.',
+  },
   guestyNoteLabel: 'Z Guesty:',
   /** Angelika's facts about the flat (src/core/packing/flats.ts). */
   flatNoteLabel: 'Info o byte:',
@@ -404,6 +414,10 @@ export function peopleParts(r: PackingResult): TextPart[] {
   const n = r.people;
   const count: TextPart = { text: String(n), bold: true };
   const osob = ` ${pluralOsob(n)}`;
+  if (r.extra) {
+    const why = { message: 'počet zo správy', stay: 'podľa hostí v byte', next: 'podľa ďalšej rezervácie', capacity: 'max. kapacita' }[r.extra.peopleFrom];
+    return [{ text: 'Balíme na ' }, count, { text: `${osob} (extra upratovanie – ${why})` }];
+  }
   if (r.peopleSource === 'same_day') return [{ text: 'Balíme na ' }, count, { text: `${osob} (check-in v ten deň)` }];
   if (r.peopleSource === 'gap' && r.gap) {
     if (r.gap.reason === 'calendar_blocked') {

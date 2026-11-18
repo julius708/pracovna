@@ -1,4 +1,4 @@
-import type { PackingSettings } from '@/core/packing';
+import type { ExtraSource, PackingSettings } from '@/core/packing';
 import type { TokenStore } from '@/guesty/token';
 import type {
   AppStateKey,
@@ -91,6 +91,10 @@ export interface SyncRepo {
   updatePackageComputed(id: string, computed: PackageComputed): Promise<void>;
   setPackageLifecycle(id: string, patch: LifecyclePatch): Promise<void>;
   insertEvents(events: PackageEventInsert[]): Promise<void>;
+
+  // extra cleanings (src/sync/extra-cleanings.ts): the board messages they are read from
+  /** Top-level "Dôležité info" and "Info pre upratovačov" messages written for days from..to (not removed). */
+  getExtraSources(from: Ymd, to: Ymd): Promise<ExtraSource[]>;
 
   // settings
   getSetting<T>(key: 'linen_table' | 'duvet_types' | 'checklist' | string): Promise<T | null>;

@@ -201,6 +201,13 @@ export interface CapsuleLine {
 /** facts = the flat's full set as Angelika counts it (flats.ts), shown as "podľa Angeliky". */
 export type DuvetSource = 'guesty_exact' | 'guesty_type' | 'setting' | 'default' | 'facts';
 
+/** Where the people of an extra cleaning come from: the message, the guests staying, the next arrival, or the capacity. */
+export interface ExtraInfo {
+  peopleFrom: 'message' | 'stay' | 'next' | 'capacity';
+  /** The messages that asked for the cleaning. */
+  texts: string[];
+}
+
 export interface PackingResult {
   v: 1;
   people: number;
@@ -227,6 +234,11 @@ export interface PackingResult {
    * that results of every other flat keep their shape and hash.
    */
   duvetInventory?: { large: number; small: number; capacity: number };
+  /**
+   * Present only on an extra cleaning (src/core/packing/extra.ts): a card made from a
+   * message on the board, not from a check-out. Optional so other results keep their hash.
+   */
+  extra?: ExtraInfo;
   private: boolean;
   coffee: string | null;
   guestyNote: string | null;

@@ -19,6 +19,8 @@ export interface NoticeBoardProps {
   onReply: (parent: BoardNote, text: string) => Promise<boolean>;
   onEdit: (note: BoardNote, text: string) => void;
   onRemove: (note: BoardNote) => void;
+  /** What the app made of a note asking for an extra cleaning (a card, or why not); null for other notes. */
+  extraLine?: (text: string) => string | null;
 }
 
 /**
@@ -29,7 +31,7 @@ export interface NoticeBoardProps {
  * Anyone answers a note: the replies show under it, oldest first (Martina,
  * 2026-10-19); a reply is edited and removed like a note.
  */
-export function NoticeBoard({ notes, dayTitle, viewer, now, busy, onAdd, onReply, onEdit, onRemove }: NoticeBoardProps) {
+export function NoticeBoard({ notes, dayTitle, viewer, now, busy, onAdd, onReply, onEdit, onRemove, extraLine }: NoticeBoardProps) {
   const [text, setText] = useState('');
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
   const [replying, setReplying] = useState<{ id: string; text: string } | null>(null);
@@ -87,6 +89,7 @@ export function NoticeBoard({ notes, dayTitle, viewer, now, busy, onAdd, onReply
         ) : (
           <div className="notice-text">{n.text}</div>
         )}
+        {!n.parent_id && extraLine?.(n.text) && <div className="extra-chip">{extraLine(n.text)}</div>}
         <div className="notice-meta">
           <span>
             {sk.noticeBoard.by(n.author_name, noteTime(n.created_at, now))}
