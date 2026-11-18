@@ -14,3 +14,5 @@ export type { FlatFacts } from './flats';
 export { DEFAULT_SETTINGS, DEFAULT_ITEMS, mergeSettings } from './settings';
 export { addDays, diffDays, datesBetween, todayInTz, windowDates, WINDOW_DAYS, weekdayShort, formatDM, formatHM, ymdToDate, isYmd, zonedMidnight } from './dates';
 export { stableStringify, hashOf, fnv1a64 } from './hash';
+export { isExtraCleaningText, matchFlats, flatKey, extraDate, extraPeople, readExtra, collectExtras, extraPackageKey, isExtraPackageKey } from './extra';
+export type { ExtraSource, ExtraCleaning, ExtraUnclear, FlatMatch } from './extra';

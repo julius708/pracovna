@@ -25,6 +25,8 @@ export interface CleaningInfoProps {
   onEdit: (request: CleaningRequest, text: string) => void;
   onTick: (request: CleaningRequest, done: boolean) => void;
   onRemove: (request: CleaningRequest) => void;
+  /** What the app made of a message asking for an extra cleaning (a card, or why not); null for other messages. */
+  extraLine?: (text: string, listingId: string | null) => string | null;
 }
 
 /**
@@ -35,7 +37,7 @@ export interface CleaningInfoProps {
  * admin / customer service tick them as done (who and when is kept). The author
  * edits their own message or reply (Martina, 2026-11-09).
  */
-export function CleaningInfo({ dayTitle, flats, requests, rights, viewer, now, busy, onAdd, onReply, onEdit, onTick, onRemove }: CleaningInfoProps) {
+export function CleaningInfo({ dayTitle, flats, requests, rights, viewer, now, busy, onAdd, onReply, onEdit, onTick, onRemove, extraLine }: CleaningInfoProps) {
   const [text, setText] = useState('');
   const [replying, setReplying] = useState<{ id: string; text: string } | null>(null);
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
@@ -81,7 +83,10 @@ export function CleaningInfo({ dayTitle, flats, requests, rights, viewer, now, b
         </div>
       </div>
     ) : (
-      <div className={className}>{r.text}</div>
+      <>
+        <div className={className}>{r.text}</div>
+        {!r.parent_id && extraLine?.(r.text, r.listing_id) && <div className="extra-chip">{extraLine(r.text, r.listing_id)}</div>}
+      </>
     );
 
   const meta = (r: CleaningRequest) => {

@@ -1,6 +1,8 @@
 import {
   addDays,
+  collectExtras,
   computePackage,
+  isExtraPackageKey,
   GAP_MAX_NIGHTS,
   mergeSettings,
   packageHash,
@@ -17,6 +19,7 @@ import { loadSettings, type SyncRepo } from '@/db/repo';
 import type { CalendarRow, ListingRow, PackageComputed, PackageEventInsert, PackageRow, ReservationRow } from '@/db/types';
 import type { Logger } from '@/guesty/log';
 import { silentLogger } from '@/guesty/log';
+import { extraComputed } from './extra-cleanings';
 
 export interface RecomputeDeps {
   repo: SyncRepo;
@@ -40,6 +43,8 @@ export const CANCEL_REASONS = {
   deleted: 'deleted_in_guesty',
   missing: 'reservation_missing',
   outOfScope: 'listing_out_of_scope',
+  /** The message that asked for an extra cleaning was removed or changed, or a check-out card covers that day. */
+  extraGone: 'extra_cleaning_gone',
 } as const;
 
 export function toListingInput(l: ListingRow): ListingInput {
@@ -190,10 +195,12 @@ export async function recomputeWindow(deps: RecomputeDeps, trigger: string, toda
     res.cancelled++;
   };
 
-  // packages in the window whose reservation vanished from the database
+  // packages in the window whose reservation vanished from the database (extra cleanings have none: below)
   for (const p of windowPackages) {
-    if (!byId.has(p.outgoing_reservation_id)) await cancel(p, CANCEL_REASONS.missing);
+    if (!isExtraPackageKey(p.outgoing_reservation_id) && !byId.has(p.outgoing_reservation_id)) await cancel(p, CANCEL_REASONS.missing);
   }
+  /** Flats and days with an active check-out card: an extra cleaning there adds no second card. */
+  const checkoutCards = new Set<string>();
 
   for (const r of byId.values()) {
     const listing = listings.get(r.listing_id) ?? null;
@@ -234,6 +241,7 @@ export async function recomputeWindow(deps: RecomputeDeps, trigger: string, toda
     const result = computePackage(input);
     const computed = computedFrom(r, listing, next, result);
     res.packages++;
+    checkoutCards.add(`${listing.guesty_id}|${r.check_out_date}`);
 
     if (!p) {
       const row = await repo.insertPackage(computed);
@@ -262,6 +270,53 @@ export async function recomputeWindow(deps: RecomputeDeps, trigger: string, toda
       res.unchanged++;
     }
   }
+
+  /**
+   * Extra cleanings (Martina, 2026-11-18): a message in "Dôležité info" or "Info pre
+   * upratovačov" asking for a cleaning ("extra upratovanie", "prosím upratať", "nabaliť
+   * tašku" …) adds a card for the flat it names. One card per flat and day, kept in
+   * line with the messages: removed or changed messages cancel it like a cancelled
+   * reservation would.
+   */
+  async function recomputeExtras(): Promise<void> {
+    // messages written up to a week before the window may ask for a day in it ("na pondelok 9.11.")
+    const sources = await repo.getExtraSources(addDays(dates[0], -7), last);
+    const inScope = listingsAll.filter((l) => l.in_scope).map((l) => ({ id: l.guesty_id, name: l.name }));
+    const wanted = collectExtras(sources, inScope, dates).extras.filter((e) => !checkoutCards.has(`${e.listingId}|${e.date}`));
+    const current = new Map(windowPackages.filter((p) => isExtraPackageKey(p.outgoing_reservation_id)).map((p) => [p.outgoing_reservation_id, p]));
+    const reservations = wanted.length ? await repo.getReservations({ checkOutGte: dates[0], status: 'confirmed', listingIds: [...new Set(wanted.map((e) => e.listingId))] }) : [];
+    const keep = new Set<string>();
+    for (const e of wanted) {
+      const listing = listings.get(e.listingId);
+      if (!listing) continue;
+      const computed = extraComputed(e, listing, toListingInput(listing), reservations, settings, loaded.duvetTypes[listing.guesty_id] ?? null);
+      keep.add(computed.outgoing_reservation_id);
+      res.packages++;
+      const p = current.get(computed.outgoing_reservation_id) ?? null;
+      if (!p) {
+        const row = await repo.insertPackage(computed);
+        sysEvent(row, 'created', { people: computed.target_people, hash: computed.computed_hash, extra: true });
+        res.created++;
+        continue;
+      }
+      if (p.status === 'cancelled') {
+        const status = p.packed_at ? 'packed' : 'todo';
+        await repo.setPackageLifecycle(p.id, { status, hidden: false, cancel_reason: null, cancelled_at: null });
+        sysEvent(p, 'restored', { status, previous_reason: p.cancel_reason });
+        res.restored++;
+      }
+      if (p.computed_hash !== computed.computed_hash) {
+        await repo.updatePackageComputed(p.id, computed);
+        sysEvent({ ...computed, id: p.id }, trigger === 'settings' ? 'settings_recompute' : 'recomputed', diffComputed(p, computed));
+        res.updated++;
+      } else {
+        res.unchanged++;
+      }
+    }
+    for (const p of current.values()) if (!keep.has(p.outgoing_reservation_id)) await cancel(p, CANCEL_REASONS.extraGone);
+  }
+
+  await recomputeExtras();
 
   if (events.length) await repo.insertEvents(events);
   // "Skoré príchody" are typed in by the office since 2026-10-19 (migration 0016): the sync no longer

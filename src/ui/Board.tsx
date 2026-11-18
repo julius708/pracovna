@@ -12,7 +12,7 @@ import { dayLabel, dayWord, packedOf, sk } from '@/core/i18n/sk';
 import { useRouter } from 'next/navigation';
 import { newActionId } from './action-id';
 import { isRecoveryHash } from './recovery';
-import { angelikaNumbers, applyCleaner, arrivalFor, arrivalNotices, boardNotices, cleanerOptions, counts, dayJobs, FILTER_KEYS, noteNotices, departureFor, sortArrivals, sortDepartures, summaryLines, visibleJobs, type Filter } from './board-model';
+import { angelikaNumbers, applyCleaner, arrivalFor, arrivalNotices, boardNotices, cleanerOptions, counts, dayJobs, FILTER_KEYS, noteNotices, departureFor, extraNoteLine, sortArrivals, sortDepartures, summaryLines, visibleJobs, type Filter } from './board-model';
 import { CleaningInfo } from './CleaningInfo';
 import { DeliveryRequests } from './DeliveryRequests';
 import { EarlyArrivals } from './EarlyArrivals';
@@ -134,6 +134,8 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
   }, []);
 
   const date = data.dates[sel];
+  /** "Zajtra 19.11." for the extra-cleaning line under a message; a day outside the board shows its weekday. */
+  const extraDayLabel = (d: string) => `${dayWord(dates.indexOf(d as (typeof dates)[number]), d)} ${formatDM(d)}`;
   const allJobs = useMemo(() => dayJobs(data.packages, date), [data.packages, date]);
   const cleaners = useMemo(() => cleanerOptions(allJobs, data.cleaners, sk.cleaners), [allJobs, data.cleaners]);
   // a remembered company that has no card today falls back to "all" without changing the stored choice
@@ -682,6 +684,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
         onAdd={(t) => void addNote(t)}
         onReply={addReply}
         onEdit={(n, t) => void editNote(n, t)}
+        extraLine={(t) => extraNoteLine(t, date, null, data.listings, data.dates, extraDayLabel)}
         onRemove={(n) => void removeNote(n)}
       />
 
@@ -696,6 +699,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
           now={now}
           busy={cleaningBusy}
           onAdd={addCleaning}
+          extraLine={(t, listingId) => extraNoteLine(t, date, listingId, data.listings, data.dates, extraDayLabel)}
           onReply={replyCleaning}
           onEdit={(r, t) => void editCleaning(r, t)}
           onTick={(r, done) => void tickCleaning(r, done)}

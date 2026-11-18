@@ -187,6 +187,16 @@ export class MemoryRepo implements SyncRepo {
     for (const e of events) this.events.push({ ...e, id: this.events.length + 1, created_at: this.nowIso() });
   }
 
+  async getExtraSources(from: Ymd, to: Ymd) {
+    const inRange = (d: string) => d >= from && d <= to;
+    return [
+      ...this.boardNotes.filter((n) => !n.removed_at && !n.parent_id && inRange(n.date)).map((n) => ({ id: n.id, from: 'notes' as const, date: n.date, text: n.text })),
+      ...this.cleaningRequests
+        .filter((c) => !c.removed_at && !c.parent_id && inRange(c.date))
+        .map((c) => ({ id: c.id, from: 'cleaning' as const, date: c.date, text: c.text, listingId: c.listing_id })),
+    ];
+  }
+
   async getSetting<T>(key: string) {
     return (this.settings.get(key) as T | undefined) ?? null;
   }

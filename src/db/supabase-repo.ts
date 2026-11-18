@@ -234,6 +234,21 @@ export class SupabaseRepo implements SyncRepo {
     for (const part of chunks(events, 200)) must(await this.db.from('package_events').insert(part), 'package_events.insert');
   }
 
+  async getExtraSources(from: Ymd, to: Ymd) {
+    const notes = must(
+      await this.db.from('board_notes').select('id, date, text').gte('date', from).lte('date', to).is('removed_at', null).is('parent_id', null),
+      'board_notes.extra',
+    ) as { id: string; date: string; text: string }[];
+    const cleaning = must(
+      await this.db.from('cleaning_requests').select('id, date, text, listing_id').gte('date', from).lte('date', to).is('removed_at', null).is('parent_id', null),
+      'cleaning_requests.extra',
+    ) as { id: string; date: string; text: string; listing_id: string | null }[];
+    return [
+      ...notes.map((n) => ({ id: n.id, from: 'notes' as const, date: String(n.date).slice(0, 10), text: n.text })),
+      ...cleaning.map((c) => ({ id: c.id, from: 'cleaning' as const, date: String(c.date).slice(0, 10), text: c.text, listingId: c.listing_id })),
+    ];
+  }
+
   async getSetting<T>(key: string) {
     const row = must(await this.db.from('settings').select('value').eq('key', key).maybeSingle(), 'settings.get') as { value: T } | null;
     return row?.value ?? null;

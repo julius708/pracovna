@@ -2,7 +2,7 @@
  * Pure derivations for the board (no React): which cards a day shows, the
  * counts, the summary totals and the sort order. Unit-tested.
  */
-import { DEFAULT_ITEMS, type CapsuleLine, type LineItem, type PackingResult } from '@/core/packing';
+import { DEFAULT_ITEMS, readExtra, type CapsuleLine, type LineItem, type PackingResult } from '@/core/packing';
 import type { BoardNote, BoardPackage, EarlyArrival, EarlyDeparture } from '@/app/_lib/board';
 import { sk } from '@/core/i18n/sk';
 
@@ -267,4 +267,24 @@ export function searchPackages(jobs: BoardPackage[], query: string): BoardPackag
   const fold = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('sk').trim();
   const words = fold(query).split(/\s+/).filter(Boolean);
   return words.length ? jobs.filter(p => words.every(word => fold(p.listing_name).includes(word))) : jobs;
+}
+
+/**
+ * The line under a board message that asks for an extra cleaning (Martina,
+ * 2026-11-18): which card it adds, or why none could be added; null for other
+ * messages. Uses the same reading as the sync (src/core/packing/extra.ts).
+ */
+export function extraNoteLine(
+  text: string,
+  noteDate: string,
+  listingId: string | null,
+  listings: readonly { id: string; name: string }[],
+  dates: readonly string[],
+  dayLabelOf: (date: string) => string,
+): string | null {
+  const r = readExtra({ id: '', from: 'notes', date: noteDate, text, listingId }, listings);
+  if (!r) return null;
+  if (!r.flats.length) return r.unclear.length ? sk.extra.unclear(r.unclear[0].map((l) => l.name).join(' / ')) : sk.extra.noFlat;
+  const names = r.flats.map((f) => f.name).join(', ');
+  return dates.includes(r.date) ? sk.extra.chip(names, dayLabelOf(r.date)) : sk.extra.chipOutside(names, dayLabelOf(r.date));
 }
