@@ -7,14 +7,14 @@ Zadanie z 17. 11. 2026 („LIVE-IN | Sklad v appke“). Tento dokument je určen
 | Oblasť | Stav |
 |---|---|
 | Doménové pravidlá (`src/core/stock`): prepočet balení s „Neoverené“, plán výdaja zo snapshotu, kniha pohybov a stav, uzávierka inventúry, návrh objednávky, predpoveď, mesačný prehľad | **Hotové a otestované** (37 testov) |
-| Migrácia `supabase/migrations/0021_sklad.sql`: tabuľky, RLS, RPC, výdaj pri zabalení, Späť bez vrátenia, inventúra, objednávky | **Hotové a otestované na PGlite** (32 testov). **Neaplikované v produkčnej DB.** |
+| Migrácia `supabase/migrations/0021_sklad.sql`: tabuľky, RLS, RPC, výdaj pri zabalení, Späť bez vrátenia, inventúra, objednávky | **Hotové, otestované na PGlite (32 testov) a od 18. 11. 2026 aplikované v produkčnej DB** (odpočty vypnuté) |
 | Obrazovky `/sklad` (Stav, Inventúra, Pohyby, Spotreba, Objednávky, Katalóg a nastavenie), tlačový list A4, CSV | **Hotové**, overené v ukážkovom režime (bez DB) |
 | Návrat migrácie `supabase/rollback/0021_sklad_rollback.sql` | **Hotové a otestované** |
 | Skutočné odosielanie objednávok dodávateľovi (e-mail/API) | **Len návrh.** Je export CSV a pripravený e-mail; objednávka ostáva „NEODOSLANÉ“, kým ju oprávnená osoba neoznačí. |
 | Vylúčenie opráv a blokácií z predpovede | **Len návrh.** Zatiaľ ručné pole „Vyradené byty“. |
 | PDF inventúrneho listu | Tlačový list A4 (`/sklad/inventura/<id>/tlac`), PDF sa uloží z tlače prehliadača. Samostatný generátor PDF nie je. |
 | Odkaz „Sklad“ v menu | Skrytý, kým nie je `NEXT_PUBLIC_SKLAD_NAV=1`. Stránky fungujú na `/pracovna/sklad` pre správcov aj bez neho. |
-| Nasadenie | **Nič.** Vetva `feature/sklad`, žiadna zmena produkčnej DB, žiadny merge do `main`. |
+| Nasadenie | Aplikovaná je len DB migrácia (odpočty vypnuté). Kód obrazoviek je na vetve `feature/sklad`, `main` je nedotknutý. |
 
 ## 2. Ako to funguje
 

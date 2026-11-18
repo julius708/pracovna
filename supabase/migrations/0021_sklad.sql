@@ -1,6 +1,6 @@
 -- "Sklad v appke" (zadanie 17. 11. 2026): prepojený sklad, inventúra a objednávky.
 --
--- NÁVRH NA REVIEW: súbor NIE JE nasadený do produkcie. Je čisto aditívny a po nasadení
+-- APLIKOVANÁ v produkčnej DB 2026-11-18 (po súhlase majiteľa). Je čisto aditívna a po nasadení
 -- nič nemení v prevádzke: odpočty zo skladu sú VYPNUTÉ (stock_config.deduction_enabled =
 -- false) a dajú sa zapnúť až po schválenej začiatočnej inventúre (nie k dátumu).
 --
@@ -150,8 +150,7 @@ language plpgsql as $fn$
 begin
   raise exception '% is append-only (opravy len novým pohybom)', tg_table_name using errcode = '42501';
 end $fn$;
-drop trigger if exists stock_movements_immutable on public.stock_movements;
-create trigger stock_movements_immutable before update or delete on public.stock_movements
+create or replace trigger stock_movements_immutable before update or delete on public.stock_movements
   for each row execute function public.stock_append_only();
 
 -- riadky snapshotu, ktoré sa nedali vydať (bez priradenia, neurčený druh kávy...): na kontrolu, nikdy odhad
@@ -318,11 +317,9 @@ create table if not exists public.stock_audit (
   entity_id text,
   data jsonb not null default '{}'
 );
-drop trigger if exists stock_audit_immutable on public.stock_audit;
-create trigger stock_audit_immutable before update or delete on public.stock_audit
+create or replace trigger stock_audit_immutable before update or delete on public.stock_audit
   for each row execute function public.stock_append_only();
-drop trigger if exists stock_order_events_immutable on public.stock_order_events;
-create trigger stock_order_events_immutable before update or delete on public.stock_order_events
+create or replace trigger stock_order_events_immutable before update or delete on public.stock_order_events
   for each row execute function public.stock_append_only();
 
 -- ---------------------------------------------------------------- pomocné funkcie
@@ -1492,12 +1489,13 @@ begin
     execute format('revoke all on public.%I from public, anon', t);
     execute format('revoke insert, update, delete, truncate, references, trigger on public.%I from authenticated', t);
     execute format('grant select on public.%I to authenticated', t);
-    execute format('drop policy if exists %I on public.%I', t || '_select', t);
     -- katalóg a konfigurácia pre každého aktívneho (personál vyberá položku pri ručnom výdaji); všetko ostatné len správca
-    if t in ('stock_warehouses', 'stock_items', 'stock_config') then
-      execute format('create policy %I on public.%I for select to authenticated using (public.is_active_user())', t || '_select', t);
-    else
-      execute format('create policy %I on public.%I for select to authenticated using (public.is_admin())', t || '_select', t);
+    if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = t and policyname = t || '_select') then
+      if t in ('stock_warehouses', 'stock_items', 'stock_config') then
+        execute format('create policy %I on public.%I for select to authenticated using (public.is_active_user())', t || '_select', t);
+      else
+        execute format('create policy %I on public.%I for select to authenticated using (public.is_admin())', t || '_select', t);
+      end if;
     end if;
   end loop;
 end $do$;
