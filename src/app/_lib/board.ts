@@ -87,6 +87,17 @@ export const DEPARTURE_COLUMNS = 'id, listing_id, listing_name, date, departure,
 export const BOARD_COLUMNS =
   'id, listing_id, listing_name, date, status, hidden, cancel_reason, same_day, target_people, incoming_reservation_id, computed_items, computed_hash, warnings, note, note_by_name, note_at, checklist, packed_by_name, packed_at, packed_hash';
 
+/** Upratovanie z hlavnej appky (cl_status_for): či je byt uprataný. Len začaté a dokončené upratovania. */
+export interface CleaningStatus {
+  listing_id: string;
+  date: Ymd;
+  status: 'in_progress' | 'done';
+  cleaner_name: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  has_problem: boolean;
+}
+
 export interface BoardData {
   today: Ymd;
   /** The board days, today first (WINDOW_DAYS of them). */
@@ -108,6 +119,8 @@ export interface BoardData {
   deliveries: DeliveryRequest[];
   /** Flats whose Guesty laundry field says "Kapsule: nedávať" (Martina, 2026-10-19): the card says so in red. */
   noCapsules: string[];
+  /** Stav upratovania bytov z hlavnej appky; prázdny, kým tam upratovanie nebeží. */
+  cleaned: CleaningStatus[];
   status: { lastOkSyncAt: string | null; consecutiveFailures: number };
   /** ISO instant the data was read on the server. */
   loadedAt: string;
@@ -142,6 +155,7 @@ export async function loadBoard(viewer: Viewer): Promise<BoardData> {
     for (const l of listingRows) cleaners[l.guesty_id] = l.cleaner;
     const status = (st.data ?? {}) as { last_ok_sync_at?: string | null; consecutive_failures?: number };
     const cleaning = await loadCleaning(db, dates);
+    const cleaned = await loadCleanedStatus(db, dates);
     const dv = await db.from('delivery_requests').select(DELIVERY_COLUMNS).in('date', dates as Ymd[]).is('removed_at', null).order('created_at');
     if (dv.error) throw new Error(`delivery_requests: ${dv.error.message}`);
     return {
@@ -156,6 +170,7 @@ export async function loadBoard(viewer: Viewer): Promise<BoardData> {
       noCapsules: listingRows.filter((l) => capsulesRefused(l.capsules)).map((l) => l.guesty_id),
       cleaning,
       deliveries: ((dv.data ?? []) as DeliveryRequest[]).map((r) => ({ ...r, date: String(r.date).slice(0, 10) })),
+      cleaned,
       status: { lastOkSyncAt: status.last_ok_sync_at ?? null, consecutiveFailures: status.consecutive_failures ?? 0 },
       loadedAt,
       live: true,
@@ -214,10 +229,27 @@ export async function loadBoard(viewer: Viewer): Promise<BoardData> {
       .filter((r) => !r.removed_at && (dates as readonly string[]).includes(r.date))
       .sort((a, b) => a.created_at.localeCompare(b.created_at))
       .map((r) => ({ id: r.id, date: r.date, listing_id: r.listing_id, listing_name: r.listing_name, text: r.text, author: r.author, author_name: r.author_name, created_at: r.created_at, delivered_at: r.delivered_at, delivered_by_name: r.delivered_by_name })),
+    cleaned: [],
     status: { lastOkSyncAt: lastOk, consecutiveFailures: failures ?? 0 },
     loadedAt,
     live: false,
   };
+}
+
+/**
+ * Upratané z hlavnej appky LIVE-IN (funkcia cl_status_for v spoločnej databáze). Nikdy nezhodí tabuľu:
+ * keď funkcia ešte neexistuje alebo zlyhá, vráti prázdny zoznam a karty ostanú bez značky.
+ */
+export async function loadCleanedStatus(db: { rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { message: string } | null }> }, dates: readonly string[]): Promise<CleaningStatus[]> {
+  try {
+    const r = await db.rpc('cl_status_for', { p_from: dates[0], p_to: dates[dates.length - 1] });
+    if (r.error || !Array.isArray(r.data)) return [];
+    return (r.data as (CleaningStatus & { status: string })[])
+      .filter((x) => x.status === 'in_progress' || x.status === 'done')
+      .map((x) => ({ listing_id: x.listing_id, date: String(x.date).slice(0, 10), status: x.status as 'in_progress' | 'done', cleaner_name: x.cleaner_name ?? null, started_at: x.started_at ?? null, finished_at: x.finished_at ?? null, has_problem: !!x.has_problem }));
+  } catch {
+    return [];
+  }
 }
 
 /** The early-arrival picker: in-scope flats by name. */

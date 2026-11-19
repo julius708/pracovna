@@ -2,14 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { BASE } from '@/lib/base';
-import type { BoardPackage, EarlyArrival, EarlyDeparture } from '@/app/_lib/board';
+import type { BoardPackage, CleaningStatus, EarlyArrival, EarlyDeparture } from '@/app/_lib/board';
 import type { Viewer } from '@/app/_lib/viewer';
 import { flatFacts, formatHM, NOTE_MAX_LENGTH, type PackingResult, type WarningCode } from '@/core/packing';
 import { flatAddress } from '@/core/printer/addresses';
 import { LabelButton } from './LabelButton';
 import { countTicked, isTicked } from './ticks';
 import { useTicks } from './useTicks';
-import { bedSummary, capsuleLabel, cheerDone, childrenBannerParts, duvetText, nextArrivalParts, packedBy, peopleParts, sk, sofaText, warningLine, type TextPart } from '@/core/i18n/sk';
+import { bedSummary, capsuleLabel, cheerDone, cleanedLine, childrenBannerParts, duvetText, nextArrivalParts, packedBy, peopleParts, sk, sofaText, warningLine, type TextPart } from '@/core/i18n/sk';
 
 const AV = `${BASE}/assets/angelika.jpg`;
 /** Warnings already shown inline (beds line, badge line), so they are not repeated in the red list. */
@@ -34,6 +34,7 @@ export function PackageCard({
   arrival = null,
   departure = null,
   noCapsules = false,
+  cleaned = null,
   viewer,
   busy,
   cheer,
@@ -47,6 +48,8 @@ export function PackageCard({
   departure?: EarlyDeparture | null;
   /** Guesty says "Kapsule: nedávať" for this flat: a red line on the card (Martina, 2026-10-19). */
   noCapsules?: boolean;
+  /** Upratovanie z hlavnej appky: upratovačka je v byte alebo ho dokončila. */
+  cleaned?: CleaningStatus | null;
   viewer: Viewer;
   busy: boolean;
   cheer: string | null;
@@ -282,6 +285,13 @@ export function PackageCard({
               {sk.buttons.note} · {p.note_by_name} · {formatHM(new Date(p.note_at))}
             </small>
           )}
+        </div>
+      )}
+      {cleaned && (
+        <div className={`cl-badge ${cleaned.status}`} role="status">
+          <span aria-hidden="true">{cleaned.status === 'done' ? '✅' : '🧹'}</span>{' '}
+          {cleanedLine(cleaned.status, cleaned.cleaner_name, formatHM(new Date((cleaned.status === 'done' ? cleaned.finished_at : cleaned.started_at) ?? Date.now())))}
+          {cleaned.has_problem && <b className="cl-prob"> · ⚠ nahlásený problém</b>}
         </div>
       )}
       {p.packed_at && <div className="who">{packedBy(p.packed_by_name, formatHM(new Date(p.packed_at)))}</div>}

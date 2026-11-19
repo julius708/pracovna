@@ -3,7 +3,7 @@
  * counts, the summary totals and the sort order. Unit-tested.
  */
 import { DEFAULT_ITEMS, readExtra, type CapsuleLine, type LineItem, type PackingResult } from '@/core/packing';
-import type { BoardNote, BoardPackage, EarlyArrival, EarlyDeparture } from '@/app/_lib/board';
+import type { BoardNote, BoardPackage, CleaningStatus, EarlyArrival, EarlyDeparture } from '@/app/_lib/board';
 import { sk } from '@/core/i18n/sk';
 
 export type Filter = 'todo' | 'packed' | 'all';
@@ -211,6 +211,11 @@ export function isArrivalTime(s: string): boolean {
 /** The early arrival written for a card's flat on the card's day, or null. */
 export function arrivalFor(arrivals: EarlyArrival[], p: Pick<BoardPackage, 'listing_id' | 'date'>): EarlyArrival | null {
   return arrivals.find((a) => a.listing_id === p.listing_id && a.date === p.date) ?? null;
+}
+
+/** Stav upratovania bytu v deň karty (check-out), alebo null. */
+export function cleanedFor(cleaned: CleaningStatus[], p: Pick<BoardPackage, 'listing_id' | 'date'>): CleaningStatus | null {
+  return cleaned.find((c) => c.listing_id === p.listing_id && c.date === p.date) ?? null;
 }
 
 /** The early departure written for a card's flat on the card's day (its check-out day), or null. */

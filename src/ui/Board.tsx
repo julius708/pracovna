@@ -12,7 +12,7 @@ import { dayLabel, dayWord, packedOf, sk } from '@/core/i18n/sk';
 import { useRouter } from 'next/navigation';
 import { newActionId } from './action-id';
 import { isRecoveryHash } from './recovery';
-import { angelikaNumbers, applyCleaner, arrivalFor, arrivalNotices, boardNotices, cleanerOptions, counts, dayJobs, FILTER_KEYS, noteNotices, departureFor, extraNoteLine, sortArrivals, sortDepartures, summaryLines, visibleJobs, type Filter } from './board-model';
+import { angelikaNumbers, applyCleaner, arrivalFor, arrivalNotices, boardNotices, cleanerOptions, cleanedFor, counts, dayJobs, FILTER_KEYS, noteNotices, departureFor, extraNoteLine, sortArrivals, sortDepartures, summaryLines, visibleJobs, type Filter } from './board-model';
 import { CleaningInfo } from './CleaningInfo';
 import { DeliveryRequests } from './DeliveryRequests';
 import { EarlyArrivals } from './EarlyArrivals';
@@ -754,6 +754,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
             arrival={arrivalFor(data.arrivals, p)}
             departure={departureFor(data.departures, p)}
             noCapsules={data.noCapsules.includes(p.listing_id)}
+            cleaned={cleanedFor(data.cleaned, p)}
             viewer={viewer}
             busy={busy.has(p.id)}
             cheer={cheer?.id === p.id ? cheer.msg : null}
