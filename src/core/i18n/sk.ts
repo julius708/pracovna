@@ -495,6 +495,12 @@ export function capsuleLabel(c: CapsuleLine): { label: string; note: string | nu
   return { label: `Kapsule ${c.type}`, note: null };
 }
 
+/** Značka na karte: upratovačka už je v byte alebo ho dokončila (hlavná appka LIVE-IN). */
+export function cleanedLine(status: 'in_progress' | 'done', name: string | null | undefined, hm: string): string {
+  const who = name ? ` · ${name}` : '';
+  return status === 'done' ? `Upratané${who} · ${hm}` : `Upratuje sa${who} · od ${hm}`;
+}
+
 export function packedBy(name: string | null | undefined, hm: string): string {
   return `Zabalil(a) ${name || '—'} · ${hm}`;
 }

@@ -185,6 +185,9 @@ button{cursor:pointer}
 .btn:disabled{opacity:.5;cursor:default}
 .btn.done,.btn.done:disabled{background:var(--ok);color:var(--ok-ink);opacity:1}
 .who{margin-top:10px;font-size:13px;color:var(--muted)}
+.cl-badge{margin-top:10px;display:inline-block;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700;background:#e3eefb;color:#1d4f91}
+.cl-badge.done{background:#ddf3e4;color:#17623a}
+.cl-badge .cl-prob{color:#9a2b2b}
 .noteform{display:flex;gap:8px;margin-top:10px}
 .noteform input{flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:10px 12px}
 
