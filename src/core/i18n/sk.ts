@@ -266,6 +266,14 @@ export const sk = {
     notAuthor: 'Odstrániť môže len autor alebo admin.',
     badListing: 'Vyber byt zo zoznamu.',
   },
+  /** Notes written ahead for a later day (Martina, 2026-11-20). */
+  ahead: {
+    pick: '📅 Na iný deň',
+    label: 'Zapísať na deň',
+    back: 'Na zobrazený deň',
+    planned: (n: number) => `🗓️ Naplánované na ďalšie dni (${n})`,
+    savedFor: (day: string) => `Uložené na deň ${day} – zobrazí sa v ten deň.`,
+  },
   /** "Info pre upratovačov": the grey box above the packing section (Martina, 2026-10-30). */
   cleaning: {
     title: 'Info pre upratovačov',

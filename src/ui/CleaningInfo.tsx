@@ -5,6 +5,7 @@ import type { CleaningRequest, CleaningRights } from '@/app/_lib/cleaning';
 import type { Viewer } from '@/app/_lib/viewer';
 import { flatAlias } from '@/core/packing';
 import { noteTime, sk } from '@/core/i18n/sk';
+import { AheadDay } from './AheadDay';
 
 export interface CleaningInfoProps {
   /** "Dnes 30.10." / "Zajtra 31.10.": the day the box belongs to. */
@@ -19,14 +20,22 @@ export interface CleaningInfoProps {
   now: Date;
   busy: boolean;
   /** Resolve true when saved; the field then clears. */
-  onAdd: (text: string) => Promise<boolean>;
+  /** day null = the day shown; a date = written ahead for that day (Martina, 2026-11-20). */
+  onAdd: (text: string, day: string | null) => Promise<boolean>;
   onReply: (parent: CleaningRequest, text: string) => Promise<boolean>;
   /** The author saves a corrected text. */
   onEdit: (request: CleaningRequest, text: string) => void;
   onTick: (request: CleaningRequest, done: boolean) => void;
   onRemove: (request: CleaningRequest) => void;
   /** What the app made of a message asking for an extra cleaning (a card, or why not); null for other messages. */
-  extraLine?: (text: string, listingId: string | null) => string | null;
+  extraLine?: (text: string, listingId: string | null, date: string) => string | null;
+  /** Messages (and replies) written for days after the shown week. */
+  planned?: CleaningRequest[];
+  /** The days a message may be written ahead for ("📅 Na iný deň"). */
+  aheadMin: string;
+  aheadMax: string;
+  /** "Pi 4.12." for a planned day. */
+  dayLabelOf: (date: string) => string;
 }
 
 /**
@@ -37,21 +46,23 @@ export interface CleaningInfoProps {
  * admin / customer service tick them as done (who and when is kept). The author
  * edits their own message or reply (Martina, 2026-11-09).
  */
-export function CleaningInfo({ dayTitle, flats, requests, rights, viewer, now, busy, onAdd, onReply, onEdit, onTick, onRemove, extraLine }: CleaningInfoProps) {
+export function CleaningInfo({ dayTitle, flats, requests, rights, viewer, now, busy, onAdd, onReply, onEdit, onTick, onRemove, extraLine, planned = [], aheadMin, aheadMax, dayLabelOf }: CleaningInfoProps) {
+  const [otherDay, setOtherDay] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [replying, setReplying] = useState<{ id: string; text: string } | null>(null);
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
   const t = sk.cleaning;
   const top = requests.filter((r) => !r.parent_id);
-  const repliesOf = (id: string) => requests.filter((r) => r.parent_id === id);
+  const repliesOf = (id: string) => [...requests, ...planned].filter((r) => r.parent_id === id);
 
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const clean = text.trim();
     if (!clean) return;
-    const ok = await onAdd(clean);
+    const ok = await onAdd(clean, otherDay);
     if (!ok) return; // keep what was typed so it can be sent again
     setText('');
+    setOtherDay(null);
   };
 
   const sendReply = async (parent: CleaningRequest) => {
@@ -85,7 +96,7 @@ export function CleaningInfo({ dayTitle, flats, requests, rights, viewer, now, b
     ) : (
       <>
         <div className={className}>{r.text}</div>
-        {!r.parent_id && extraLine?.(r.text, r.listing_id) && <div className="extra-chip">{extraLine(r.text, r.listing_id)}</div>}
+        {!r.parent_id && extraLine?.(r.text, r.listing_id, r.date) && <div className="extra-chip">{extraLine(r.text, r.listing_id, r.date)}</div>}
       </>
     );
 
@@ -116,41 +127,10 @@ export function CleaningInfo({ dayTitle, flats, requests, rights, viewer, now, b
     );
   };
 
-  return (
-    <section className="contact cleaning-box" aria-labelledby="cleaning-title">
-      <h2 id="cleaning-title" className="contact-title cleaning-title">
-        <span aria-hidden="true">🧹</span> {t.title}
-        <span className="notice-day">{dayTitle}</span>
-      </h2>
-      <p className="cleaning-intro">{t.intro}</p>
-
-      {flats.length > 0 && (
-        <div className="cleaning-part">
-          <div className="cleaning-label">{t.guestyLabel}</div>
+  /** A list of messages with their replies, actions and the reply form. */
+  const renderList = (list: CleaningRequest[]) => (
           <ul className="cleaning-list">
-            {flats.map((f) => {
-              const alias = flatAlias(f.listing_id);
-              return (
-                <li key={f.listing_id} className="cleaning-item">
-                  <b className="cleaning-flat">
-                    {f.listing_name}
-                    {alias && <small> · {alias}</small>}
-                  </b>
-                  <div className="cleaning-text">{f.info}</div>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
-
-      <div className="cleaning-part">
-        <div className="cleaning-label">{t.requestsLabel}</div>
-        {top.length === 0 ? (
-          <p className="notice-empty">{t.noRequests}</p>
-        ) : (
-          <ul className="cleaning-list">
-            {top.map((r) => {
+            {list.map((r) => {
               const replies = repliesOf(r.id);
               const temp = r.id.startsWith('temp-');
               return (
@@ -207,6 +187,45 @@ export function CleaningInfo({ dayTitle, flats, requests, rights, viewer, now, b
               );
             })}
           </ul>
+  );
+
+  const plannedTop = planned.filter((r) => !r.parent_id).sort((x, y) => x.date.localeCompare(y.date) || x.created_at.localeCompare(y.created_at));
+  const plannedDays = [...new Set(plannedTop.map((r) => r.date))];
+
+  return (
+    <section className="contact cleaning-box" aria-labelledby="cleaning-title">
+      <h2 id="cleaning-title" className="contact-title cleaning-title">
+        <span aria-hidden="true">🧹</span> {t.title}
+        <span className="notice-day">{dayTitle}</span>
+      </h2>
+      <p className="cleaning-intro">{t.intro}</p>
+
+      {flats.length > 0 && (
+        <div className="cleaning-part">
+          <div className="cleaning-label">{t.guestyLabel}</div>
+          <ul className="cleaning-list">
+            {flats.map((f) => {
+              const alias = flatAlias(f.listing_id);
+              return (
+                <li key={f.listing_id} className="cleaning-item">
+                  <b className="cleaning-flat">
+                    {f.listing_name}
+                    {alias && <small> · {alias}</small>}
+                  </b>
+                  <div className="cleaning-text">{f.info}</div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
+      <div className="cleaning-part">
+        <div className="cleaning-label">{t.requestsLabel}</div>
+        {top.length === 0 ? (
+          <p className="notice-empty">{t.noRequests}</p>
+        ) : (
+          renderList(top)
         )}
       </div>
 
@@ -216,7 +235,19 @@ export function CleaningInfo({ dayTitle, flats, requests, rights, viewer, now, b
           <button className="btn primary" type="submit" disabled={busy || !text.trim()}>
             {t.add}
           </button>
+          <AheadDay value={otherDay} onChange={setOtherDay} min={aheadMin} max={aheadMax} disabled={busy} />
         </form>
+      )}
+      {plannedTop.length > 0 && (
+        <details className="planned">
+          <summary>{sk.ahead.planned(plannedTop.length)}</summary>
+          {plannedDays.map((d) => (
+            <div key={d}>
+              <div className="planned-day">{dayLabelOf(d)}</div>
+              {renderList(plannedTop.filter((r) => r.date === d))}
+            </div>
+          ))}
+        </details>
       )}
     </section>
   );

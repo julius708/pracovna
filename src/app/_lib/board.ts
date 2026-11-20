@@ -1,5 +1,6 @@
 import 'server-only';
-import { todayInTz, windowDates, type PackingResult, type Ymd } from '@/core/packing';
+import { addDays, todayInTz, windowDates, type PackingResult, type Ymd } from '@/core/packing';
+import { CLEANING_AHEAD_DAYS, NOTE_AHEAD_DAYS } from './ahead';
 import type { MemoryRepo } from '@/db/memory-repo';
 import { createServerSupabase } from '@/db/server';
 import type { Checklist, PackageStatus } from '@/db/types';
@@ -142,7 +143,8 @@ export async function loadBoard(viewer: Viewer): Promise<BoardData> {
       db.from('packages').select(BOARD_COLUMNS).in('date', dates),
       db.from('listings').select('guesty_id, name, cleaner, in_scope, capsules:laundry->capsules'),
       db.rpc('board_status'),
-      db.from('board_notes').select(NOTE_COLUMNS).in('date', dates).is('removed_at', null).order('created_at', { ascending: false }),
+      // the shown week plus the notes written ahead for later days ("Naplánované", Martina 2026-11-20)
+      db.from('board_notes').select(NOTE_COLUMNS).gte('date', dates[0]).lte('date', addDays(today, NOTE_AHEAD_DAYS)).is('removed_at', null).order('created_at', { ascending: false }),
       db.from('early_arrivals').select(ARRIVAL_COLUMNS).in('date', dates).is('removed_at', null).eq('source', 'manual').order('date').order('arrival').order('created_at'),
       db.from('early_departures').select(DEPARTURE_COLUMNS).in('date', dates).is('removed_at', null).order('date').order('departure').order('created_at'),
     ]);
@@ -154,7 +156,7 @@ export async function loadBoard(viewer: Viewer): Promise<BoardData> {
     const listingRows = (ls.data ?? []) as { guesty_id: string; name: string; cleaner: string | null; in_scope: boolean; capsules: unknown }[];
     for (const l of listingRows) cleaners[l.guesty_id] = l.cleaner;
     const status = (st.data ?? {}) as { last_ok_sync_at?: string | null; consecutive_failures?: number };
-    const cleaning = await loadCleaning(db, dates);
+    const cleaning = await loadCleaning(db, dates, addDays(today, CLEANING_AHEAD_DAYS));
     const cleaned = await loadCleanedStatus(db, dates);
     const dv = await db.from('delivery_requests').select(DELIVERY_COLUMNS).in('date', dates as Ymd[]).is('removed_at', null).order('created_at');
     if (dv.error) throw new Error(`delivery_requests: ${dv.error.message}`);
@@ -210,7 +212,7 @@ export async function loadBoard(viewer: Viewer): Promise<BoardData> {
       packed_hash: p.packed_hash,
     })),
     notes: ((repo as MemoryRepo).boardNotes ?? [])
-      .filter((n) => !n.removed_at && (dates as readonly string[]).includes(n.date))
+      .filter((n) => !n.removed_at && n.date >= dates[0] && n.date <= addDays(today, NOTE_AHEAD_DAYS))
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
       .map((n) => ({ id: n.id, text: n.text, date: n.date, author: n.author, author_name: n.author_name, created_at: n.created_at, edited_at: n.edited_at, parent_id: n.parent_id ?? null })),
     arrivals: ((repo as MemoryRepo).earlyArrivals ?? [])
@@ -268,13 +270,13 @@ function capsulesRefused(capsules: unknown): boolean {
 type ServerDb = NonNullable<Awaited<ReturnType<typeof createServerSupabase>>>;
 
 /** "Info pre upratovačov": the viewer's app roles decide; nothing is read for anyone else (RLS checks the same). */
-async function loadCleaning(db: ServerDb, dates: readonly Ymd[]): Promise<CleaningData> {
+async function loadCleaning(db: ServerDb, dates: readonly Ymd[], until: Ymd): Promise<CleaningData> {
   const roles = await db.rpc('current_app_roles');
   const rights = cleaningRights(Array.isArray(roles.data) ? (roles.data as string[]) : []);
   if (!rights.read) return { rights, info: {}, requests: [] };
   const [li, rq] = await Promise.all([
     db.from('listings').select('guesty_id, cleaning_info').eq('in_scope', true).not('cleaning_info', 'is', null),
-    db.from('cleaning_requests').select(CLEANING_REQUEST_COLUMNS).in('date', dates as Ymd[]).is('removed_at', null).order('created_at'),
+    db.from('cleaning_requests').select(CLEANING_REQUEST_COLUMNS).gte('date', dates[0]).lte('date', until).is('removed_at', null).order('created_at'),
   ]);
   if (li.error) throw new Error(`listings.cleaning_info: ${li.error.message}`);
   if (rq.error) throw new Error(`cleaning_requests: ${rq.error.message}`);
@@ -290,7 +292,7 @@ function memoryCleaning(repo: MemoryRepo, listings: { guesty_id: string; in_scop
   const info: Record<string, string> = {};
   for (const l of listings) if (l.in_scope && l.cleaning_info?.trim()) info[l.guesty_id] = l.cleaning_info;
   const requests = (repo.cleaningRequests ?? [])
-    .filter((r) => !r.removed_at && (dates as readonly string[]).includes(r.date))
+    .filter((r) => !r.removed_at && r.date >= dates[0] && r.date <= addDays(dates[0], CLEANING_AHEAD_DAYS + 1))
     .sort((a, b) => a.created_at.localeCompare(b.created_at))
     .map((r) => ({ id: r.id, date: r.date, listing_id: r.listing_id, listing_name: r.listing_name, text: r.text, author: r.author, author_name: r.author_name, created_at: r.created_at, parent_id: r.parent_id, done_at: r.done_at, done_by_name: r.done_by_name, edited_at: r.edited_at ?? null }));
   return { rights, info, requests };
