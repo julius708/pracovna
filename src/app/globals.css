@@ -293,6 +293,7 @@ td input.lbl{width:190px;text-align:left}
 .planned{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px}
 .planned summary{cursor:pointer;font-weight:700;font-size:14px;min-height:36px;display:flex;align-items:center}
 .planned-day{margin:10px 0 4px;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:var(--muted)}
+.pack-history{display:inline-flex;align-items:center;min-height:36px;margin-top:6px;font-size:14px;font-weight:600;color:var(--muted);text-decoration:underline}
 .notice-form .btn{flex:0 0 auto;min-width:96px;min-height:44px;font-size:15px}
 .notice-form textarea{flex:1 1 auto;min-width:0;min-height:44px;resize:vertical;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font:inherit;font-size:16px;background:var(--surface);color:var(--ink)}
 .notice-form textarea:disabled{opacity:.6}

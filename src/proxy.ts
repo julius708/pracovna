@@ -14,6 +14,9 @@ const go = (request: NextRequest, path: string, status = 307) => NextResponse.re
 // the service worker, the web manifest and the app icons are fetched without the session (push, home-screen install)
 const PUBLIC = ['/login', '/nove-heslo', '/auth/', '/health', '/api/', '/sw.js', '/manifest.webmanifest', '/icons/'];
 const ADMIN = ['/nastavenia', '/historia', '/stav'];
+/** "Zabalené balíčky" is for everyone (Martina, 2026-11-20); the rest of História stays the admin's. */
+const STAFF_OK = ['/historia/balenie'];
+const adminOnly = (path: string) => !STAFF_OK.includes(path.replace(/\/$/, '')) && ADMIN.some((p) => path.startsWith(p));
 const DEV_ROLE_COOKIE = 'pr-dev-role';
 
 function isPublic(path: string) {
@@ -47,7 +50,7 @@ export async function proxy(request: NextRequest) {
   if (!url || !key) {
     const role = request.cookies.get(DEV_ROLE_COOKIE)?.value;
     if (!role) return go(request, '/login');
-    if (ADMIN.some((p) => path.startsWith(p)) && role !== 'admin') return go(request, '/');
+    if (adminOnly(path) && role !== 'admin') return go(request, '/');
     return NextResponse.next();
   }
 
@@ -69,7 +72,7 @@ export async function proxy(request: NextRequest) {
   if (!data?.claims?.sub) {
     return go(request, '/login');
   }
-  if (ADMIN.some((p) => path.startsWith(p))) {
+  if (adminOnly(path)) {
     const { data: profile, error: profileError } = await supabase.from('profiles').select('role, active').eq('id', data.claims.sub).maybeSingle();
     if (profileError) return response;
     const p = profile as { role: string; active: boolean } | null;

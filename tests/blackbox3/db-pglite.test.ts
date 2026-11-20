@@ -34,6 +34,7 @@ const MIG17 = readFileSync(new URL('../../supabase/migrations/0017_early_departu
 const MIG18 = readFileSync(new URL('../../supabase/migrations/0018_cleaning_info.sql', import.meta.url), 'utf8');
 const MIG19 = readFileSync(new URL('../../supabase/migrations/0019_delivery_requests.sql', import.meta.url), 'utf8');
 const MIG20 = readFileSync(new URL('../../supabase/migrations/0020_cleaning_edit.sql', import.meta.url), 'utf8');
+const MIG22 = readFileSync(new URL('../../supabase/migrations/0022_packing_history_for_staff.sql', import.meta.url), 'utf8');
 /** The shared LIVE-IN users and their roles as they exist in LIVE-IN Core (not created by this app's migrations). */
 const APP_USERS_STUB = `
 create or replace function auth.jwt() returns jsonb language sql stable as
@@ -132,6 +133,8 @@ describe('migrations', () => {
       expect(e19, `0019_delivery_requests.sql failed: ${e19?.code} ${e19?.message} (line ${lineOf(MIG19, e19?.position)})`).toBeNull();
       const e20 = await pgError(fresh.exec(MIG20));
       expect(e20, `0020_cleaning_edit.sql failed: ${e20?.code} ${e20?.message} (line ${lineOf(MIG20, e20?.position)})`).toBeNull();
+      const e22 = await pgError(fresh.exec(MIG22));
+      expect(e22, `0022_packing_history_for_staff.sql failed: ${e22?.code} ${e22?.message} (line ${lineOf(MIG22, e22?.position)})`).toBeNull();
       const fns =(await fresh.query<Row>("select proname from pg_proc where pronamespace = 'public'::regnamespace order by 1")).rows.map((r) => r.proname);
       expect(fns).toEqual(expect.arrayContaining(['today_ba', 'is_admin', 'is_active_user', 'handle_new_user', 'sync_upsert_package', 'sync_set_lifecycle', 'pack_package', 'unpack_package', 'set_note', 'toggle_check', 'save_settings', 'admin_set_profile', 'acquire_lock', 'run_retention', 'increment_not_found', 'add_board_note', 'remove_board_note', 'edit_board_note']));
     } finally {
@@ -216,6 +219,7 @@ beforeAll(async () => {
   await db.exec(MIG18);
   await db.exec(MIG19);
   await db.exec(MIG20);
+  await db.exec(MIG22);
   await db.exec('set check_function_bodies = on');
   todayBa = (await one('select public.today_ba()::text as d')).d as string;
 });
@@ -726,13 +730,24 @@ describe('row level security', () => {
     await q("insert into public.reservations (guesty_id, listing_id, arrival_listing_id, status, check_in_date, check_out_date, fetched_at) values ('rls-res', 'l', 'l', 'confirmed', '2026-10-01', '2026-10-03', now())");
     const count = (uid: string | null) =>
       asAuthenticated(uid, async () => {
-        const r = await one("select (select count(*) from public.reservations where guesty_id = 'rls-res')::int as res, (select count(*) from public.package_events)::int as ev, (select count(*) from public.sync_runs)::int as runs");
+        const r = await one("select (select count(*) from public.reservations where guesty_id = 'rls-res')::int as res, (select count(*) from public.package_events where event <> 'packed')::int as ev, (select count(*) from public.sync_runs)::int as runs");
         return [r.res > 0, r.ev > 0, r.runs > 0];
       });
     expect(await count(admin)).toEqual([true, true, true]);
     expect(await count(staff)).toEqual([false, false, false]);
     expect(await count(null)).toEqual([false, false, false]);
     expect(await count(exAdmin)).toEqual([false, false, false]);
+  });
+
+  it('0022: every active user reads the packed events (Zabalené balíčky), nothing else of the log', async () => {
+    const staff = await newUser('Staff');
+    const inactive = await newUser('Gone', { active: false });
+    const p = await newPackage({ outgoing_reservation_id: `hist-${randomUUID()}`, listing_id: 'hist-flat' });
+    await q("insert into public.package_events (package_id, package_date, listing_id, listing_name, event, actor_name) values ($1, current_date, 'hist-flat', 'Hist', 'packed', 'Angelika'), ($1, current_date, 'hist-flat', 'Hist', 'note', 'Angelika')", [p.id]);
+    const seen = (uid: string | null) => asAuthenticated(uid, async () => (await q("select event from public.package_events where listing_id = 'hist-flat' order by event")).map((r) => r.event));
+    expect(await seen(staff)).toEqual(['packed']);
+    expect(await seen(inactive)).toEqual([]);
+    expect(await seen(null)).toEqual([]);
   });
 
   it('active users read settings and profiles; the sync helpers are not executable by authenticated', async () => {

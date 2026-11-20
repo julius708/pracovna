@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { BASE } from '@/lib/base';
 import type { BoardPackage, CleaningStatus, EarlyArrival, EarlyDeparture } from '@/app/_lib/board';
 import type { Viewer } from '@/app/_lib/viewer';
-import { flatFacts, formatHM, NOTE_MAX_LENGTH, type PackingResult, type WarningCode } from '@/core/packing';
+import { addDays, flatFacts, formatHM, NOTE_MAX_LENGTH, type PackingResult, type WarningCode } from '@/core/packing';
 import { flatAddress } from '@/core/printer/addresses';
 import { LabelButton } from './LabelButton';
 import { countTicked, isTicked } from './ticks';
@@ -295,6 +295,10 @@ export function PackageCard({
         </div>
       )}
       {p.packed_at && <div className="who">{packedBy(p.packed_by_name, formatHM(new Date(p.packed_at)))}</div>}
+      {/* what was packed for this flat in the last two weeks, for everyone (Martina, 2026-11-20) */}
+      <a className="pack-history" href={`${BASE}/historia/balenie?byt=${encodeURIComponent(p.listing_id)}&od=${addDays(p.date, -14)}&do=${p.date}`}>
+        {sk.packHistory}
+      </a>
       {noteOpen && (
         <form
           className="noteform"
