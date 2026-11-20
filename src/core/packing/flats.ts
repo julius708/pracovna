@@ -103,13 +103,13 @@ export const FLAT_FACTS: Record<string, FlatFacts> = {
     alert: 'Nebaliť tablety do umývačky – v byte nie je umývačka.',
     skipItems: ['myckaKaps'],
   },
-  // Ivanská, Airport (Martina, 2026-11-20): two white cloth kitchen towels go in the bag; a note only, not counted
+  // Ivanská, Airport (Martina, 2026-11-20): one white cloth kitchen towel goes in the bag (2026-11-20: 1 is enough); a note only, not counted
   '694aa1282620770015016c06': {
-    note: 'Baliť aj biele látkové utierky do kuchyne – 2 ks.',
+    note: 'Baliť aj bielu látkovú utierku do kuchyne – 1 ks.',
   },
-  // Pionierska C, Large (Martina, 2026-11-20): two white cloth kitchen towels go in the bag; a note only, not counted
+  // Pionierska C, Large (Martina, 2026-11-20): one white cloth kitchen towel goes in the bag (2026-11-20: 1 is enough); a note only, not counted
   '6a748768067fda0013c70290': {
-    note: 'Baliť aj biele látkové utierky do kuchyne – 2 ks.',
+    note: 'Baliť aj bielu látkovú utierku do kuchyne – 1 ks.',
   },
 };
 
