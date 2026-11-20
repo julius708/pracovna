@@ -286,6 +286,7 @@ td input.lbl{width:190px;text-align:left}
 .notice-edit-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
 .notice-edit-actions .btn{flex:0 0 auto;min-height:40px;font-size:15px;padding:0 14px}
 .notice-form{display:flex;gap:8px;align-items:flex-end}
+.pack-history{display:inline-flex;align-items:center;min-height:36px;margin-top:6px;font-size:14px;font-weight:600;color:var(--muted);text-decoration:underline}
 .notice-form .btn{flex:0 0 auto;min-width:96px;min-height:44px;font-size:15px}
 .notice-form textarea{flex:1 1 auto;min-width:0;min-height:44px;resize:vertical;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font:inherit;font-size:16px;background:var(--surface);color:var(--ink)}
 .notice-form textarea:disabled{opacity:.6}

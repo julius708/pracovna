@@ -70,6 +70,8 @@ export const sk = {
   },
   notePlaceholder: 'napr. chýba 1 osuška',
   rushTag: 'Rýchla výmena · príchod v ten istý deň',
+  /** Link on every card to what was packed for the flat in the last two weeks (Martina, 2026-11-20). */
+  packHistory: '📜 Čo sa sem balilo (posledných 14 dní)',
   noNextTag: 'Bez ďalšej rezervácie',
   privateBanner: 'Súkromné prádlo – nebaliť z našej bielizne',
   /** Extra cleanings asked for in a board message (Martina, 2026-11-18). */
