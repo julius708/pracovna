@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 import type { BoardNote } from '@/app/_lib/board';
 import type { Viewer } from '@/app/_lib/viewer';
 import { noteTime, sk } from '@/core/i18n/sk';
+import { AheadDay } from './AheadDay';
 
 export interface NoticeBoardProps {
   /** Notes of the selected day only. */
@@ -14,13 +15,21 @@ export interface NoticeBoardProps {
   /** The board's clock (seeded from the server so SSR and client agree). */
   now: Date;
   busy: boolean;
-  onAdd: (text: string) => void;
+  /** day null = the day shown; a date = written ahead for that day (Martina, 2026-11-20). */
+  onAdd: (text: string, day: string | null) => void;
   /** Resolves true when the reply was saved; the reply field then clears and closes. */
   onReply: (parent: BoardNote, text: string) => Promise<boolean>;
   onEdit: (note: BoardNote, text: string) => void;
   onRemove: (note: BoardNote) => void;
   /** What the app made of a note asking for an extra cleaning (a card, or why not); null for other notes. */
-  extraLine?: (text: string) => string | null;
+  extraLine?: (text: string, date: string) => string | null;
+  /** Notes (and their replies) written for days after the shown week, oldest day first. */
+  planned?: BoardNote[];
+  /** The days a note may be written ahead for ("📅 Na iný deň"). */
+  aheadMin: string;
+  aheadMax: string;
+  /** "Pi 4.12." for a planned day. */
+  dayLabelOf: (date: string) => string;
 }
 
 /**
@@ -31,19 +40,21 @@ export interface NoticeBoardProps {
  * Anyone answers a note: the replies show under it, oldest first (Martina,
  * 2026-10-19); a reply is edited and removed like a note.
  */
-export function NoticeBoard({ notes, dayTitle, viewer, now, busy, onAdd, onReply, onEdit, onRemove, extraLine }: NoticeBoardProps) {
+export function NoticeBoard({ notes, dayTitle, viewer, now, busy, onAdd, onReply, onEdit, onRemove, extraLine, planned = [], aheadMin, aheadMax, dayLabelOf }: NoticeBoardProps) {
+  const [otherDay, setOtherDay] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
   const [replying, setReplying] = useState<{ id: string; text: string } | null>(null);
   const top = notes.filter((n) => !n.parent_id);
-  const repliesOf = (id: string) => notes.filter((n) => n.parent_id === id).sort((a, b) => a.created_at.localeCompare(b.created_at));
+  const repliesOf = (id: string) => [...notes, ...planned].filter((n) => n.parent_id === id).sort((a, b) => a.created_at.localeCompare(b.created_at));
 
   const submit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const clean = text.trim();
     if (!clean) return;
     setText('');
-    onAdd(clean);
+    onAdd(clean, otherDay);
+    setOtherDay(null);
   };
 
   const saveEdit = (n: BoardNote) => {
@@ -89,7 +100,7 @@ export function NoticeBoard({ notes, dayTitle, viewer, now, busy, onAdd, onReply
         ) : (
           <div className="notice-text">{n.text}</div>
         )}
-        {!n.parent_id && extraLine?.(n.text) && <div className="extra-chip">{extraLine(n.text)}</div>}
+        {!n.parent_id && extraLine?.(n.text, n.date) && <div className="extra-chip">{extraLine(n.text, n.date)}</div>}
         <div className="notice-meta">
           <span>
             {sk.noticeBoard.by(n.author_name, noteTime(n.created_at, now))}
@@ -119,17 +130,10 @@ export function NoticeBoard({ notes, dayTitle, viewer, now, busy, onAdd, onReply
     );
   };
 
-  return (
-    <section className="notice-board" aria-labelledby="notice-title">
-      <h2 id="notice-title" className="notice-title">
-        <span aria-hidden="true">📌</span> {sk.noticeBoard.title}
-        <span className="notice-day">{dayTitle}</span>
-      </h2>
-      {top.length === 0 ? (
-        <p className="notice-empty">{sk.noticeBoard.empty}</p>
-      ) : (
+  /** A list of notes with their replies and the reply form. */
+  const renderList = (list: BoardNote[]) => (
         <ul className="notice-list">
-          {top.map((n) => {
+          {list.map((n) => {
             const replies = repliesOf(n.id);
             return (
               <li key={n.id} className="notice-item">
@@ -169,6 +173,21 @@ export function NoticeBoard({ notes, dayTitle, viewer, now, busy, onAdd, onReply
             );
           })}
         </ul>
+  );
+
+  const plannedTop = planned.filter((n) => !n.parent_id).sort((x, y) => x.date.localeCompare(y.date) || x.created_at.localeCompare(y.created_at));
+  const plannedDays = [...new Set(plannedTop.map((n) => n.date))];
+
+  return (
+    <section className="notice-board" aria-labelledby="notice-title">
+      <h2 id="notice-title" className="notice-title">
+        <span aria-hidden="true">📌</span> {sk.noticeBoard.title}
+        <span className="notice-day">{dayTitle}</span>
+      </h2>
+      {top.length === 0 ? (
+        <p className="notice-empty">{sk.noticeBoard.empty}</p>
+      ) : (
+        renderList(top)
       )}
       <form className="notice-form" onSubmit={submit}>
         <textarea
@@ -184,6 +203,18 @@ export function NoticeBoard({ notes, dayTitle, viewer, now, busy, onAdd, onReply
           {sk.noticeBoard.add}
         </button>
       </form>
+      <AheadDay value={otherDay} onChange={setOtherDay} min={aheadMin} max={aheadMax} disabled={busy} />
+      {plannedTop.length > 0 && (
+        <details className="planned">
+          <summary>{sk.ahead.planned(plannedTop.length)}</summary>
+          {plannedDays.map((d) => (
+            <div key={d}>
+              <div className="planned-day">{dayLabelOf(d)}</div>
+              {renderList(plannedTop.filter((n) => n.date === d))}
+            </div>
+          ))}
+        </details>
+      )}
     </section>
   );
 }

@@ -7,7 +7,8 @@ import type { BoardData, BoardNote, BoardPackage, EarlyArrival, EarlyDeparture }
 import { cleaningInfoFlats, type CleaningRequest } from '@/app/_lib/cleaning';
 import type { DeliveryRequest } from '@/app/_lib/delivery';
 import type { Viewer } from '@/app/_lib/viewer';
-import { formatDM } from '@/core/packing';
+import { addDays, formatDM } from '@/core/packing';
+import { CLEANING_AHEAD_DAYS, NOTE_AHEAD_DAYS } from '@/app/_lib/ahead';
 import { dayLabel, dayWord, packedOf, sk } from '@/core/i18n/sk';
 import { useRouter } from 'next/navigation';
 import { newActionId } from './action-id';
@@ -135,6 +136,7 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
 
   const date = data.dates[sel];
   /** "Zajtra 19.11." for the extra-cleaning line under a message; a day outside the board shows its weekday. */
+  const lastDay = data.dates[data.dates.length - 1];
   const extraDayLabel = (d: string) => `${dayWord(dates.indexOf(d as (typeof dates)[number]), d)} ${formatDM(d)}`;
   const allJobs = useMemo(() => dayJobs(data.packages, date), [data.packages, date]);
   const cleaners = useMemo(() => cleanerOptions(allJobs, data.cleaners, sk.cleaners), [allJobs, data.cleaners]);
@@ -252,19 +254,22 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
     },
   };
 
-  const addNote = async (text: string) => {
-    const temp: BoardNote = { id: `temp-${newActionId()}`, text, date, author: viewer.id, author_name: viewer.name, created_at: new Date().toISOString(), edited_at: null, parent_id: null };
+  /** A note for the shown day, or (Martina, 2026-11-20) written ahead for another day. */
+  const addNote = async (text: string, day: string | null = null) => {
+    const on = day ?? date;
+    const temp: BoardNote = { id: `temp-${newActionId()}`, text, date: on, author: viewer.id, author_name: viewer.name, created_at: new Date().toISOString(), edited_at: null, parent_id: null };
     setNoteBusy(true);
     setData((d) => ({ ...d, notes: [temp, ...d.notes] }));
     let res: ActionResult;
     try {
-      res = await track(() => addBoardNoteAction(text, date, newActionId()));
+      res = await track(() => addBoardNoteAction(text, on, newActionId()));
     } catch {
       res = { ok: false, error: 'failed' };
     }
     setNoteBusy(false);
     if (res.ok) {
       if (res.id) setData((d) => ({ ...d, notes: d.notes.map((n) => (n.id === temp.id ? { ...n, id: res.id as string } : n)) }));
+      if (on !== date) showToast(sk.ahead.savedFor(extraDayLabel(on)));
       void refresh();
     } else {
       setData((d) => ({ ...d, notes: d.notes.filter((n) => n.id !== temp.id) }));
@@ -420,7 +425,13 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
     ...over,
   });
 
-  const addCleaning = (text: string) => saveCleaning(cleaningTemp({ text }), () => addCleaningRequestAction(date, null, text, newActionId()), sk.cleaning.notSaved);
+  /** A message for the shown day, or (Martina, 2026-11-20) written ahead for another day. */
+  const addCleaning = async (text: string, day: string | null = null) => {
+    const on = day ?? date;
+    const ok = await saveCleaning(cleaningTemp({ text, date: on }), () => addCleaningRequestAction(on, null, text, newActionId()), sk.cleaning.notSaved);
+    if (ok && on !== date) showToast(sk.ahead.savedFor(extraDayLabel(on)));
+    return ok;
+  };
 
   const replyCleaning = (parent: CleaningRequest, text: string) =>
     saveCleaning(cleaningTemp({ date: parent.date, listing_id: parent.listing_id, listing_name: parent.listing_name, parent_id: parent.id, text }), () => addCleaningReplyAction(parent.id, text, newActionId()), sk.cleaning.replyNotSaved);
@@ -681,10 +692,14 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
         viewer={viewer}
         now={now}
         busy={noteBusy}
-        onAdd={(t) => void addNote(t)}
+        onAdd={(t, day) => void addNote(t, day)}
         onReply={addReply}
         onEdit={(n, t) => void editNote(n, t)}
-        extraLine={(t) => extraNoteLine(t, date, null, data.listings, data.dates, extraDayLabel)}
+        extraLine={(t, d) => extraNoteLine(t, d, null, data.listings, data.dates, extraDayLabel)}
+        planned={data.notes.filter((n) => n.date > lastDay)}
+        aheadMin={data.today}
+        aheadMax={addDays(data.today, NOTE_AHEAD_DAYS)}
+        dayLabelOf={extraDayLabel}
         onRemove={(n) => void removeNote(n)}
       />
 
@@ -699,7 +714,11 @@ export function Board({ initial, viewer }: { initial: BoardData; viewer: Viewer 
           now={now}
           busy={cleaningBusy}
           onAdd={addCleaning}
-          extraLine={(t, listingId) => extraNoteLine(t, date, listingId, data.listings, data.dates, extraDayLabel)}
+          extraLine={(t, listingId, d) => extraNoteLine(t, d, listingId, data.listings, data.dates, extraDayLabel)}
+          planned={data.cleaning.requests.filter((r) => r.date > lastDay)}
+          aheadMin={data.today}
+          aheadMax={addDays(data.today, CLEANING_AHEAD_DAYS)}
+          dayLabelOf={extraDayLabel}
           onReply={replyCleaning}
           onEdit={(r, t) => void editCleaning(r, t)}
           onTick={(r, done) => void tickCleaning(r, done)}
