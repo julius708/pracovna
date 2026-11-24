@@ -22,6 +22,13 @@ export interface FlatFacts {
    * her (owner, 2026-10-04).
    */
   singleSheet?: 'small';
+  /**
+   * Sheets packed for this flat every time, whatever the guest count (Martina, 2026-11-24): guests may want to sleep
+   * apart, so the flat always gets its full set of sheets. Replaces the calculated sheets (large, small; no 140 cm).
+   */
+  sheets?: { large: number; small?: number };
+  /** Items packed in a fixed number every time for this flat (Floriánska: 4 large bin bags, Martina, 2026-11-24). */
+  fixedItems?: Record<string, number>;
   /** Shown on the card ("Info o byte: …"). */
   note?: string;
   /** A must-not-miss instruction, shown in red on every card of the flat (Martina, 2026-10-21). */
@@ -58,11 +65,13 @@ export const FLAT_FACTS: Record<string, FlatFacts> = {
     singleSheet: 'small',
     settled: ['beds_insufficient'],
   },
-  // Skalická 3A, Bright (owner, 2026-10-10): 2 small beds + 3 large; full flat = 2 small + 3 large sheets
+  // Skalická 3A, Bright (owner, 2026-10-10): 2 small beds + 3 large; full flat = 2 small + 3 large sheets.
+  // Martina, 2026-11-24: 3 large + 2 small sheets go with EVERY packing, whatever the guest count
   '688b6dfc3abd4d0010ae4542': {
     beds: { DOUBLE_BED: 3, SINGLE_BED: 2 },
     singleSheet: 'small',
-    note: '2 malé postele + 3 veľké · plný byt: 2 malé + 3 veľké plachty',
+    sheets: { large: 3, small: 2 },
+    note: '2 malé postele + 3 veľké · plachty vždy: 3 veľké + 2 malé (pri každom balení)',
   },
   // Tomášikova, Family (owner, 2026-10-10): the same as Skalická
   '68b84c169c4f710012f3984f': {
@@ -102,6 +111,22 @@ export const FLAT_FACTS: Record<string, FlatFacts> = {
   '6859255a167a6d001324a29a': {
     alert: 'Nebaliť tablety do umývačky – v byte nie je umývačka.',
     skipItems: ['myckaKaps'],
+  },
+  // Dunajská A, Danube (Martina, 2026-11-24): always 3 large sheets, whatever the guest count - even 3 guests may
+  // want to sleep apart
+  '691d8ca9a43f320023b40e41': {
+    sheets: { large: 3 },
+    note: 'Plachty vždy 3 veľké – bez ohľadu na počet hostí (môžu spať oddelene).',
+  },
+  // Obchodná B, Romantic (Obchodná 4; Martina, 2026-11-24): 1 double bed + 1 fold-out sofa; always 2 large sheets,
+  // the guests may want to sleep apart
+  '6a8577e4ff9336003ceeae80': {
+    sheets: { large: 2 },
+    note: 'Plachty vždy 2 veľké – 1 manželská posteľ + rozkladací gauč, hostia môžu spať oddelene.',
+  },
+  // Floriánska, Castle (Martina, 2026-11-24): 4 large bin bags with every packing
+  '68f644d35dd39b0012f6e6ac': {
+    fixedItems: { vreckoV: 4 },
   },
   // Ivanská, Airport (Martina, 2026-11-20): one white cloth kitchen towel goes in the bag (2026-11-20: 1 is enough); a note only, not counted
   '694aa1282620770015016c06': {

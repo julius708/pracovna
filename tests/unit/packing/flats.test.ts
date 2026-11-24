@@ -135,10 +135,10 @@ describe('Skalická and Tomášikova: 2 small beds + 3 large, small sheets confi
     expect(bedSummary(r)).toBe('2× manželská (z 3) · 2× jednolôžko netreba');
   });
 
-  it('Skalická with 4 guests: three doubles and one single bed, that single bed takes a small sheet', () => {
+  it('Skalická with 4 guests: three doubles and one single bed; the sheets are still the full 3 large + 2 small (Martina, 2026-11-24)', () => {
     const r = skalicka(4);
     expect(r.beds.usedGroups).toEqual(['dvoj', 'dvoj', 'dvoj', 'jedno']);
-    expect([count(r, 'plachta'), count(r, 'plachtaM')]).toEqual([3, 1]);
+    expect([count(r, 'plachta'), count(r, 'plachtaM')]).toEqual([3, 2]);
     expect(r.warnings).not.toContain('sheet_size_check');
   });
 });
@@ -284,11 +284,44 @@ describe('2 small duvets = 1 bed = 1 sheet (Martina, 2026-10-21)', () => {
     expect([count(r, 'paplonM'), count(r, 'plachta')]).toEqual([4, 2]);
   });
 
-  it('never fewer sheets than the beds already give, and large-duvet flats keep 1 sheet per made bed', () => {
+  it('never fewer sheets than the beds already give; 1 large duvet = 1 large sheet (Martina, 2026-11-24)', () => {
     const small = card('Paplón veľký: 0\nPaplón malý: 2', { KING_BED: 1 }, 2, 2);
     expect([count(small, 'paplonM'), count(small, 'plachta')]).toEqual([2, 1]);
+    // 2 large duvets + 4 pillows on one king (Gross. 23, Landererova): 2 sheets
     const large = card('Paplón veľký: 2\nPaplón malý: 0', { KING_BED: 1 }, 2, 2);
-    expect([count(large, 'paplonV'), count(large, 'plachta')]).toEqual([2, 1]);
+    expect([count(large, 'paplonV'), count(large, 'vankus'), count(large, 'plachta')]).toEqual([2, 4, 2]);
+    // 3 large duvets for 2 kings (Vysoká): 3 sheets
+    const three = card('Paplón veľký: 3\nPaplón malý: 0', { KING_BED: 2 }, 4, 4);
+    expect([count(three, 'paplonV'), count(three, 'plachta')]).toEqual([3, 3]);
+    // 1 large duvet for 1 king stays 1 sheet
+    const one = card('Paplón veľký: 1\nPaplón malý: 0', { KING_BED: 1 }, 2, 2);
+    expect([count(one, 'paplonV'), count(one, 'plachta')]).toEqual([1, 1]);
+  });
+});
+
+describe('Fixed sheets for every packing, whatever the guest count (Martina, 2026-11-24)', () => {
+  const fixed = (guestyId: string, beds: Record<string, number>, accommodates: number, text: string, guests: number) =>
+    computePackage(pkg({ listing: listing({ guestyId, beds, accommodates, laundry: laundry(text) }), next: sameDay(guests) }));
+  const sheets = (r: ReturnType<typeof computePackage>) => [count(r, 'plachta'), count(r, 'plachtaM'), count(r, 'plachta140')];
+
+  it('Dunajská A: always 3 large sheets', () => {
+    for (const g of [1, 2, 3, 6]) expect(sheets(fixed('691d8ca9a43f320023b40e41', { KING_BED: 2, SOFA_BED: 1 }, 6, 'Paplón veľký: 0\nPaplón malý: 6\nPoznámka: súkromné prádlo', g))).toEqual([3, 0, 0]);
+  });
+  it('Skalická 3A: always 3 large + 2 small sheets', () => {
+    for (const g of [1, 2, 4, 6]) expect(sheets(skalicka(g))).toEqual([3, 2, 0]);
+  });
+  it('Obchodná B (Obchodná 4): always 2 large sheets', () => {
+    for (const g of [1, 2, 4]) expect(sheets(fixed('6a8577e4ff9336003ceeae80', { KING_BED: 1, SOFA_BED: 1 }, 4, 'Paplón veľký: 2', g))).toEqual([2, 0, 0]);
+  });
+  it('Floriánska: always 4 large bin bags', () => {
+    for (const g of [1, 2, 4]) {
+      const r = fixed('68f644d35dd39b0012f6e6ac', { KING_BED: 1, SOFA_BED: 1 }, 4, 'Paplón malý: 4\nPrádlo: súkromné', g);
+      expect(count(r, 'vreckoV')).toBe(4);
+      expect(count(r, 'vreckoM')).toBe(3); // the small ones stay as calculated
+    }
+  });
+  it('Tomášikova keeps the calculated sheets (no fixed set)', () => {
+    expect(sheets(tomasikova(2))).toEqual([2, 0, 0]);
   });
 });
 

@@ -216,12 +216,27 @@ export function computeLinen(args: {
     const needed = Math.floor(counts.paplonM / 2);
     if (needed > sheets) counts.plachta = (counts.plachta ?? 0) + needed - sheets;
   }
+  // 1 large duvet = 1 large sheet (Martina, 2026-11-24): 2 large duvets with 4 pillows always get 2 sheets, even when
+  // both go on one bed (Gross. 23, Landererova) or the set has more duvets than made beds (Vysoká: 3 for 2 kings)
+  if (counts.paplonV) {
+    const sheets = (counts.plachta ?? 0) + (counts.plachtaM ?? 0) + (counts.plachta140 ?? 0);
+    if (counts.paplonV > sheets) counts.plachta = (counts.plachta ?? 0) + counts.paplonV - sheets;
+  }
+  // the flat's fixed sheets (flats.ts sheets): packed every time, whatever the guests and beds
+  if (facts?.sheets) {
+    counts.plachta = facts.sheets.large;
+    counts.plachtaM = facts.sheets.small ?? 0;
+    counts.plachta140 = 0;
+  }
   for (const [key, n] of Object.entries(laundry?.overrides ?? {})) {
     if (typeof n === 'number') {
       counts[key] = n;
       overridden.add(key);
     }
   }
+
+  // fixed counts for this flat (flats.ts fixedItems): packed every time, whatever the guests
+  for (const [key, n] of Object.entries(facts?.fixedItems ?? {})) counts[key] = n;
 
   // the flat has its own stock of these (flats.ts): nothing is packed, the rows leave the card and the totals
   for (const key of facts?.skipItems ?? []) counts[key] = 0;
