@@ -35,6 +35,7 @@ const MIG18 = readFileSync(new URL('../../supabase/migrations/0018_cleaning_info
 const MIG19 = readFileSync(new URL('../../supabase/migrations/0019_delivery_requests.sql', import.meta.url), 'utf8');
 const MIG20 = readFileSync(new URL('../../supabase/migrations/0020_cleaning_edit.sql', import.meta.url), 'utf8');
 const MIG22 = readFileSync(new URL('../../supabase/migrations/0022_packing_history_for_staff.sql', import.meta.url), 'utf8');
+const MIG23 = readFileSync(new URL('../../supabase/migrations/0023_two_week_window.sql', import.meta.url), 'utf8');
 /** The shared LIVE-IN users and their roles as they exist in LIVE-IN Core (not created by this app's migrations). */
 const APP_USERS_STUB = `
 create or replace function auth.jwt() returns jsonb language sql stable as
@@ -135,6 +136,8 @@ describe('migrations', () => {
       expect(e20, `0020_cleaning_edit.sql failed: ${e20?.code} ${e20?.message} (line ${lineOf(MIG20, e20?.position)})`).toBeNull();
       const e22 = await pgError(fresh.exec(MIG22));
       expect(e22, `0022_packing_history_for_staff.sql failed: ${e22?.code} ${e22?.message} (line ${lineOf(MIG22, e22?.position)})`).toBeNull();
+      const e23 = await pgError(fresh.exec(MIG23));
+      expect(e23, `0023_two_week_window.sql failed: ${e23?.code} ${e23?.message} (line ${lineOf(MIG23, e23?.position)})`).toBeNull();
       const fns =(await fresh.query<Row>("select proname from pg_proc where pronamespace = 'public'::regnamespace order by 1")).rows.map((r) => r.proname);
       expect(fns).toEqual(expect.arrayContaining(['today_ba', 'is_admin', 'is_active_user', 'handle_new_user', 'sync_upsert_package', 'sync_set_lifecycle', 'pack_package', 'unpack_package', 'set_note', 'toggle_check', 'save_settings', 'admin_set_profile', 'acquire_lock', 'run_retention', 'increment_not_found', 'add_board_note', 'remove_board_note', 'edit_board_note']));
     } finally {
@@ -220,6 +223,7 @@ beforeAll(async () => {
   await db.exec(MIG19);
   await db.exec(MIG20);
   await db.exec(MIG22);
+  await db.exec(MIG23);
   await db.exec('set check_function_bodies = on');
   todayBa = (await one('select public.today_ba()::text as d')).d as string;
 });
@@ -693,7 +697,7 @@ describe('row level security', () => {
     }
   }
 
-  it('staff see only visible packages from yesterday to day+6; admins see everything; inactive users see nothing', async () => {
+  it('staff see only visible packages from yesterday to day+13 (0023, two weeks); admins see everything; inactive users see nothing', async () => {
     const staff = await newUser('Staff');
     const admin = await newUser('Admin', { role: 'admin' });
     const inactive = await newUser('Gone', { active: false });
@@ -712,13 +716,14 @@ describe('row level security', () => {
     await mk(-1);
     await mk(0);
     await mk(6);
-    await mk(7);
+    await mk(13);
+    await mk(14);
     await mk(0, true);
 
     const visible = (uid: string | null) =>
       asAuthenticated(uid, async () => (await q('select date::text as d, hidden from public.packages where listing_id = $1 order by 1, 2', [tag])).map((r) => `${r.d}${r.hidden ? '!' : ''}`));
-    expect(await visible(staff)).toEqual([shift(-1), shift(0), shift(6)]);
-    expect(await visible(admin)).toEqual([shift(-2), shift(-1), shift(0), `${shift(0)}!`, shift(6), shift(7)]);
+    expect(await visible(staff)).toEqual([shift(-1), shift(0), shift(6), shift(13)]);
+    expect(await visible(admin)).toEqual([shift(-2), shift(-1), shift(0), `${shift(0)}!`, shift(6), shift(13), shift(14)]);
     expect(await visible(inactive)).toEqual([]);
     expect(await visible(null)).toEqual([]);
   });
@@ -810,7 +815,7 @@ describe('0006 access rules', () => {
     expect(missing?.code).toBe('P0002');
   });
 
-  it('staff RPCs refuse hidden rows and rows outside yesterday..day+6; admins may touch them', async () => {
+  it('staff RPCs refuse hidden rows and rows outside yesterday..day+13 (0023); admins may touch them', async () => {
     const staff = await newUser('Staff');
     const admin = await newUser('Admin', { role: 'admin' });
     const today = (await one('select public.today_ba()::text as d')).d as string;
@@ -820,11 +825,11 @@ describe('0006 access rules', () => {
       return d.toISOString().slice(0, 10);
     };
     const old = await newPackage({ date: shift(-5) });
-    const future = await newPackage({ date: shift(7) });
+    const future = await newPackage({ date: shift(14) });
     const hidden = await newPackage({ date: shift(0) });
     await q('select public.sync_set_lifecycle($1, $2, $3, $4)', [hidden.id, null, true, null]);
     const edgeLow = await newPackage({ date: shift(-1) });
-    const edgeHigh = await newPackage({ date: shift(6) });
+    const edgeHigh = await newPackage({ date: shift(13) });
     const refused = { ok: false, status: 'out_of_window' };
 
     await actAs(staff);
