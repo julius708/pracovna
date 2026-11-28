@@ -73,11 +73,11 @@ export function todayInTz(now: Date = new Date(), tz: string = TZ): Ymd {
 }
 
 /**
- * Days the board shows: today and the following WINDOW_DAYS - 1 days (the
- * owner's week view of 2026-10-03; 3 days before). The database mirrors the
- * window for staff (migration 0010: yesterday .. today + WINDOW_DAYS - 1).
+ * Days the board shows: today and the following WINDOW_DAYS - 1 days (two
+ * weeks ahead, Martina 2026-11-28; a week from 2026-10-03, 3 days before). The
+ * database mirrors the window for staff (migration 0023: yesterday .. today + 13).
  */
-export const WINDOW_DAYS = 7;
+export const WINDOW_DAYS = 14;
 
 /** The board days, today first. */
 export function windowDates(today: Ymd): Ymd[] {

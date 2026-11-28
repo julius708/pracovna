@@ -27,7 +27,7 @@ function computed(date: string): PackageComputed {
   };
 }
 
-/** Same rule as the Postgres RPCs: staff act only on visible rows from yesterday to the last board day (today+6). */
+/** Same rule as the Postgres RPCs: staff act only on visible rows from yesterday to the last board day (today+13). */
 describe('memory staff actions: the visible window', () => {
   const repo = new MemoryRepo();
   // 2026-10-02 10:00 in Bratislava (CEST)
@@ -36,7 +36,7 @@ describe('memory staff actions: the visible window', () => {
 
   it('refuses rows before yesterday, after the last board day and hidden rows for staff', async () => {
     const old = await repo.insertPackage(computed('2026-09-30'));
-    const far = await repo.insertPackage(computed('2026-10-09'));
+    const far = await repo.insertPackage(computed('2026-10-16'));
     const hidden = await repo.insertPackage(computed('2026-10-02'));
     await repo.setPackageLifecycle(hidden.id, { hidden: true });
     expect(await memoryPack(repo, staff, old.id, null)).toEqual(refused);
@@ -47,7 +47,7 @@ describe('memory staff actions: the visible window', () => {
     expect(repo.packages.get(old.id)?.status).toBe('todo');
   });
 
-  it('allows yesterday and the last board day (today+6) for staff', async () => {
+  it('allows yesterday and the last board day (today+13) for staff', async () => {
     const low = await repo.insertPackage(computed('2026-10-01'));
     const high = await repo.insertPackage(computed('2026-10-08'));
     expect(await memoryPack(repo, staff, low.id, null)).toMatchObject({ ok: true, status: 'packed' });

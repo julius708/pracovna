@@ -144,8 +144,11 @@ export function generateSeedData(listings: ParsedListing[], opts: SeedOptions): 
   for (let i = 0; i < Math.min(8, inScope.length); i++) {
     scenario(inScope[i], days[i % days.length], 100 + i, FORCED_ROLLS[i]);
   }
+  // the forced listings keep only their own scenario: with the two-week board (2026-11-28)
+  // a random check-out on a later day would overwrite their min. stay and blocked gap
+  const forced = new Set(inScope.slice(0, 8).map((l) => l._id));
   for (const day of days) {
-    const pool = inScope.filter((l) => !used.has(`${l._id}|${day}`));
+    const pool = inScope.filter((l) => !used.has(`${l._id}|${day}`) && !forced.has(l._id));
     const already = [...used].filter((k) => k.endsWith(`|${day}`)).length;
     for (let i = 0; i < perDay - already && pool.length; i++) {
       const l = pool.splice(Math.floor(rand() * pool.length), 1)[0];

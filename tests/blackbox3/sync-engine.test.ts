@@ -4,7 +4,7 @@
  * by hand so each expectation is explicit. Binding: spec §3, proposal §4–§6, §8.
  */
 import { describe, expect, it } from 'vitest';
-import { LAUNDRY_FIELD_ID, addDays, windowDates } from '@/core/packing';
+import { LAUNDRY_FIELD_ID, WINDOW_DAYS, addDays, windowDates } from '@/core/packing';
 import type { PackingResult } from '@/core/packing';
 import { MemoryRepo } from '@/db/memory-repo';
 import type { CalendarRow, ListingRow, PackageRow, ReservationRow } from '@/db/types';
@@ -21,7 +21,7 @@ import { reconcile } from '@/sync/reconcile';
 const D0 = '2026-10-05';
 const [, D1, D2] = windowDates(D0);
 const D3 = addDays(D0, 3);
-const AFTER = addDays(D0, 7); // first day after the 7-day board window
+const AFTER = addDays(D0, WINDOW_DAYS); // first day after the board window
 // 06:00 Bratislava, written in UTC because stored instants are always toISOString() output
 const NOW_ISO = `${D0}T04:00:00.000Z`;
 const H = 3_600_000;
@@ -322,7 +322,7 @@ describe('recomputeWindow – settings, calendar, moves, scope, cancellation', (
     row.packed_at = NOW_ISO;
     row.packed_by_name = 'Angelika';
 
-    const far = addDays(D0, 7);
+    const far = addDays(D0, WINDOW_DAYS);
     await repo.upsertReservations([resRow('R1', 'L1', addDays(D0, -2), far, 2, { fetched_at: shift(H) })]);
     const r = await recomputeWindow(rdeps(repo, at(shift(H))), 'cron');
     expect(r.moved).toBe(1);
